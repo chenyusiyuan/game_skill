@@ -29,7 +29,7 @@ description: "Phase 1: 需求理解。读取用户 query（及可能的上传文
 |---|---|---|
 | `genre` | 9 大类之一 | 用户说「贪吃蛇」→ board-grid；说「育成小猫」→ simulation；说不清 → 缺口 |
 | `platform` | `[web]` 默认 | 通常能推断为 web，除非明确 iOS/Android → simulation |
-| `runtime` | `_index.json` 登记的引擎之一（2D 默认 phaser3/pixijs/canvas/dom-ui；明确 3D 时为 three） | 用户未指定 → **Phase 1 末尾 AskUserQuestion 让用户选择**（附推荐），不算缺口 |
+| `runtime` | `_index.json` 登记的引擎之一（2D 默认 phaser3/pixijs/canvas/dom-ui；明确 3D 时为 three） | 用户未指定 → **Phase 1 末尾 AskUserQuestion 让用户选择或选"让我决定"**（附推荐），不算缺口 |
 | `mode` | 单机 / 联机 / AI 对战 | 大多数小游戏默认「单机」，只要没提多人即可 |
 | `core-loop` | `[@flow(...)]` | 有主玩法循环描述即可 |
 | `player-goal` | 玩家目标 | 能从 core-loop 派生 |
@@ -66,6 +66,30 @@ description: "Phase 1: 需求理解。读取用户 query（及可能的上传文
 - 或用户写了 3 个及以上显式系统，但没有说明本次哪些必须保留
 - 或用户的**强约束/硬规则**（"禁止 / 必须 / 一定要"）与当前 runtime 能力矛盾 → 走 clarify
 - 否则直接写 ClarifiedBrief 段，进入 Phase 2
+
+### Step 2.s：语义澄清（读 `semantic-clarify.md`）
+
+在 Clarify（缺口补齐）之后、写 brief 之前，判断是否需要语义级别的深挖。语义澄清只处理**低信息量或高分叉**的 query，不能因为"没写风格"单独触发。
+
+触发条件（满足任一组即可）：
+
+- 用户 query ≤ 30 字，且存在以下任一情况：`must-have-features` ≤ 2、core-loop / 胜负条件只能粗略推断、内容范围/关卡规模/难度机制至少 2 项无法合理推断
+- 用户使用大型或多义参考对象，导致实现方向分叉明显
+- 用户点了多个系统但没说明优先级，且 clarify 问题少于 3 个，仍有提问额度补关键语义参数
+- 风格会显著影响素材选择或玩法表达，且结构字段已经清晰、本轮仍有提问空位
+
+触发后读 `semantic-clarify.md`，按优先级生成问题：
+1. **P0 结构缺口**：来自 clarify.md 的缺口问题（若有）
+2. **P1 核心设计参数**：有空位时补充内容量、难度机制等功能性问题
+3. **P1 风格选择**：结构字段清晰且仍有空位时，从 `color-palettes.yaml` 打分取 Top-3 + 用户自描述选项
+
+所有问题（含 clarify + 语义澄清）合并为一次 AskUserQuestion，**总计不超过 3 问**。每个问题都必须提供"让我决定"选项；用户选择后按推荐/默认策略回填，不再追问。如果 `genre` / `core-loop` / 胜负条件仍高度不确定，先问结构，不生成 Top-3 风格推荐。
+
+用户回答回填到 ClarifiedBrief 段：
+- 风格 → 用户明确选择时写入 `style-preference` 字段；选择"让我决定"时只追加推荐关键词到 `theme-keywords`
+- 设计参数 → `content-scope` / `difficulty-mode` 等字段，或追加到 `must-have-features`
+
+Phase 2 必须消费这些字段：`style-preference` / `theme-keywords` → `color-scheme`；`content-scope` → `@resource` / `@level`；`difficulty-mode` → `@rule` / `@level`。
 
 ### Step 3：生成 `docs/brief.md`
 
@@ -104,6 +128,10 @@ description: "Phase 1: 需求理解。读取用户 query（及可能的上传文
 - constraints:
   - mvp-boundary: "不含登录、排行榜、班级管理"
   - hard-rule: <若有>
+- style-preference: candy-pop  # 用户选择的色板 ID 或自描述文本；未触发语义澄清时留空
+- theme-keywords: [单词, 消消乐, 教育, 糖果, 休闲]   # 原有推断 + 风格/语义澄清追加
+- content-scope: "小学3-4年级词库，共60词"            # 语义澄清补充（若有）
+- difficulty-mode: "3关递进，每关限时递减"             # 语义澄清补充（若有）
 - suggested-runtime: dom-ui   # 仅建议，由 Phase 2 末尾 strategy 正式回写
 - is-3d: false                # 与 Inferred 保持一致；Phase 2 回写到 front-matter
 - mvp-cut: ["暂不做登录", "暂不做自定义词库"]
@@ -112,8 +140,8 @@ description: "Phase 1: 需求理解。读取用户 query（及可能的上传文
 
 ### Step 4：决策
 
-- **无 gap**：写出 ClarifiedBrief 段 → 进入 Phase 2
-- **有 gap**：按 `clarify.md` 提问，把用户回答写回 ClarifiedBrief 段 → Phase 2
+- **无 gap**：判断是否触发语义澄清（Step 2.s）→ 写出 ClarifiedBrief 段 → 进入 Phase 2
+- **有 gap**：按 `clarify.md` 提问优先补结构；若仍有提问额度且触发语义澄清，再追加核心设计参数或风格问题，合并为一次 AskUserQuestion（≤ 3 问）→ 把用户回答写回 ClarifiedBrief 段 → Phase 2
 - **若必填字段能推断，但功能优先级/交付档位不清**：仍然必须走 clarify，不能直接默认最小 MVP
 - 更新 `state.json` 的 `understand.status = "completed"`
 
