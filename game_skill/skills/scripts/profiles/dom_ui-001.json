@@ -1,0 +1,75 @@
+{
+  "case_id": "dom_ui-001",
+  "description": "单词消消乐 - 面向小学生的英语配对游戏",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "prd_hash": "16d18f3c42ea0af33077690cf633963fe31c19fe",
+  "prd_path": "cases/dom_ui/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "playable-loop",
+      "check_id": "playable-loop",
+      "kind": "interaction",
+      "description": "主循环可玩 - 点击配对成功后分数增加",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 600 }
+      ],
+      "expect": {
+        "eval": "window.gameState.score > 0 || window.gameState.matchedPairs > 0",
+        "op": "eq",
+        "value": true
+      }
+    },
+    {
+      "id": "time-penalty",
+      "check_id": "time-penalty",
+      "kind": "interaction",
+      "description": "配对失败扣时间",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.simulateWrongMatch()" },
+        { "action": "wait", "ms": 600 }
+      ],
+      "expect": {
+        "eval": "window.gameState.combo === 0",
+        "op": "eq",
+        "value": true
+      }
+    },
+    {
+      "id": "result-display",
+      "check_id": "result-display",
+      "kind": "interaction",
+      "description": "结算页显示",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.showResult()" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": {
+        "eval": "window.gameState.phase === 'win' && document.body.innerText.includes('恭喜通关')",
+        "op": "eq",
+        "value": true
+      }
+    },
+    {
+      "id": "level-progression",
+      "check_id": "level-progression",
+      "kind": "interaction",
+      "description": "关卡递进 - 完成一关后进入下一关",
+      "setup": [
+        { "action": "eval", "code": "window.gameState.level = 1; window.gameTest.showResult()" },
+        { "action": "wait", "ms": 200 },
+        { "action": "eval", "code": "window.gameTest.clickNextButton()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "eval": "window.gameState.level === 2 && window.gameState.phase === 'playing'",
+        "op": "eq",
+        "value": true
+      }
+    }
+  ],
+  "hard_rule_assertions": []
+}

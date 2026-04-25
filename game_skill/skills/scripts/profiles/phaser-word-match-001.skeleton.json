@@ -1,0 +1,137 @@
+{
+  "case_id": "phaser-word-match-001",
+  "description": "phaser-word-match-001 - 从 PRD @check 自动生成的骨架，需人工补 setup/expect",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "prd_hash": "dc4c596e48bd1b9e0b2e469cfa6b761ccb9cc4d0",
+  "prd_path": "cases/phaser-word-match-001/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "start-scene",
+      "check_id": "start-scene",
+      "kind": "state",
+      "description": "开始场景",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 打开游戏 → 验证标题和开始按钮可见\"",
+      "_prd_expect": "\"标题文字包含'单词消消乐'，开始按钮可点击\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(start-scene) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "playable-loop",
+      "check_id": "playable-loop",
+      "kind": "state",
+      "description": "主循环可玩",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 打开 game/index.html → 点击开始 → 完成至少一轮配对 → 查看结算页\"",
+      "_prd_expect": "\"window.gameState.phase 最终进入 win 或 lose；得分有数值\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(playable-loop) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "match-correct",
+      "check_id": "match-correct",
+      "kind": "state",
+      "description": "正确配对",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 点击正确的英文-中文卡片对\"",
+      "_prd_expect": "\"两张卡片消失，score 增加，combo 增加\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(match-correct) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "match-wrong",
+      "check_id": "match-wrong",
+      "kind": "state",
+      "description": "错误配对",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 点击错误的英文-中文卡片对\"",
+      "_prd_expect": "\"卡片翻回，timeLeft 减少，combo 归零\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(match-wrong) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "time-out",
+      "check_id": "time-out",
+      "kind": "state",
+      "description": "时间耗尽",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 等待时间归零\"",
+      "_prd_expect": "\"进入 result 场景，显示失败状态\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(time-out) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "level-progression",
+      "check_id": "level-progression",
+      "kind": "state",
+      "description": "关卡递进",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 完成第一关 → 点击下一关\"",
+      "_prd_expect": "\"进入第二关，词汇难度提升，时间限制减少\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(level-progression) 的 expect 改成真实判定"
+      }
+    }
+  ],
+  "hard_rule_assertions": []
+}

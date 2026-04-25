@@ -1,19 +1,19 @@
 {
-  "case_id": "dom_ui",
-  "description": "dom_ui - 从 PRD @check 自动生成的骨架，需人工补 setup/expect",
+  "case_id": "dom_ui-001",
+  "description": "dom_ui-001 - 从 PRD @check 自动生成的骨架，需人工补 setup/expect",
   "game_html_relative": "game/index.html",
   "boot_timeout_ms": 5000,
-  "prd_hash": "b0b58a7c4e774075cd0d595e0e14d27af601ace0",
+  "prd_hash": "16d18f3c42ea0af33077690cf633963fe31c19fe",
   "prd_path": "cases/dom_ui/docs/game-prd.md",
   "assertions": [
     {
-      "id": "start-to-play",
-      "check_id": "start-to-play",
+      "id": "playable-loop",
+      "check_id": "playable-loop",
       "kind": "state",
-      "description": "开始游戏流程",
+      "description": "主循环可玩",
       "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
-      "_prd_method": "\"点击开始游戏按钮\"",
-      "_prd_expect": "\"state.phase = playing，卡片正确渲染，计时器开始\"",
+      "_prd_method": "\"Playwright 点击开始 → 点击英文卡片 → 点击正确中文卡片 → 验证卡片消除 + 分数增加\"",
+      "_prd_expect": "\"window.gameState.score > 0，matched 卡片数量增加\"",
       "setup": [
         {
           "action": "wait",
@@ -24,17 +24,17 @@
         "selector": "window.gameState",
         "op": "truthy",
         "value": true,
-        "_todo": "根据 @check(start-to-play) 的 expect 改成真实判定"
+        "_todo": "根据 @check(playable-loop) 的 expect 改成真实判定"
       }
     },
     {
-      "id": "match-success-flow",
-      "check_id": "match-success-flow",
+      "id": "time-penalty",
+      "check_id": "time-penalty",
       "kind": "state",
-      "description": "配对成功流程",
+      "description": "配对失败扣时间",
       "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
-      "_prd_method": "\"依次点击两张匹配的卡片(pairId 相同)\"",
-      "_prd_expect": "\"两张卡片消失，score += 10，matchedCount += 1\"",
+      "_prd_method": "\"Playwright 点击英文卡片 → 点击错误中文卡片\"",
+      "_prd_expect": "\"window.gameState.timeLeft 减少 3 秒，window.gameState.combo === 0\"",
       "setup": [
         {
           "action": "wait",
@@ -45,17 +45,17 @@
         "selector": "window.gameState",
         "op": "truthy",
         "value": true,
-        "_todo": "根据 @check(match-success-flow) 的 expect 改成真实判定"
+        "_todo": "根据 @check(time-penalty) 的 expect 改成真实判定"
       }
     },
     {
-      "id": "match-fail-flow",
-      "check_id": "match-fail-flow",
+      "id": "level-progression",
+      "check_id": "level-progression",
       "kind": "state",
-      "description": "配对失败流程",
+      "description": "关卡递进",
       "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
-      "_prd_method": "\"依次点击两张不匹配的卡片(pairId 不同)\"",
-      "_prd_expect": "\"卡片翻回，timeLeft -= 2，combo = 0\"",
+      "_prd_method": "\"Playwright 完成第一关所有配对 → 点击下一关\"",
+      "_prd_expect": "\"进入第二关，词库内容不同，时间限制不同\"",
       "setup": [
         {
           "action": "wait",
@@ -66,17 +66,17 @@
         "selector": "window.gameState",
         "op": "truthy",
         "value": true,
-        "_todo": "根据 @check(match-fail-flow) 的 expect 改成真实判定"
+        "_todo": "根据 @check(level-progression) 的 expect 改成真实判定"
       }
     },
     {
-      "id": "combo-bonus",
-      "check_id": "combo-bonus",
+      "id": "result-display",
+      "check_id": "result-display",
       "kind": "state",
-      "description": "连击加分",
+      "description": "结算页显示",
       "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
-      "_prd_method": "\"连续匹配成功 2 次及以上\"",
-      "_prd_expect": "\"每次成功后 combo += 1，score 额外 += 5\"",
+      "_prd_method": "\"Playwright 完成一关或时间耗尽\"",
+      "_prd_expect": "\"显示结果页，包含最终得分、重试按钮\"",
       "setup": [
         {
           "action": "wait",
@@ -87,120 +87,9 @@
         "selector": "window.gameState",
         "op": "truthy",
         "value": true,
-        "_todo": "根据 @check(combo-bonus) 的 expect 改成真实判定"
-      }
-    },
-    {
-      "id": "win-condition",
-      "check_id": "win-condition",
-      "kind": "state",
-      "description": "通关条件",
-      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
-      "_prd_method": "\"在限时内匹配完所有卡片\"",
-      "_prd_expect": "\"state.phase = win，显示结果页\"",
-      "setup": [
-        {
-          "action": "wait",
-          "ms": 200
-        }
-      ],
-      "expect": {
-        "selector": "window.gameState",
-        "op": "truthy",
-        "value": true,
-        "_todo": "根据 @check(win-condition) 的 expect 改成真实判定"
-      }
-    },
-    {
-      "id": "lose-condition",
-      "check_id": "lose-condition",
-      "kind": "state",
-      "description": "失败条件",
-      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
-      "_prd_method": "\"时间归零时仍有未匹配卡片\"",
-      "_prd_expect": "\"state.phase = lose，显示结果页\"",
-      "setup": [
-        {
-          "action": "wait",
-          "ms": 200
-        }
-      ],
-      "expect": {
-        "selector": "window.gameState",
-        "op": "truthy",
-        "value": true,
-        "_todo": "根据 @check(lose-condition) 的 expect 改成真实判定"
-      }
-    },
-    {
-      "id": "retry-flow",
-      "check_id": "retry-flow",
-      "kind": "state",
-      "description": "重试流程",
-      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
-      "_prd_method": "\"结果页点击重试\"",
-      "_prd_expect": "\"重新开始当前关卡，分数/时间重置\"",
-      "setup": [
-        {
-          "action": "wait",
-          "ms": 200
-        }
-      ],
-      "expect": {
-        "selector": "window.gameState",
-        "op": "truthy",
-        "value": true,
-        "_todo": "根据 @check(retry-flow) 的 expect 改成真实判定"
-      }
-    },
-    {
-      "id": "next-level-flow",
-      "check_id": "next-level-flow",
-      "kind": "state",
-      "description": "下一关流程",
-      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
-      "_prd_method": "\"通关后点击下一关\"",
-      "_prd_expect": "\"进入下一关卡，词汇量增加，时间限制调整\"",
-      "setup": [
-        {
-          "action": "wait",
-          "ms": 200
-        }
-      ],
-      "expect": {
-        "selector": "window.gameState",
-        "op": "truthy",
-        "value": true,
-        "_todo": "根据 @check(next-level-flow) 的 expect 改成真实判定"
+        "_todo": "根据 @check(result-display) 的 expect 改成真实判定"
       }
     }
   ],
-  "hard_rule_assertions": [
-    {
-      "id": "hard-rule-time-limit",
-      "hard_rule_id": "time-limit",
-      "kind": "hard-rule",
-      "description": "时间限制",
-      "_todo": "根据 @constraint 填真实断言",
-      "setup": [],
-      "expect": {
-        "selector": "// TODO",
-        "op": "truthy",
-        "value": true
-      }
-    },
-    {
-      "id": "hard-rule-score-rules",
-      "hard_rule_id": "score-rules",
-      "kind": "hard-rule",
-      "description": "计分规则",
-      "_todo": "根据 @constraint 填真实断言",
-      "setup": [],
-      "expect": {
-        "selector": "// TODO",
-        "op": "truthy",
-        "value": true
-      }
-    }
-  ]
+  "hard_rule_assertions": []
 }

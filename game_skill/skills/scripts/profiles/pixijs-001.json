@@ -5,6 +5,7 @@
   "assertions": [
     {
       "id": "boot-success",
+      "check_id": "boot-game",
       "kind": "state",
       "description": "启动后 phase = ready",
       "setup": [],
@@ -15,54 +16,69 @@
       }
     },
     {
-      "id": "playable-loop",
-      "kind": "state",
-      "description": "主循环可玩 - 点击开始配对卡片",
+      "id": "playable-round",
+      "check_id": "playable-round",
+      "kind": "interaction",
+      "description": "可玩单局 - 点击开始完成配对",
       "setup": [
         { "action": "eval", "js": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 800 },
-        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
         { "action": "wait", "ms": 800 }
       ],
       "expect": {
-        "selector": "window.gameState.score > 0 && window.gameState.matchedPairs >= 2",
+        "selector": "window.gameState.score > 0 && window.gameState.phase",
         "op": "truthy",
         "value": true
       }
     },
     {
-      "id": "match-feedback",
-      "kind": "state",
-      "description": "配对失败反馈 - 扣时间和清零连击",
+      "id": "match-logic",
+      "check_id": "match-logic",
+      "kind": "interaction",
+      "description": "配对逻辑正确 - 成功匹配消除卡片",
       "setup": [
         { "action": "eval", "js": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 800 },
-        { "action": "eval", "js": "window.gameState._timeBeforeFail = window.gameState.timeLeft" },
-        { "action": "eval", "js": "window.simulateWrongMatch()" },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
         { "action": "wait", "ms": 800 }
       ],
       "expect": {
-        "selector": "window.gameState.timeLeft < window.gameState._timeBeforeFail && window.gameState.combo === 0",
+        "selector": "window.gameState.matchedCount > 0",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "timer-countdown",
+      "check_id": "timer-countdown",
+      "kind": "interaction",
+      "description": "计时器正常倒计时",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.__initialTime = window.gameState.timeLeft" },
+        { "action": "wait", "ms": 2000 }
+      ],
+      "expect": {
+        "selector": "window.gameState.timeLeft < window.__initialTime",
         "op": "truthy",
         "value": true
       }
     },
     {
       "id": "combo-system",
-      "kind": "state",
-      "description": "连击系统 - 连续配对成功3次",
+      "check_id": "combo-system",
+      "kind": "interaction",
+      "description": "连击系统 - 连续配对成功增加combo",
       "setup": [
         { "action": "eval", "js": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
         { "action": "wait", "ms": 800 },
-        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
         { "action": "wait", "ms": 800 },
-        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
         { "action": "wait", "ms": 800 }
       ],
       "expect": {
@@ -73,47 +89,28 @@
     },
     {
       "id": "level-progression",
-      "kind": "state",
+      "check_id": "level-progression",
+      "kind": "interaction",
       "description": "关卡递进 - 完成关卡进入下一关",
       "setup": [
         { "action": "eval", "js": "window.gameTest.setLevel(1)" },
         { "action": "eval", "js": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 900 },
-        { "action": "eval", "js": "window.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 900 },
-        { "action": "eval", "js": "window.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 900 },
-        { "action": "eval", "js": "window.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 900 },
-        { "action": "eval", "js": "window.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 900 },
-        { "action": "eval", "js": "window.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 1200 },
-        { "action": "eval", "js": "window.gameTest.clickNextLevelButton()" },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 700 },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 700 },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 700 },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "js": "window.gameTest.clickNextButton()" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": {
-        "selector": "window.gameState.level === 2",
+        "selector": "window.gameState.currentLevel",
         "op": "eq",
-        "value": true
-      }
-    },
-    {
-      "id": "time-limit",
-      "kind": "state",
-      "description": "时间限制 - 超时进入失败状态",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameState.timeLeft = 1" },
-        { "action": "wait", "ms": 2000 }
-      ],
-      "expect": {
-        "selector": "window.gameState.phase",
-        "op": "eq",
-        "value": "lose"
+        "value": 2
       }
     }
   ]

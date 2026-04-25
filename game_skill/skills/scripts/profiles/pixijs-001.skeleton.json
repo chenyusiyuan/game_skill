@@ -3,17 +3,17 @@
   "description": "pixijs-001 - 从 PRD @check 自动生成的骨架，需人工补 setup/expect",
   "game_html_relative": "game/index.html",
   "boot_timeout_ms": 5000,
-  "prd_hash": "9d68ca7485bc5e99e3b47be2b8a2a6acc7574453",
+  "prd_hash": "72365f7fac7030880bdc0a214f6abdc78f48bc37",
   "prd_path": "cases/pixijs-001/docs/game-prd.md",
   "assertions": [
     {
-      "id": "playable-loop",
-      "check_id": "playable-loop",
+      "id": "playable-round",
+      "check_id": "playable-round",
       "kind": "state",
-      "description": "主循环可玩",
+      "description": "可玩单局",
       "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
-      "_prd_method": "\"Playwright 点击开始 → 配对至少2对卡片 → 检查分数增加\"",
-      "_prd_expect": "\"window.gameState.score > 0, window.gameState.matchedPairs >= 2\"",
+      "_prd_method": "\"Playwright 点击开始 → 完成至少1次配对 → 查看结算\"",
+      "_prd_expect": "\"window.gameState.phase 最终进入 win 或 lose；score > 0\"",
       "setup": [
         {
           "action": "wait",
@@ -24,17 +24,17 @@
         "selector": "window.gameState",
         "op": "truthy",
         "value": true,
-        "_todo": "根据 @check(playable-loop) 的 expect 改成真实判定"
+        "_todo": "根据 @check(playable-round) 的 expect 改成真实判定"
       }
     },
     {
-      "id": "match-feedback",
-      "check_id": "match-feedback",
+      "id": "match-logic",
+      "check_id": "match-logic",
       "kind": "state",
-      "description": "配对反馈",
+      "description": "配对逻辑正确",
       "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
-      "_prd_method": "\"Playwright 触发配对成功和失败各一次\"",
-      "_prd_expect": "\"成功时卡片消失且有粒子效果；失败时卡片翻回且有屏幕震动\"",
+      "_prd_method": "\"Playwright 选同组卡片 → 验证消除；选不同组卡片 → 验证翻回\"",
+      "_prd_expect": "\"matched卡片从网格消失；unmatched卡片翻回原状\"",
       "setup": [
         {
           "action": "wait",
@@ -45,17 +45,17 @@
         "selector": "window.gameState",
         "op": "truthy",
         "value": true,
-        "_todo": "根据 @check(match-feedback) 的 expect 改成真实判定"
+        "_todo": "根据 @check(match-logic) 的 expect 改成真实判定"
       }
     },
     {
-      "id": "combo-system",
-      "check_id": "combo-system",
+      "id": "timer-countdown",
+      "check_id": "timer-countdown",
       "kind": "state",
-      "description": "连击系统",
+      "description": "计时器正常",
       "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
-      "_prd_method": "\"Playwright 连续配对成功3次\"",
-      "_prd_expect": "\"window.gameState.combo === 3, 分数增加包含连击加成\"",
+      "_prd_method": "\"Playwright 等待30秒 → 验证 timeLeft 减少\"",
+      "_prd_expect": "\"timeLeft 从初始值持续减少\"",
       "setup": [
         {
           "action": "wait",
@@ -66,7 +66,7 @@
         "selector": "window.gameState",
         "op": "truthy",
         "value": true,
-        "_todo": "根据 @check(combo-system) 的 expect 改成真实判定"
+        "_todo": "根据 @check(timer-countdown) 的 expect 改成真实判定"
       }
     },
     {
@@ -75,8 +75,8 @@
       "kind": "state",
       "description": "关卡递进",
       "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
-      "_prd_method": "\"Playwright 完成第一关 → 点击下一关 → 进入第二关\"",
-      "_prd_expect": "\"关卡参数正确加载，词库更换，时限调整\"",
+      "_prd_method": "\"Playwright 通关 level-1 → 点击下一关 → 验证进入 level-2\"",
+      "_prd_expect": "\"currentLevel 从 1 变为 2；卡片数量增加\"",
       "setup": [
         {
           "action": "wait",
@@ -91,13 +91,13 @@
       }
     },
     {
-      "id": "time-limit",
-      "check_id": "time-limit",
+      "id": "combo-system",
+      "check_id": "combo-system",
       "kind": "state",
-      "description": "时间限制",
+      "description": "连击系统",
       "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
-      "_prd_method": "\"Playwright 进入游戏后等待超时\"",
-      "_prd_expect": "\"时间耗尽后进入失败结算页，window.gameState.phase === 'lose'\"",
+      "_prd_method": "\"Playwright 连续成功配对3次 → 验证 combo 和 score\"",
+      "_prd_expect": "\"combo 依次为 1,2,3；score 包含连击加成\"",
       "setup": [
         {
           "action": "wait",
@@ -108,7 +108,7 @@
         "selector": "window.gameState",
         "op": "truthy",
         "value": true,
-        "_todo": "根据 @check(time-limit) 的 expect 改成真实判定"
+        "_todo": "根据 @check(combo-system) 的 expect 改成真实判定"
       }
     }
   ],

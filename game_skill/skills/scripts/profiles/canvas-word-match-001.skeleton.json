@@ -1,0 +1,130 @@
+{
+  "case_id": "canvas-word-match-001",
+  "description": "canvas-word-match-001 - 从 PRD @check 自动生成的骨架，需人工补 setup/expect",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "prd_hash": "a0fc4f358701bc59ad765c5b9512a14490c4562f",
+  "prd_path": "cases/canvas-word-match-001/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "click-match",
+      "check_id": "click-match",
+      "kind": "state",
+      "description": "点击配对",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 点击左侧英文卡片 → 点击右侧匹配的中文卡片\"",
+      "_prd_expect": "\"window.gameState.score 增加，两张卡片消失\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(click-match) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "wrong-match",
+      "check_id": "wrong-match",
+      "kind": "state",
+      "description": "错误配对",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 点击左侧英文卡片 → 点击右侧不匹配的中文卡片\"",
+      "_prd_expect": "\"window.gameState.timeLeft 减少，卡片取消选中状态\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(wrong-match) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "level-complete",
+      "check_id": "level-complete",
+      "kind": "state",
+      "description": "关卡通关",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 完成所有配对\"",
+      "_prd_expect": "\"window.gameState.phase = win，进入结果页\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(level-complete) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "time-out",
+      "check_id": "time-out",
+      "kind": "state",
+      "description": "时间耗尽",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 等待时间耗尽\"",
+      "_prd_expect": "\"window.gameState.phase = lose，进入结果页\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(time-out) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "level-progression",
+      "check_id": "level-progression",
+      "kind": "state",
+      "description": "关卡递进",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 通关第一关 → 点击下一关\"",
+      "_prd_expect": "\"window.gameState.level = 2，新关卡开始\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(level-progression) 的 expect 改成真实判定"
+      }
+    }
+  ],
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-same-side-exclusive",
+      "hard_rule_id": "same-side-exclusive",
+      "kind": "hard-rule",
+      "description": "同侧互斥选择",
+      "_todo": "根据 @constraint 填真实断言",
+      "setup": [],
+      "expect": {
+        "selector": "// TODO",
+        "op": "truthy",
+        "value": true
+      }
+    }
+  ]
+}

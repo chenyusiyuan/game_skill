@@ -1,0 +1,124 @@
+{
+  "case_id": "phaser-word-match-001",
+  "description": "Phaser 3 单词消消乐游戏验证",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 10000,
+  "prd_hash": "dc4c596e48bd1b9e0b2e469cfa6b761ccb9cc4d0",
+  "prd_path": "cases/phaser-word-match-001/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "boot-success",
+      "check_id": "boot-success",
+      "kind": "state",
+      "description": "游戏启动成功",
+      "setup": [
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "start-scene",
+      "check_id": "start-scene",
+      "kind": "state",
+      "description": "开始场景显示正确",
+      "setup": [
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "ready"
+      }
+    },
+    {
+      "id": "playable-loop",
+      "check_id": "playable-loop",
+      "kind": "interactive",
+      "description": "主循环可玩 - 点击开始完成配对",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 800 }
+      ],
+      "expect": {
+        "selector": "window.gameState.score",
+        "op": "gt",
+        "value": 0
+      }
+    },
+    {
+      "id": "match-correct",
+      "check_id": "match-correct",
+      "kind": "interactive",
+      "description": "正确配对得分增加",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "const s = window.gameState; s._beforeScore = s.score; window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.score",
+        "op": "gt",
+        "value": 0
+      }
+    },
+    {
+      "id": "match-wrong",
+      "check_id": "match-wrong",
+      "kind": "interactive",
+      "description": "错误配对扣时",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "const s = window.gameState; s._beforeTime = s.timeLeft; window.gameTest.simulateWrongMatch()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.combo",
+        "op": "eq",
+        "value": 0
+      }
+    },
+    {
+      "id": "time-out",
+      "check_id": "time-out",
+      "kind": "interactive",
+      "description": "时间耗尽进入失败",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameState.timeLeft = 1" },
+        { "action": "wait", "ms": 1500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "in",
+        "value": ["lose", "result"]
+      }
+    },
+    {
+      "id": "level-progression",
+      "check_id": "level-progression",
+      "kind": "interactive",
+      "description": "关卡递进 - 完成关卡后可进入下一关",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameState.currentLevel" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": {
+        "selector": "window.gameState.currentLevel",
+        "op": "gte",
+        "value": 1
+      }
+    }
+  ],
+  "hard_rule_assertions": []
+}

@@ -1,0 +1,116 @@
+{
+  "case_id": "canvas-word-match-001",
+  "description": "单词消消乐 - 小学生英语配对游戏",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 10000,
+  "prd_hash": "a0fc4f358701bc59ad765c5b9512a14490c4562f",
+  "prd_path": "cases/canvas-word-match-001/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "click-match",
+      "check_id": "click-match",
+      "kind": "interaction",
+      "description": "点击配对成功",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.score",
+        "op": "gt",
+        "value": 0
+      }
+    },
+    {
+      "id": "wrong-match",
+      "check_id": "wrong-match",
+      "kind": "interaction",
+      "description": "错误配对扣时间",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameState._testInitialTime = window.gameState.timeLeft" },
+        { "action": "eval", "code": "window.gameTest.simulateWrongMatch()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameState._testTimeAfter = window.gameState.timeLeft" }
+      ],
+      "expect": {
+        "selector": "window.gameState._testTimeAfter < window.gameState._testInitialTime",
+        "op": "eq",
+        "value": true
+      }
+    },
+    {
+      "id": "level-complete",
+      "check_id": "level-complete",
+      "kind": "interaction",
+      "description": "关卡通关 - 手动设置获胜状态",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameState.matchedPairs = window.gameState.totalPairs; window.gameState.phase = 'win'" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "win"
+      }
+    },
+    {
+      "id": "time-out",
+      "check_id": "time-out",
+      "kind": "interaction",
+      "description": "时间耗尽",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameState.timeLeft = 0.05" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "lose"
+      }
+    },
+    {
+      "id": "level-progression",
+      "check_id": "level-progression",
+      "kind": "interaction",
+      "description": "关卡递进 - 验证关卡变化",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameState.level = 2" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": {
+        "selector": "window.gameState.level",
+        "op": "eq",
+        "value": 2
+      }
+    }
+  ],
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-same-side-exclusive",
+      "hard_rule_id": "same-side-exclusive",
+      "kind": "hard-rule",
+      "description": "同侧互斥选择",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "const cards = window.gameTest.getCards(); const leftCards = cards.filter(c => c.side === 'left' && !c.matched); if(leftCards.length >= 2) { window.gameTest.selectCard(leftCards[0].id); window.gameTest.selectCard(leftCards[1].id); }" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": {
+        "selector": "window.gameState.selectedCards.length",
+        "op": "lte",
+        "value": 1
+      }
+    }
+  ]
+}
