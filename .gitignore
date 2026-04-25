@@ -8,9 +8,7 @@
 node_modules/
 
 # Generated case outputs
-cases/.DS_Store
-cases/*/.game/
-cases/*/eval/
+cases/
 
 # Large analysis artifacts and local secrets
 data_analysis/.env

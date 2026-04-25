@@ -10,7 +10,7 @@
  *   3. 所有 <script src="./src/..."> 文件存在
  *   4. 所有 *.js 文件通过 node --check
  *   5. 至少一处 window.gameState 暴露
- *   6. 链式运行 implementation-contract / asset-selection / asset-usage gate
+ *   6. 链式运行 implementation-contract / asset-selection / asset-usage / asset-paths gate
  *
  * 退出码: 0 = OK, 1 = 有错误
  */
@@ -262,6 +262,16 @@ if (existsSync(assetsYamlPath)) {
     ok("[ASSETS] 素材消费校验通过");
   } catch (e) {
     fail("[ASSETS] 素材消费校验失败（详见上方 check_asset_usage 输出）");
+  }
+
+  // ── 9.2 素材路径存在性校验（硬门槛）：业务代码中硬编码的路径是否指向真实文件 ──
+  const pathChecker = resolve(dirname(new URL(import.meta.url).pathname), "check_asset_paths.js");
+  try {
+    const logArg2 = _logPath ? ` --log "${_logPath}"` : "";
+    execSync(`node "${pathChecker}" "${caseDir}"${logArg2}`, { stdio: "inherit" });
+    ok("[ASSETS] 素材路径存在性校验通过");
+  } catch (e) {
+    fail("[ASSETS] 素材路径存在性校验失败（详见上方 check_asset_paths 输出）");
   }
 } else {
   // 未跑 expand 的老案例不拦截，仅提示
