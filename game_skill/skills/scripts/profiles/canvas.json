@@ -1,0 +1,81 @@
+{
+  "case_id": "canvas",
+  "description": "单词消消乐 - 小学生英语学习游戏",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "prd_hash": "4dfc2e317de6edb656e76940f6d9096edd7b35a5",
+  "prd_path": "cases/canvas/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "playable-loop",
+      "check_id": "playable-loop",
+      "kind": "interaction",
+      "description": "主循环可玩 - 能开始游戏",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 320, "y": 350 },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "eval": "window.gameState.phase === 'playing'",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "match-rule-correct",
+      "check_id": "match-rule-correct",
+      "kind": "interaction",
+      "description": "配对规则正确 - 正确配对消除并得分",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 320, "y": 350 },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "eval": "window.gameState.score > 0",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "timer-works",
+      "check_id": "timer-works",
+      "kind": "interaction",
+      "description": "计时器工作 - 时间持续减少",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 320, "y": 350 },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.__t1 = window.gameState.timeLeft" },
+        { "action": "wait", "ms": 1100 }
+      ],
+      "expect": {
+        "eval": "window.gameState.timeLeft < window.__t1",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "combo-bonus",
+      "check_id": "combo-bonus",
+      "kind": "interaction",
+      "description": "连击奖励 - 连续3次成功获得额外5分",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 320, "y": 350 },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 400 },
+        { "action": "eval", "code": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 400 },
+        { "action": "eval", "code": "window.__scoreBefore = window.gameState.score; window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 400 }
+      ],
+      "expect": {
+        "eval": "window.gameState.score >= window.__scoreBefore + 15",
+        "op": "truthy",
+        "value": true
+      }
+    }
+  ],
+  "hard_rule_assertions": []
+}

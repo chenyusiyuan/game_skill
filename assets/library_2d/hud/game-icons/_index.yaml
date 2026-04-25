@@ -1,0 +1,129 @@
+# Game Icons - 素材语义索引
+# 来源: kenney_game-icons
+# 分辨率: 2x (白色轮廓图标，适合叠加在任何底色上)
+# 文件名: 语义文件名
+#
+# ── 风格与适用范围 ──
+# 视觉风格: 通用（白色轮廓，可 tint 为任意颜色）
+# 适用游戏类型: 所有类型的游戏菜单和 HUD
+# 特别适合: 暂停菜单、设置页面、游戏选择界面、移动端 HUD
+#
+# ── 分组概要（用途与组合关系）──
+#
+# 导航图标:
+#   home.png(主页), return.png(返回), exit.png/exitLeft.png/exitRight.png(退出)
+#   用途: 游戏菜单的页面导航
+#
+# 音频控制:
+#   audioOn.png/audioOff.png(音效开关), musicOn.png/musicOff.png(音乐开关)
+#   用途: 设置页面的音频控制按钮
+#
+# 媒体控制:
+#   pause.png, stop.png, fastForward.png, rewind.png, next.png, previous.png
+#   用途: 游戏暂停/回放控制
+#
+# 系统功能:
+#   gear.png(设置), save.png(保存), open.png(打开), power.png(电源)
+#   locked.png/unlocked.png(锁定/解锁), information.png(信息), question.png(帮助)
+#   warning.png(警告), exclamation.png(提醒)
+#   checkmark.png/cross.png(确认/取消), plus.png/minus.png(加/减)
+#   trashcan.png/trashcanOpen.png(删除), wrench.png(工具)
+#   用途: 通用系统操作按钮
+#
+# 手柄/控制器:
+#   gamepad.png~gamepad4.png(手柄图标)
+#   joystick.png/joystickLeft/Right/Up.png(摇杆)
+#   buttonA/B/X/Y/L/L1/L2/R/R1/R2/Select/Start.png(控制器按键)
+#   button1/2/3.png(通用按钮)
+#   用途: 按键提示、控制方式选择
+#
+# 方向箭头:
+#   arrowUp/Down/Left/Right.png(大箭头)
+#   up/down/left/right/upLeft/upRight/downLeft/downRight.png(小箭头/方向)
+#   用途: UI 导航、地图方向指示
+#
+# 缩放:
+#   zoom.png, zoomIn.png, zoomOut.png, zoomDefault.png
+#   用途: 地图/画面缩放控制
+#
+# 成就/评分:
+#   star.png(星星), trophy.png(奖杯), medal1.png/medal2.png(奖牌)
+#   leaderboardsSimple.png/leaderboardsComplex.png(排行榜)
+#   用途: 成就展示、评分系统
+#
+# 社交/商店:
+#   share1.png/share2.png(分享), shoppingBasket.png/shoppingCart.png(商店)
+#   multiplayer.png/massiveMultiplayer.png/singleplayer.png(人数模式)
+#   用途: 社交功能、内购商店
+#
+# 设备:
+#   mouse.png(鼠标), tablet.png(平板), phone.png(手机)
+#   用途: 平台/设备选择
+#
+# 菜单布局:
+#   barsHorizontal.png/barsVertical.png(汉堡菜单)
+#   menuGrid.png/menuList.png(网格/列表视图)
+#   scrollHorizontal.png/scrollVertical.png(滚动指示)
+#   用途: 菜单样式切换
+#
+# 信号:
+#   siganl1.png/signal2.png/signal3.png(信号强度)
+#   用途: 网络状态显示
+#
+# 其他媒体:
+#   movie.png, video.png, target.png, contrast.png, door.png
+#   import.png, export.png, larger.png, smaller.png
+
+groups:
+  - name: navigation
+    files: [home.png, return.png, exit.png, exitLeft.png, exitRight.png]
+    cn: "导航"
+    tags: [navigation, home, back, exit, menu]
+  - name: audio
+    files: [audioOn.png, audioOff.png, musicOn.png, musicOff.png]
+    cn: "音频控制"
+    tags: [audio, music, sound, toggle, settings]
+  - name: media
+    files: [pause.png, stop.png, fastForward.png, rewind.png, next.png, previous.png]
+    cn: "媒体控制"
+    tags: [media, play, pause, stop, control]
+  - name: system
+    files: [gear.png, save.png, open.png, power.png, locked.png, unlocked.png, information.png, question.png, warning.png, exclamation.png, checkmark.png, cross.png, plus.png, minus.png, trashcan.png, trashcanOpen.png, wrench.png, target.png, contrast.png, door.png, import.png, export.png, larger.png, smaller.png]
+    cn: "系统功能"
+    tags: [system, settings, gear, lock, info, confirm, cancel, delete, tool]
+  - name: gamepad
+    files: [gamepad.png, gamepad1.png, gamepad2.png, gamepad3.png, gamepad4.png, joystick.png, joystickLeft.png, joystickRight.png, joystickUp.png, buttonA.png, buttonB.png, buttonX.png, buttonY.png, buttonL.png, buttonL1.png, buttonL2.png, buttonR.png, buttonR1.png, buttonR2.png, buttonSelect.png, buttonStart.png, button1.png, button2.png, button3.png]
+    cn: "手柄/控制器"
+    tags: [gamepad, controller, joystick, button, input]
+  - name: arrows
+    files: [arrowUp.png, arrowDown.png, arrowLeft.png, arrowRight.png, up.png, down.png, left.png, right.png, upLeft.png, upRight.png, downLeft.png, downRight.png]
+    cn: "方向箭头"
+    tags: [arrow, direction, navigation, up, down, left, right]
+  - name: zoom
+    files: [zoom.png, zoomIn.png, zoomOut.png, zoomDefault.png]
+    cn: "缩放"
+    tags: [zoom, magnify, scale, view]
+  - name: achievements
+    files: [star.png, trophy.png, medal1.png, medal2.png, leaderboardsSimple.png, leaderboardsComplex.png]
+    cn: "成就/评分"
+    tags: [achievement, star, trophy, medal, leaderboard, score]
+  - name: social
+    files: [share1.png, share2.png, shoppingBasket.png, shoppingCart.png, multiplayer.png, massiveMultiplayer.png, singleplayer.png]
+    cn: "社交/商店"
+    tags: [social, share, shop, cart, multiplayer]
+  - name: devices
+    files: [mouse.png, tablet.png, phone.png]
+    cn: "设备"
+    tags: [device, mouse, tablet, phone, platform]
+  - name: menu
+    files: [barsHorizontal.png, barsVertical.png, menuGrid.png, menuList.png, scrollHorizontal.png, scrollVertical.png]
+    cn: "菜单布局"
+    tags: [menu, hamburger, grid, list, scroll, layout]
+  - name: signal
+    files: [siganl1.png, signal2.png, signal3.png]
+    cn: "信号"
+    tags: [signal, network, wifi, connection]
+  - name: media_extra
+    files: [movie.png, video.png]
+    cn: "其他媒体"
+    tags: [movie, video, media]

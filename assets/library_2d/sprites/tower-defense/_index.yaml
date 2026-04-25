@@ -1,0 +1,84 @@
+# Tower Defense - 素材语义索引
+# 来源: kenney_tower-defense
+# 分辨率: 标准尺寸
+# 文件名: {category}_{编号}.png
+#
+# ── 风格与适用范围 ──
+# 视觉风格: cartoon-bright / minimal-modern（卡通明亮 / 简约现代）
+# 适用游戏类型: 塔防(TD)、策略战斗、路径防御
+# 不适用: RPG、平台跳跃、模拟经营（请用其他包代替）
+#
+# ── 分组概要（用途与组合关系）──
+#
+# 防御塔 tower (00-54):
+#   用途: 塔防游戏的核心防御建筑，放置在路径旁攻击敌人
+#   内容: 55种不同造型的塔，包括：
+#     - 基础塔(方形/圆形底座，无顶/有顶)
+#     - 武装塔(带弩/弓/炮台的攻击塔)
+#     - 魔法塔(水晶顶/发光球顶)
+#     - 高级塔(多层/带旗帜/带装饰)
+#     - 特殊塔(投石机/冰塔/火塔变体)
+#   提示: 塔的编号从简单到复杂递增，可用不同编号表示塔的升级等级
+#   组合: 塔放在 landscape 地形的空地上
+#
+# 地形 landscape (00-39):
+#   用途: 构建塔防地图的基础地面
+#   内容: 40种地形块，包括：
+#     - 草地(多变体，浅绿/深绿)
+#     - 路径(直线/弯道/十字/T形)
+#     - 水面/河流(直/弯/岸边)
+#     - 沙地(路径变体)
+#     - 悬崖/台阶/高低差
+#   组合: 草地做底→路径供敌人行走→水面做不可通行区域
+#   提示: 路径瓦片拼接形成敌人的行进路线
+#
+# 水晶 crystals (1-4):
+#   用途: 装饰物或可收集资源
+#   内容: 4种不同颜色的水晶（蓝/紫/红/绿）
+#   搭配: 放在地图上做资源点或装饰
+#
+# 岩石 rocks (1-8):
+#   用途: 环境障碍物和装饰
+#   内容: 8种不同大小和形状的岩石/石堆
+#   搭配: 放在地图边缘或空地上增加自然感
+#
+# 树木 trees (1-12):
+#   用途: 环境装饰和视觉遮挡
+#   内容: 12种树木（绿树/松树/枯树/灌木/不同大小）
+#   搭配: 成组放置在地图边缘形成森林区域
+
+groups:
+  - name: towers
+    prefix: "tower_"
+    range: "00-54"
+    count: 55
+    cn: "防御塔"
+    tags: [tower, defense, building, weapon, upgrade, attack]
+
+  - name: landscape
+    prefix: "landscape_"
+    range: "00-39"
+    count: 40
+    cn: "地形"
+    tags: [terrain, ground, grass, path, road, water, river, sand]
+
+  - name: crystals
+    prefix: "crystals_"
+    range: "1-4"
+    count: 4
+    cn: "水晶"
+    tags: [crystal, gem, resource, decoration, collectible]
+
+  - name: rocks
+    prefix: "rocks_"
+    range: "1-8"
+    count: 8
+    cn: "岩石"
+    tags: [rock, stone, obstacle, nature, decoration]
+
+  - name: trees
+    prefix: "trees_"
+    range: "1-12"
+    count: 12
+    cn: "树木"
+    tags: [tree, vegetation, nature, forest, decoration]

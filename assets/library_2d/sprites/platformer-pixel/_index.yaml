@@ -1,0 +1,168 @@
+# Pixel Platformer Characters - 瓦片语义索引
+# 来源: kenney_pixel-platformer (Characters tilemap)
+# 网格: 9列 × 3行, 每格 24×24px, 共 27 个瓦片
+# 文件名: tile_{编号:04d}.png
+#
+# ── 风格与适用范围 ──
+# 视觉风格: pixel-retro（像素复古）
+# 适用游戏类型: 横版平台跳跃、像素动作游戏
+# 不适用: 俯视角游戏（请用 tiny-dungeon/tiny-town 的角色代替）
+#
+# ── 分组概要（用途与组合关系）──
+#
+# 玩家角色 - 5色 (0000-0014):
+#   用途: 主角，可选不同颜色作为皮肤/多人区分
+#   颜色: 米色(0000-0002)/蓝色(0003-0005)/绿色(0006-0008)/粉色(0009-0011)/黄色(0012-0014)
+#   每色3帧: idle(站立) + walk_1 + walk_2
+#   动画: idle 单帧静止；walk_1 和 walk_2 交替播放做行走动画
+#   搭配: 与 tiles/platformer-pixel/ 的地形(0000-0079)和道具(0080-0099)组合构建完整关卡
+#
+# 敌人角色 (0015-0026):
+#   用途: 关卡中的敌方NPC
+#   僵尸(0015-0017): 地面慢速敌人，3帧(idle+walk×2)
+#   幽灵(0018-0020): 飞行穿墙敌人，3帧(idle+float×2)
+#   骷髅(0021-0023): 地面中速敌人，3帧(idle+walk×2)
+#   蝙蝠(0024-0026): 飞行快速敌人，3帧(idle+fly×2)
+#   搭配: 与 tiles/platformer-pixel/ 的敌人(0140-0149)不同——本文件是角色大小(24px)，那边是瓦片大小(18px)的简单敌人
+
+tiles:
+  # ── Row 0 (0000-0008): Player characters 玩家角色 ──
+  - id: "0000"
+    name: player_beige_idle
+    cn: "米色玩家-站立"
+    size: "24x24"
+    tags: [player, beige, idle, character]
+  - id: "0001"
+    name: player_beige_walk_1
+    cn: "米色玩家-行走1"
+    size: "24x24"
+    tags: [player, beige, walk, character, animation, frame1]
+  - id: "0002"
+    name: player_beige_walk_2
+    cn: "米色玩家-行走2"
+    size: "24x24"
+    tags: [player, beige, walk, character, animation, frame2]
+  - id: "0003"
+    name: player_blue_idle
+    cn: "蓝色玩家-站立"
+    size: "24x24"
+    tags: [player, blue, idle, character]
+  - id: "0004"
+    name: player_blue_walk_1
+    cn: "蓝色玩家-行走1"
+    size: "24x24"
+    tags: [player, blue, walk, character, animation, frame1]
+  - id: "0005"
+    name: player_blue_walk_2
+    cn: "蓝色玩家-行走2"
+    size: "24x24"
+    tags: [player, blue, walk, character, animation, frame2]
+  - id: "0006"
+    name: player_green_idle
+    cn: "绿色玩家-站立"
+    size: "24x24"
+    tags: [player, green, idle, character]
+  - id: "0007"
+    name: player_green_walk_1
+    cn: "绿色玩家-行走1"
+    size: "24x24"
+    tags: [player, green, walk, character, animation, frame1]
+  - id: "0008"
+    name: player_green_walk_2
+    cn: "绿色玩家-行走2"
+    size: "24x24"
+    tags: [player, green, walk, character, animation, frame2]
+
+  # ── Row 1 (0009-0017): More player colors 更多玩家颜色 ──
+  - id: "0009"
+    name: player_pink_idle
+    cn: "粉色玩家-站立"
+    size: "24x24"
+    tags: [player, pink, idle, character]
+  - id: "0010"
+    name: player_pink_walk_1
+    cn: "粉色玩家-行走1"
+    size: "24x24"
+    tags: [player, pink, walk, character, animation, frame1]
+  - id: "0011"
+    name: player_pink_walk_2
+    cn: "粉色玩家-行走2"
+    size: "24x24"
+    tags: [player, pink, walk, character, animation, frame2]
+  - id: "0012"
+    name: player_yellow_idle
+    cn: "黄色玩家-站立"
+    size: "24x24"
+    tags: [player, yellow, idle, character]
+  - id: "0013"
+    name: player_yellow_walk_1
+    cn: "黄色玩家-行走1"
+    size: "24x24"
+    tags: [player, yellow, walk, character, animation, frame1]
+  - id: "0014"
+    name: player_yellow_walk_2
+    cn: "黄色玩家-行走2"
+    size: "24x24"
+    tags: [player, yellow, walk, character, animation, frame2]
+  - id: "0015"
+    name: zombie_idle
+    cn: "僵尸-站立"
+    size: "24x24"
+    tags: [enemy, zombie, idle, character, npc]
+  - id: "0016"
+    name: zombie_walk_1
+    cn: "僵尸-行走1"
+    size: "24x24"
+    tags: [enemy, zombie, walk, character, npc, animation, frame1]
+  - id: "0017"
+    name: zombie_walk_2
+    cn: "僵尸-行走2"
+    size: "24x24"
+    tags: [enemy, zombie, walk, character, npc, animation, frame2]
+
+  # ── Row 2 (0018-0026): Enemies/NPCs 敌人与NPC ──
+  - id: "0018"
+    name: ghost_idle
+    cn: "幽灵-站立"
+    size: "24x24"
+    tags: [enemy, ghost, idle, character, npc]
+  - id: "0019"
+    name: ghost_float_1
+    cn: "幽灵-飘动1"
+    size: "24x24"
+    tags: [enemy, ghost, float, character, npc, animation, frame1]
+  - id: "0020"
+    name: ghost_float_2
+    cn: "幽灵-飘动2"
+    size: "24x24"
+    tags: [enemy, ghost, float, character, npc, animation, frame2]
+  - id: "0021"
+    name: skeleton_idle
+    cn: "骷髅-站立"
+    size: "24x24"
+    tags: [enemy, skeleton, idle, character, npc]
+  - id: "0022"
+    name: skeleton_walk_1
+    cn: "骷髅-行走1"
+    size: "24x24"
+    tags: [enemy, skeleton, walk, character, npc, animation, frame1]
+  - id: "0023"
+    name: skeleton_walk_2
+    cn: "骷髅-行走2"
+    size: "24x24"
+    tags: [enemy, skeleton, walk, character, npc, animation, frame2]
+  - id: "0024"
+    name: bat_idle
+    cn: "蝙蝠-静止"
+    size: "24x24"
+    tags: [enemy, bat, idle, character, npc, flying]
+  - id: "0025"
+    name: bat_fly_1
+    cn: "蝙蝠-飞行1"
+    size: "24x24"
+    tags: [enemy, bat, fly, character, npc, flying, animation, frame1]
+  - id: "0026"
+    name: bat_fly_2
+    cn: "蝙蝠-飞行2"
+    size: "24x24"
+    tags: [enemy, bat, fly, character, npc, flying, animation, frame2]

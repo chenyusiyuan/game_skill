@@ -1,0 +1,141 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GameSkillImplementationContract",
+  "description": "Phase 3 到 Phase 4 的增强契约层。描述运行时、启动路径、素材语义绑定、引擎生命周期和验证证据，避免 codegen 只凭散落 specs 自行解释。",
+  "type": "object",
+  "required": [
+    "contract-version",
+    "runtime",
+    "boot",
+    "asset-bindings",
+    "engine-lifecycle",
+    "verification"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "contract-version": {
+      "type": "integer",
+      "const": 1
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["engine", "run-mode"],
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "type": "string",
+          "enum": ["dom-ui", "canvas", "phaser3", "pixijs", "three", "phaser", "pixi"]
+        },
+        "run-mode": {
+          "type": "string",
+          "enum": ["file", "local-http"]
+        }
+      }
+    },
+    "boot": {
+      "type": "object",
+      "required": ["entry-scene", "ready-condition", "start-action", "scene-transitions"],
+      "additionalProperties": true,
+      "properties": {
+        "entry-scene": { "type": "string" },
+        "ready-condition": { "type": "string" },
+        "start-action": {
+          "type": "object",
+          "required": ["trigger", "result"],
+          "additionalProperties": true,
+          "properties": {
+            "trigger": { "type": "string" },
+            "target": { "type": ["string", "null"] },
+            "result": { "type": "string" }
+          }
+        },
+        "scene-transitions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "trigger"],
+            "additionalProperties": true,
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "trigger": { "type": "string" },
+              "guard": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "asset-bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "section",
+          "role",
+          "asset-kind",
+          "type",
+          "source",
+          "render-as",
+          "text-bearing",
+          "must-render",
+          "allow-fallback"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "section": { "type": "string", "enum": ["images", "spritesheets", "audio", "fonts"] },
+          "role": {
+            "type": "string",
+            "description": "素材绑定到的业务元素角色，如 button/card-surface/hud-indicator/particle/audio-feedback。"
+          },
+          "asset-kind": {
+            "type": "string",
+            "description": "素材自身语义，如 button/icon/panel/tile/sprite/generated-surface/audio。"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["local-file", "graphics-generated", "inline-svg", "synthesized", "unknown"]
+          },
+          "source": { "type": ["string", "null"] },
+          "render-as": { "type": ["string", "null"] },
+          "text-bearing": { "type": "boolean" },
+          "must-render": { "type": "boolean" },
+          "allow-fallback": { "type": "boolean" },
+          "consumer": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "engine-lifecycle": {
+      "type": "object",
+      "required": ["asset-loading", "forbid"],
+      "additionalProperties": true,
+      "properties": {
+        "asset-loading": { "type": "string" },
+        "forbid": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": ["required-runtime-evidence", "required-test-hooks", "report-policy"],
+      "additionalProperties": true,
+      "properties": {
+        "required-runtime-evidence": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "required-test-hooks": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "report-policy": {
+          "type": "string",
+          "enum": ["verifier-json-only"]
+        }
+      }
+    }
+  }
+}

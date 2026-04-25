@@ -1,0 +1,603 @@
+# ============================================================
+# Kenney 素材库目录索引 (catalog.yaml)
+# ============================================================
+#
+# 使用方式（Phase 3 expand-assets）：
+#
+# 1. 读取本文件，了解有哪些素材包可用
+# 2. 根据 color-scheme.palette-id 映射 asset-style，再结合 genre 缩小候选范围
+# 3. 如果需要某类语义元素（如 heart/coin/sword），先查 semantic-hints 反向索引
+# 4. 对于候选包，查看 _preview.png 了解整体风格
+# 5. 对于 tile_XXXX.png 编号文件，查看 _tilemap.png（带网格参考图）来确定具体编号含义
+# 6. 对于有语义文件名的包，直接 ls 目录看文件名即可选择
+# 7. assets.yaml 中用相对路径引用: assets/library_2d/{path}/{file}
+#
+# 所有素材来自 Kenney（kenney.nl），CC0 协议，可商用。
+# 路径基准: assets/library_2d/
+# 注意：本文件仅索引 2D 素材。3D 素材见 assets/library_3d/catalog.yaml
+# ============================================================
+
+# ── Genre 枚举（必须与 game-aprd-format.md §genre 保持一致）────────────
+# 下方 packs 的 suitable-genres 字段只能取这里登记的 id；expand-assets
+# 阶段在筛选候选包时必须以当前 PRD 的 @game.genre 做字面匹配。
+genres:
+  - id: board-grid
+    name: 棋盘格子规则型
+    examples: [俄罗斯方块, 贪吃蛇, 五子棋, 2048, pixel-flow]
+  - id: platform-physics
+    name: 控制闯关物理型
+    examples: [马里奥, 平台跳跃, 愤怒小鸟, 物理解谜]
+  - id: simulation
+    name: 经营养成型
+    examples: [电子宠物, clicker, idle, 城市建设]
+  - id: strategy-battle
+    name: 策略战斗型
+    examples: [塔防, 卡牌, 回合制RPG, Roguelike, Diablo-like ARPG]
+  - id: single-reflex
+    name: 单屏反应型
+    examples: [打地鼠, 飞机大战, 接球, 打砖块, Flappy]
+  - id: quiz-rule
+    name: 规则问答型
+    examples: [猜数字, 谜题, 测验, 数独]
+  - id: social-multi
+    name: 多人社交型
+    examples: [联机对战, 你画我猜]
+  - id: edu-practice
+    name: 教育练习型
+    examples: [单词消消乐, 数学练习, 闪卡, 记忆配对]
+  - id: narrative
+    name: 剧情互动型
+    examples: [AVG, 选择树, 文字冒险]
+
+# ── 语义反向索引（semantic-hints）────────────────────────────────────
+# 问"我想要一把剑/一颗心/一枚金币"时的快速查表。
+# key = 语义关键词，value = 候选包 id 列表（同一语义出现在多个包时，
+# 按推荐顺序排列）。最终仍以 asset-style/genre 过滤后为准。
+semantic-hints:
+  # ── UI 基础件 ──
+  button:       [ui-pack, ui-pixel-adventure, mobile-controls]
+  panel:        [ui-pixel-adventure, ui-pack]
+  checkbox:     [ui-pack, ui-pixel-adventure]
+  slider:       [ui-pack]
+  arrow:        [ui-pack, ui-pixel-adventure, game-icons]
+  progress-bar: [ui-pixel-adventure]
+  number-digit: [ui-pixel-adventure, sprites-platformer, tiles-platformer-pixel]
+
+  # ── HUD 常用 ──
+  heart:     [ui-pixel-adventure, sprites-platformer, tiles-platformer-pixel, tiles-dungeon]
+  coin:      [ui-pixel-adventure, sprites-platformer, tiles-platformer-pixel, tiles-dungeon, sprites-tower-defense]
+  gem:       [ui-pixel-adventure, sprites-platformer, tiles-dungeon, sprites-puzzle]
+  star:      [ui-pack, ui-pixel-adventure, sprites-platformer, board-game-icons]
+  key:       [ui-pixel-adventure, sprites-platformer, tiles-dungeon, tiles-platformer-pixel]
+  flag:      [ui-pixel-adventure, sprites-platformer, tiles-platformer-pixel, board-game-icons]
+
+  # ── 角色 / 敌人 ──
+  character:     [sprites-platformer, sprites-platformer-pixel, tiles-dungeon, tiles-roguelike-characters, sprites-medieval]
+  enemy-generic: [sprites-platformer, sprites-platformer-pixel, tiles-dungeon, tiles-roguelike-dungeon]
+  boss:          [tiles-dungeon, tiles-roguelike-dungeon]
+  npc:           [tiles-town, sprites-medieval, tiles-dungeon]
+
+  # ── 武器 / 装备 ──
+  weapon-sword: [tiles-dungeon, board-game-icons]
+  weapon-bow:   [tiles-dungeon, board-game-icons]
+  shield:       [tiles-dungeon, board-game-icons]
+  potion:       [tiles-dungeon, board-game-icons]
+
+  # ── 地形 / 地图 ──
+  terrain:         [sprites-platformer, tiles-platformer-pixel, tiles-town, sprites-tower-defense, sprites-medieval]
+  terrain-pixel:   [tiles-platformer-pixel, tiles-town, tiles-dungeon]
+  wall:            [tiles-dungeon, tiles-platformer-pixel]
+  floor:           [tiles-dungeon, tiles-town, tiles-platformer-pixel]
+  door:            [tiles-dungeon, sprites-platformer, tiles-platformer-pixel]
+  stairs:          [tiles-dungeon]
+  background:      [sprites-platformer]
+  tree:            [sprites-platformer, tiles-town, sprites-medieval, sprites-tower-defense]
+  rock:            [sprites-platformer, tiles-town, sprites-tower-defense]
+  water-lava:      [sprites-platformer, tiles-platformer-pixel]
+
+  # ── 机关 / 收集 ──
+  trap-spike:    [sprites-platformer, tiles-platformer-pixel, tiles-dungeon]
+  spring:        [sprites-platformer, tiles-platformer-pixel]
+  chest:         [tiles-dungeon]
+  torch:         [sprites-platformer, tiles-dungeon, tiles-platformer-pixel]
+
+  # ── 桌游 / 卡牌 ──
+  playing-card:  [cards]
+  dice:          [board-game-icons]
+  chess-piece:   [board-game-icons]
+
+  # ── 塔防特有 ──
+  tower:         [sprites-tower-defense]
+  tower-terrain: [sprites-tower-defense]
+
+  # ── 输入提示 ──
+  keyboard-prompt: [input-prompts]
+  gamepad-prompt:  [input-prompts]
+  virtual-joystick: [mobile-controls]
+  virtual-button:   [mobile-controls]
+
+  # ── 音效语义 ──（详见 audio 三个包的 recommended 段）
+  sfx-click:    [audio-ui-clicks, audio-ui-interface]
+  sfx-hover:    [audio-ui-clicks]
+  sfx-confirm:  [audio-ui-interface]
+  sfx-error:    [audio-ui-interface]
+  sfx-jump:     [audio-sfx]
+  sfx-coin:     [audio-sfx]
+  sfx-hurt:     [audio-sfx]
+  sfx-magic:    [audio-sfx]
+  sfx-card:     [audio-sfx]
+  sfx-dice:     [audio-sfx]
+
+# ── Palette → Asset Style 别名层 ───────────────────────────────
+# color-palettes.yaml 已经扩展为 19+1 套 palette。素材库仍按少量视觉桶
+# 维护 suitable-styles，避免每新增一套配色就复制一份素材推荐表。
+# expand-assets 阶段：先取 color-scheme.palette-id，经此表得到 asset-style，
+# 再用 (asset-style, genre) 查 style-genre-preferred。
+palette-style-aliases:
+  neutral-clean: minimal-modern
+  board-classic: minimal-modern
+  tetris-blocks: dark-neon
+  snake-grid: pixel-retro
+  adventure-outdoor: cartoon-bright
+  candy-pop: cartoon-bright
+  card-table: cartoon-bright
+  farm-cozy: cartoon-bright
+  military-steel: dark-neon
+  cyber-neon: dark-neon
+  ocean-deep: cartoon-bright
+  forest-mystic: cartoon-bright
+  pixel-retro: pixel-retro
+  ink-scroll: hand-drawn
+  campus-fresh: cartoon-bright
+  dungeon-dark: dark-neon
+  medieval-castle: hand-drawn
+  speed-race: dark-neon
+  hand-drawn: hand-drawn
+  party-social: cartoon-bright
+
+# ── Asset Style × Genre → 推荐首选包（快速匹配）──
+# expand-assets 阶段：拿到 (asset-style, genre) 后先来这张表看"第一候选"，
+# 再回到 packs 列表里取详细元数据，避免漏选核心包。
+style-genre-preferred:
+  pixel-retro + platform-physics:  [ui-pixel-adventure, sprites-platformer-pixel, tiles-platformer-pixel, audio-sfx, audio-ui-clicks]
+  pixel-retro + strategy-battle:   [ui-pixel-adventure, tiles-dungeon, tiles-roguelike-characters, tiles-roguelike-dungeon, audio-ui-interface]
+  pixel-retro + board-grid:        [ui-pixel-adventure, tiles-town, tiles-dungeon, audio-ui-clicks]
+  pixel-retro + simulation:        [ui-pixel-adventure, tiles-town, audio-ui-interface]
+  pixel-retro + narrative:         [ui-pixel-adventure, tiles-dungeon, tiles-town, audio-ui-interface]
+  cartoon-bright + platform-physics: [ui-pack, sprites-platformer, audio-sfx, audio-ui-interface]
+  cartoon-bright + single-reflex:    [ui-pack, sprites-platformer, sprites-puzzle, audio-sfx]
+  cartoon-bright + strategy-battle:  [ui-pack, sprites-tower-defense, sprites-medieval, audio-ui-interface]
+  cartoon-bright + simulation:       [ui-pack, sprites-medieval, board-game-icons, audio-ui-interface]
+  cartoon-bright + board-grid:       [ui-pack, sprites-puzzle, board-game-icons, cards, audio-ui-interface]
+  cartoon-bright + edu-practice:     [ui-pack, sprites-puzzle, board-game-icons, audio-ui-interface]
+  cartoon-bright + quiz-rule:        [ui-pack, sprites-puzzle, board-game-icons, audio-ui-interface]
+  cartoon-bright + social-multi:     [ui-pack, board-game-icons, audio-ui-interface]
+  minimal-modern + board-grid:       [ui-pack, sprites-puzzle, game-icons, audio-ui-clicks]
+  minimal-modern + quiz-rule:        [ui-pack, board-game-icons, game-icons, audio-ui-clicks]
+  minimal-modern + edu-practice:     [ui-pack, sprites-puzzle, game-icons, audio-ui-clicks]
+  dark-neon + strategy-battle:       [tiles-dungeon, tiles-roguelike-dungeon, game-icons, audio-ui-interface]
+  dark-neon + platform-physics:      [ui-pixel-adventure, tiles-platformer-pixel, audio-ui-interface]
+  dark-neon + narrative:             [tiles-dungeon, game-icons, audio-ui-interface]
+  hand-drawn + narrative:            [ui-pack, board-game-icons, sprites-medieval, audio-ui-interface]
+  hand-drawn + edu-practice:         [ui-pack, board-game-icons, sprites-puzzle, audio-ui-interface]
+  hand-drawn + strategy-battle:      [sprites-medieval, board-game-icons, audio-ui-interface]
+
+packs:
+
+  # ═══════════════════════════════════════════════════════════
+  # UI 组件
+  # ═══════════════════════════════════════════════════════════
+
+  - id: ui-pack
+    path: ui/
+    source: kenney_ui-pack
+    description: "现代矢量 UI 组件：按钮、箭头、复选框、滑块、星星、输入框"
+    suitable-styles: [cartoon-bright, minimal-modern]
+    suitable-genres: [all]
+    preview: ui/_preview.png          # 完整素材概览
+    sample: ui/_sample.png            # 使用示例
+    colors: [Blue, Green, Grey, Red, Yellow]
+    resolution: "Double (2x)"
+    naming: "语义文件名"              # button_rectangle_flat.png, arrow_basic_e.png 等
+    structure:
+      - "buttons/{color}/ — 矩形/圆形/方形按钮（border/flat/gloss/gradient/line × depth 变体）"
+      - "arrows/{color}/  — 方向箭头（basic/decorative × 四方向 × small 变体）"
+      - "checks/{color}/  — 圆形/方形 复选框（color/grey 状态）"
+      - "icons/{color}/   — 基础图标（checkmark/cross/circle/square + outline 变体）"
+      - "sliders/{color}/ — 水平/垂直滑块和把手"
+      - "stars/{color}/   — 星星（实心/空心）"
+      - "inputs/          — 输入框、分割线（无颜色分支）"
+    fonts:
+      - "../fonts/Kenney Future.ttf"
+      - "../fonts/Kenney Future Narrow.ttf"
+    index: ui/_index.yaml
+    how-to-pick: "读 _index.yaml 了解分组结构，或直接 ls 子目录看文件名选择。文件名完全自描述。"
+
+  - id: ui-pixel-adventure
+    path: ui-pixel/
+    source: kenney_ui-pack-pixel-adventure
+    description: "像素冒险风 UI：面板、按钮、生命心、金币、进度条、数字、光标等"
+    suitable-styles: [pixel-retro]
+    suitable-genres: [platform-physics, board-grid, strategy-battle, single-reflex]
+    preview: ui-pixel/_preview.png    # 所有元素概览
+    sample: ui-pixel/_sample.png      # 组合使用示例
+    tilemap: ui-pixel/_tilemap.png    # 带网格的 tilemap（32x32 每格，13列×7行）
+    index: ui-pixel/_index.yaml       # 每个 tile 编号到语义名的完整映射
+    resolution: "Large tiles / Thick outline (32x32px)"
+    naming: "tile_XXXX.png 编号"
+    total-files: 91
+    how-to-pick: |
+      读 _index.yaml，搜索需要的元素（如 "heart" "button" "panel"），找到对应 id 即文件编号。
+      包含：面板九宫格(0000-0012)、按钮(0013-0021)、深色面板(0022-0030)、心(0031-0033)、进度条(0034-0039)、
+      金币/宝石/星星/钥匙(0040-0043)、箭头/光标(0044-0051)、边框/缎带(0052-0062)、数字0-9(0063-0072)、
+      旗帜/锁/滚动条/复选框/开关/气泡(0073-0090)
+
+  # ═══════════════════════════════════════════════════════════
+  # HUD / 游戏图标
+  # ═══════════════════════════════════════════════════════════
+
+  - id: game-icons
+    path: hud/game-icons/
+    source: kenney_game-icons
+    description: "通用游戏功能图标（白色轮廓，适合叠加在任何底色上）"
+    suitable-styles: [all]
+    suitable-genres: [all]
+    preview: hud/game-icons/_preview.png
+    resolution: "2x"
+    naming: "语义文件名"             # home.png, pause.png, star.png 等
+    total-files: 105
+    index: hud/game-icons/_index.yaml
+    how-to-pick: "读 _index.yaml 了解分组，或直接 ls 目录，文件名即图标含义。包含：导航(home/return/exit)、媒体控制(pause/play/stop)、音频(audioOn/audioOff)、设置(gear/save/lock)、游戏(star/trophy/medal/target)、方向箭头、缩放、设备图标等。"
+
+  - id: board-game-icons
+    path: hud/board-icons/
+    source: kenney_board-game-icons
+    description: "桌游风格图标（128px）：骰子、棋子、卡牌、旗帜、奖杯、计时器、药水等"
+    suitable-styles: [cartoon-bright, minimal-modern, hand-drawn]
+    suitable-genres: [board-grid, quiz-rule, edu-practice]
+    preview: hud/board-icons/_preview.png
+    resolution: "Double (128px)"
+    naming: "语义文件名"             # dice_1.png, chess_king.png, crown.png 等
+    total-files: 255
+    index: hud/board-icons/_index.yaml
+    how-to-pick: "读 _index.yaml 了解分组，或 ls 目录看文件名。包含大量桌游元素：d4-d20 各种骰子、象棋棋子、卡牌图标、代币/筹码、沙漏、奖杯/皇冠、旗帜、书本、药水/盾牌/剑、骷髅、火焰等。"
+
+  # ═══════════════════════════════════════════════════════════
+  # 游戏精灵
+  # ═══════════════════════════════════════════════════════════
+
+  - id: sprites-platformer
+    path: sprites/platformer/
+    source: kenney_new-platformer-pack-1.1
+    description: "卡通平台跳跃素材：角色、敌人、地形瓦片、道具、环境装饰"
+    suitable-styles: [cartoon-bright]
+    suitable-genres: [platform-physics, single-reflex]
+    preview: sprites/platformer/_preview.png
+    resolution: "Double"
+    naming: "语义文件名"             # character_beige_idle.png, slime_green.png, terrain_grass_block.png
+    total-files: 433
+    index: sprites/platformer/_index.yaml
+    how-to-pick: |
+      读 _index.yaml 了解分组结构。包含：
+      - character_* — 5色角色（idle/walk/jump/climb/duck/hit/front 帧）
+      - bee*/fly*/frog*/slime*/snail*/worm*/barnacle*/fish*/ladybug*/mouse* — 16种敌人
+      - terrain_{dirt/grass/sand/snow/stone/purple}_* — 6种材质地形（每种28块）
+      - block_*/brick_* — 可打击方块和砖块
+      - coin_*/gem_*/heart*/key_*/star_*/flag* — 收集物
+      - bomb*/door*/lock*/lever*/switch*/spring*/saw*/spikes* — 道具机关
+      - bush*/fence*/bridge*/water*/lava*/ladder*/torch*/sign* — 环境装饰
+      - hud_* — HUD数字/心/图标/玩家头像
+
+  - id: sprites-platformer-pixel
+    path: sprites/platformer-pixel/
+    source: kenney_pixel-platformer
+    description: "像素平台角色（18px 小像素人，4色变体）"
+    suitable-styles: [pixel-retro]
+    suitable-genres: [platform-physics]
+    preview: sprites/platformer-pixel/_preview.png
+    tilemap: sprites/platformer-pixel/_tilemap.png
+    index: sprites/platformer-pixel/_index.yaml
+    resolution: "像素原生 (24x24px)"
+    naming: "tile_XXXX.png 编号"
+    total-files: 28
+    how-to-pick: "读 _index.yaml 搜索角色。5色玩家(米/蓝/绿/粉/黄各3帧) + 僵尸/幽灵/骷髅/蝙蝠(各3帧)"
+
+  - id: sprites-medieval
+    path: sprites/medieval/
+    source: kenney_medieval-rts
+    description: "中世纪 RTS：城堡、房屋、树木、兵种（等距视角）"
+    suitable-styles: [cartoon-bright, hand-drawn]
+    suitable-genres: [strategy-battle, simulation]
+    preview: sprites/medieval/_preview.png
+    sample: sprites/medieval/_sample.png
+    resolution: "Retina (2x)"
+    naming: "半语义编号"             # medievalEnvironment_01.png, medievalUnit_12.png
+    total-files: 126
+    index: sprites/medieval/_index.yaml
+    how-to-pick: |
+      读 _index.yaml 了解分组和编号含义。文件名前缀标识类别：
+      - medievalEnvironment_XX — 自然环境（树/石/山/水）21个
+      - medievalStructure_XX  — 建筑（城堡/塔/房/农田/兵营）23个
+      - medievalTile_XX       — 地形瓦片（草/路/水/桥/城墙）58个
+      - medievalUnit_XX       — 兵种（弓手/骑士/农民/国王）24个
+
+  - id: sprites-tower-defense
+    path: sprites/tower-defense/
+    source: kenney_tower-defense
+    description: "塔防素材：55种塔楼变体、地形瓦片、装饰物"
+    suitable-styles: [cartoon-bright, minimal-modern]
+    suitable-genres: [strategy-battle]
+    preview: sprites/tower-defense/_preview.png
+    sample: sprites/tower-defense/_sample.png
+    resolution: "标准"
+    naming: "半语义编号"             # tower_12.png, landscape_05.png
+    total-files: 119
+    index: sprites/tower-defense/_index.yaml
+    how-to-pick: |
+      读 _index.yaml 了解分组。文件名前缀标识类别：
+      - tower_XX      — 55种塔（圆/方/带顶/带旗/带武器变体）
+      - landscape_XX  — 40种地形（草/路/水/沙/十字路口）
+      - crystals_X    — 水晶装饰(4)
+      - rocks_X       — 岩石装饰(8)
+      - trees_X       — 树木装饰(12)
+
+  - id: sprites-puzzle
+    path: sprites/puzzle/
+    source: kenney_puzzle-pack-1
+    description: "益智游戏：彩色球、宝石形元素(6色×4形)、按钮、指针、挡板"
+    suitable-styles: [cartoon-bright, minimal-modern]
+    suitable-genres: [board-grid, quiz-rule, edu-practice]
+    preview: sprites/puzzle/_preview.png
+    sample: sprites/puzzle/_sample.png
+    resolution: "Double"
+    naming: "语义文件名"             # ballBlue.png, elementGreen_diamond_glossy.png
+    total-files: 86
+    index: sprites/puzzle/_index.yaml
+    how-to-pick: "读 _index.yaml 了解分组，或 ls 目录看文件名。ball*/element*/button*/hand*/pointer*/selector*/paddle*/particle*"
+
+  # ═══════════════════════════════════════════════════════════
+  # 瓦片地图
+  # ═══════════════════════════════════════════════════════════
+
+  - id: tiles-dungeon
+    path: tiles/dungeon/
+    source: kenney_tiny-dungeon
+    description: "像素地牢瓦片（16px）：地板、墙壁、门、宝箱、角色、怪物、道具、陷阱、装饰"
+    suitable-styles: [pixel-retro, dark-neon]
+    suitable-genres: [board-grid, strategy-battle, narrative]
+    preview: tiles/dungeon/_preview.png
+    sample: tiles/dungeon/_sample.png
+    tilemap: tiles/dungeon/_tilemap.png    # 12列×11行网格
+    index: tiles/dungeon/_index.yaml       # 每个 tile 编号到语义名的完整映射
+    resolution: "像素原生 (16x16px)"
+    naming: "tile_XXXX.png 编号"
+    total-files: 132
+    how-to-pick: |
+      读 _index.yaml，搜索需要的元素。
+      包含：地板/墙壁(0000-0019)、门/楼梯/宝箱(0020-0029)、英雄4职业(0030-0037)、NPC(0038-0041)、
+      亡灵怪(0042-0047)、小怪(0048-0059)、Boss(0060-0063)、武器盾牌(0064-0071)、
+      药水/货币/宝石/钥匙(0072-0083)、消耗品(0084-0095)、装饰(0096-0109)、陷阱(0110-0114)、
+      特效(0115-0119)、UI心/魔力(0120-0131)
+
+  - id: tiles-town
+    path: tiles/town/
+    source: kenney_tiny-town
+    description: "像素城镇瓦片（16px）：地形、道路、房屋、自然、NPC、交通、物品、装饰"
+    suitable-styles: [pixel-retro]
+    suitable-genres: [simulation, board-grid, narrative]
+    preview: tiles/town/_preview.png
+    sample: tiles/town/_sample.png
+    tilemap: tiles/town/_tilemap.png       # 12列×11行网格
+    index: tiles/town/_index.yaml          # 每个 tile 编号到语义名的完整映射
+    resolution: "像素原生 (16x16px)"
+    naming: "tile_XXXX.png 编号"
+    total-files: 132
+    how-to-pick: |
+      读 _index.yaml，搜索需要的元素。
+      包含：地形(0000-0011)、道路系统(0012-0023)、民居/商店/教堂/城堡(0024-0035)、
+      风车/水井/码头/矿洞(0036-0047)、树木/灌木/花卉(0048-0059)、岩石/栅栏(0060-0071)、
+      NPC角色(0072-0083)、动物/交通(0084-0095)、物品资源(0096-0107)、工具武器(0108-0119)、
+      装饰(0120-0131)
+
+  - id: tiles-platformer-pixel
+    path: tiles/platformer-pixel/
+    source: kenney_pixel-platformer
+    description: "像素平台瓦片（18px）：地形块、平台、道具、装饰"
+    suitable-styles: [pixel-retro]
+    suitable-genres: [platform-physics]
+    preview: tiles/platformer-pixel/_preview.png
+    tilemap: tiles/platformer-pixel/_tilemap.png  # 20列×9行网格
+    index: tiles/platformer-pixel/_index.yaml     # 每个 tile 编号到语义名的完整映射
+    resolution: "像素原生 (18x18px)"
+    naming: "tile_XXXX.png 编号"
+    total-files: 181
+    how-to-pick: |
+      读 _index.yaml，搜索需要的元素。
+      包含：4色地形(棕0000-0019/绿0020-0039/灰0040-0059/蓝0060-0079，每色含9-slice+平台+柱+半块+内角)、
+      道具(金币/宝石/钥匙/心/星/旗/门/梯子/尖刺/弹簧/开关 0080-0099)、
+      装饰(箱子/植物/蘑菇/石头/告示牌/火把/云/水/岩浆/锁链 0100-0119)、
+      浮空平台4色(0120-0131)、蹦床/炮台/投射物(0132-0139)、
+      敌人(史莱姆/蜗牛/苍蝇/蜜蜂/刺球/锯片 0140-0149)、特效(0150-0159)、
+      HUD心/数字0-9/UI箭头/勾叉(0160-0179)
+
+  - id: tiles-roguelike-dungeon
+    path: tiles/roguelike-dungeon/
+    source: kenney_roguelike-caves-dungeons
+    description: "Roguelike 地牢精灵表（单张大图，需 16x16 slice）"
+    suitable-styles: [pixel-retro, dark-neon]
+    suitable-genres: [board-grid, strategy-battle]
+    preview: tiles/roguelike-dungeon/_preview.png
+    format: spritesheet
+    file: spritesheet.png
+    how-to-pick: "查看 _preview.png。这是一整张精灵表，加载后用 frameWidth=16, frameHeight=16 切割。"
+
+  - id: tiles-roguelike-characters
+    path: tiles/roguelike-characters/
+    source: kenney_roguelike-characters
+    description: "Roguelike 角色精灵表（单张大图，需 16x16 slice）"
+    suitable-styles: [pixel-retro, dark-neon]
+    suitable-genres: [board-grid, strategy-battle]
+    preview: tiles/roguelike-characters/_preview.png
+    format: spritesheet
+    file: spritesheet.png
+    how-to-pick: "查看 _preview.png。这是一整张精灵表，加载后用 frameWidth=16, frameHeight=16 切割。"
+
+  # ═══════════════════════════════════════════════════════════
+  # 卡牌
+  # ═══════════════════════════════════════════════════════════
+
+  - id: cards
+    path: cards/
+    source: kenney_boardgame-pack
+    description: "标准扑克牌：A-K 四花色 + 双王 + 多色牌背"
+    suitable-styles: [cartoon-bright, minimal-modern]
+    suitable-genres: [board-grid, quiz-rule]
+    preview: cards/_preview.png
+    sample: cards/_sample.png
+    naming: "语义文件名"             # cardClubs_A.png, cardBack_blue3.png
+    total-files: 68
+    how-to-pick: "ls 目录。card{Clubs|Diamonds|Hearts|Spades}_{A-K}.png = 牌面；cardBack_{color}{1-5}.png = 牌背。"
+
+  # ═══════════════════════════════════════════════════════════
+  # 音频
+  # ═══════════════════════════════════════════════════════════
+
+  - id: audio-ui-clicks
+    path: audio/ui-clicks/
+    source: kenney_ui-audio
+    description: "UI 点击/悬停/开关音效（短促清脆）"
+    suitable-styles: [all]
+    suitable-genres: [all]
+    total-files: 48
+    naming: "语义文件名"             # click1.ogg, rollover3.ogg, switch15.ogg
+    how-to-pick: "click{1-5} = 点击; mouseclick1/mouserelease1 = 鼠标; rollover{1-6} = 悬停; switch{1-38} = 开关切换（多音色变体）"
+    recommended:
+      button-click: click1.ogg          # 最通用的按钮点击音，清脆短促
+      button-click-alt: click3.ogg      # 稍低沉的点击变体
+      hover: rollover1.ogg              # 鼠标悬停音，轻柔
+      toggle: switch3.ogg               # 开关切换音，适合复选框/设置开关
+      mouse-down: mouseclick1.ogg       # 鼠标按下
+      mouse-up: mouserelease1.ogg       # 鼠标释放
+
+  - id: audio-ui-interface
+    path: audio/ui-interface/
+    source: kenney_interface-sounds
+    description: "界面交互音效（更丰富的反馈音，93个）"
+    suitable-styles: [all]
+    suitable-genres: [all]
+    total-files: 93
+    naming: "语义文件名"             # confirmation_002.ogg, error_005.ogg
+    how-to-pick: |
+      按语义前缀选择：
+      back_00{1-4} = 返回; click_00{1-5} = 点击; close_00{1-4} = 关闭
+      confirmation_00{1-4} = 确认/成功; error_00{1-8} = 错误/失败
+      drop_00{1-4} = 放下; glass_00{1-6} = 清脆提示; glitch_00{1-4} = 故障
+      maximize_00{1-9} = 展开; minimize_00{1-9} = 收起; open_00{1-4} = 打开
+      pluck_00{1-2} = 拨弦; question_00{1-4} = 疑问; scratch_00{1-5} = 划动
+      scroll_00{1-5} = 翻页; select_00{1-8} = 选择; switch_00{1-7} = 切换
+      tick_00{1-2,4} = 勾选; toggle_00{1-4} = 开关; bong_001 = 敲击
+    recommended:
+      success: confirmation_002.ogg     # 操作成功/通关确认
+      error: error_004.ogg              # 操作失败/错误提示
+      select: select_003.ogg            # 菜单选项选择
+      back: back_001.ogg                # 返回上一页
+      open-menu: open_001.ogg           # 打开菜单/弹窗
+      close-menu: close_002.ogg         # 关闭菜单/弹窗
+      scroll: scroll_002.ogg            # 列表滚动/翻页
+      drop-item: drop_002.ogg           # 物品放下/放置
+      question: question_003.ogg        # 帮助/提示音
+      tick: tick_001.ogg                # 复选框勾选
+      glass-ding: glass_004.ogg         # 清脆提示音（适合获得奖励）
+      glitch: glitch_003.ogg            # 故障/毛刺音效（适合 dark-neon 风格）
+      level-up: maximize_008.ogg        # 升级/展开的上升音
+      level-down: minimize_003.ogg      # 降级/收起的下降音
+
+  - id: audio-sfx
+    path: audio/sfx/
+    source: "kenney_boardgame-pack + kenney_new-platformer-pack-1.1"
+    description: "游戏音效混合包：平台跳跃 + 桌游"
+    suitable-styles: [all]
+    suitable-genres: [all]    # 通用音效（跳跃/金币/受伤等语义广泛适配）
+    total-files: 22
+    naming: "语义文件名"
+    how-to-pick: |
+      平台跳跃: sfx_bump/coin/disappear/gem/hurt/jump/jump-high/magic/select/throw
+      桌游: cardPlace{1-3}/cardSlide{1-3}/chipsCollide{1-3}/dieShuffle1/dieThrow{1-2}
+    recommended:
+      # ── 平台跳跃推荐 ──
+      jump: sfx_jump.ogg                # 普通跳跃
+      jump-high: sfx_jump-high.ogg      # 高跳/二段跳
+      collect-coin: sfx_coin.ogg        # 拾取金币
+      collect-gem: sfx_gem.ogg          # 拾取宝石/高价值物品
+      hurt: sfx_hurt.ogg                # 受伤
+      bump: sfx_bump.ogg                # 撞墙/碰撞
+      disappear: sfx_disappear.ogg      # 消失/死亡
+      magic: sfx_magic.ogg              # 魔法/技能释放
+      throw: sfx_throw.ogg              # 投掷
+      # ── 桌游推荐 ──
+      card-play: cardPlace1.ogg         # 出牌
+      card-draw: cardSlide1.ogg         # 抽牌/滑动卡牌
+      dice-roll: dieThrow1.ogg          # 掷骰子
+      dice-shuffle: dieShuffle1.ogg     # 摇骰子
+      chips-collect: chipsCollide1.ogg  # 筹码碰撞/收集
+
+  # ═══════════════════════════════════════════════════════════
+  # 操控与输入
+  # ═══════════════════════════════════════════════════════════
+
+  - id: mobile-controls
+    path: controls/mobile/
+    source: mobile-controls-1
+    description: "移动端虚拟按钮：方向键、摇杆、操作按钮（Style A）"
+    suitable-styles: [all]
+    suitable-genres: [platform-physics, single-reflex]
+    preview: controls/mobile/_preview.png
+    sample: controls/mobile/_sample.png
+    naming: "语义文件名"             # button_circle.png, dpad.png, joystick_circle_pad_a.png
+    total-files: 88
+    how-to-pick: "ls 目录。button_* = 按钮; dpad* = 方向键; joystick_* = 摇杆; icon_* = 功能图标"
+
+  - id: input-prompts
+    path: input-prompts/
+    source: kenney_input-prompts_1.4.1
+    description: "键盘/通用输入按键提示图标"
+    suitable-styles: [all]
+    suitable-genres: [all]
+    resolution: "Double"
+    naming: "语义文件名"             # keyboard_w.png, keyboard_space.png
+    subdirs:
+      keyboard: { path: "keyboard/", files: 243, description: "所有标准键 + 鼠标按钮" }
+      generic: { path: "generic/", files: 36, description: "通用控制器按键" }
+    how-to-pick: "ls keyboard/ 或 generic/ 目录，文件名即按键名。"
+
+  # ═══════════════════════════════════════════════════════════
+  # 字体
+  # ═══════════════════════════════════════════════════════════
+
+  - id: fonts
+    path: fonts/
+    files:
+      - "Kenney Future.ttf       — 现代无衬线游戏字体，适合标题和 HUD"
+      - "Kenney Future Narrow.ttf — 窄版，适合空间受限的 UI"
+
+# ============================================================
+# 素材选择流程（expand-assets agent 必读）
+# ============================================================
+#
+# Step 1: 从 GamePRD 获取 color-scheme.palette-id 和 genre，
+#         通过 palette-style-aliases 映射为 asset-style
+#
+# Step 2: 筛选候选包
+#   - 遍历上方 packs 列表
+#   - suitable-styles 包含当前 asset-style（或为 [all]）的包入选
+#   - suitable-genres 包含当前 genre（或为 [all]）的包入选
+#
+# Step 3: 选择具体文件
+#   - 语义文件名的包（naming='语义文件名'）：ls 目录按文件名选
+#   - tile_XXXX 编号的包：读 index 字段指向的 _index.yaml，
+#     搜索需要的元素关键词（中文或英文），找到对应 id 即 tile 编号
+#   - （可选）若模型有多模态能力，也可查看 preview / tilemap 图片辅助确认
+#
+# Step 4: 写入 assets.yaml
+#   - type: local-file 的用 assets/library_2d/{path}/{file}
+#   - 本地素材不足时用 inline-svg / graphics-generated / synthesized 补充

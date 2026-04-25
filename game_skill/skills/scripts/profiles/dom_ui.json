@@ -1,0 +1,202 @@
+{
+  "case_id": "dom_ui",
+  "description": "单词消消乐 - 小学生英语单词配对游戏",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "prd_hash": "b0b58a7c4e774075cd0d595e0e14d27af601ace0",
+  "prd_path": "cases/dom_ui/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "start-to-play",
+      "check_id": "start-to-play",
+      "kind": "interaction",
+      "description": "开始游戏流程",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "eval": "window.gameState.phase === 'playing' && window.gameState.cards.length > 0",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "match-success-flow",
+      "check_id": "match-success-flow",
+      "kind": "interaction",
+      "description": "配对成功流程",
+      "setup": [
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "(() => { const state = window.gameState; const enCards = state.cards.filter(c => c.side === 'en' && !c.matched); const zhCards = state.cards.filter(c => c.side === 'zh' && !c.matched); const pair = enCards[0]; const zhMatch = zhCards.find(c => c.pairId === pair.pairId); if (pair && zhMatch) { state.selectedCards = [pair, zhMatch]; window.checkMatch(); return true; } return false; })()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "eval": "window.gameState.score >= 10 && window.gameState.matchedCount >= 1",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "match-fail-flow",
+      "check_id": "match-fail-flow",
+      "kind": "interaction",
+      "description": "配对失败流程",
+      "setup": [
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "(() => { const state = window.gameState; const enCards = state.cards.filter(c => c.side === 'en' && !c.matched); const zhCards = state.cards.filter(c => c.side === 'zh' && !c.matched); if (enCards.length > 1 && zhCards.length > 1) { const en = enCards[0]; const zh = zhCards.find(c => c.pairId !== en.pairId); if (zh) { state.selectedCards = [en, zh]; window.checkMatch(); return true; }} return false; })()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "eval": "window.gameState.combo === 0",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "wrong-match-reselect-flow",
+      "check_id": "match-fail-flow",
+      "kind": "interaction",
+      "description": "错配恢复后中文释义仍可再次选择",
+      "setup": [
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "(() => { const state = window.gameState; const en = state.cards.find(c => c.side === 'en' && !c.matched); const zh = state.cards.find(c => c.side === 'zh' && !c.matched && c.pairId !== en.pairId); window.__wrongMatchProbe = { enId: en.id, zhId: zh.id, zhPairId: zh.pairId }; document.querySelector(`[data-card-id='${en.id}']`).click(); document.querySelector(`[data-card-id='${zh.id}']`).click(); return true; })()" },
+        { "action": "wait", "ms": 1200 },
+        { "action": "eval", "code": "(() => { const probe = window.__wrongMatchProbe; const zh = window.gameState.cards.find(c => c.side === 'zh' && c.pairId === probe.zhPairId); const el = document.querySelector(`[data-card-id='${probe.zhId}']`); if (!zh || !el || zh.id !== probe.zhId || zh.selected) return false; el.click(); return zh.selected === true && window.gameState.selectedCards.some(c => c.id === probe.zhId); })()" }
+      ],
+      "expect": {
+        "eval": "window.gameState.selectedCards.some(c => c.id === window.__wrongMatchProbe.zhId)",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "combo-bonus",
+      "check_id": "combo-bonus",
+      "kind": "interaction",
+      "description": "连击加分",
+      "setup": [
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "(() => { window.gameState.score = 0; window.gameState.combo = 0; window.gameState.matchedCount = 0; return true; })()" },
+        { "action": "eval", "code": "(() => { const state = window.gameState; const enCards = state.cards.filter(c => c.side === 'en' && !c.matched); const zhCards = state.cards.filter(c => c.side === 'zh' && !c.matched); for (let i = 0; i < 2 && i < enCards.length; i++) { const en = enCards[i]; const zh = zhCards.find(c => c.pairId === en.pairId); if (zh) { state.selectedCards = [en, zh]; window.checkMatch(); }} return true; })()" },
+        { "action": "wait", "ms": 800 }
+      ],
+      "expect": {
+        "eval": "window.gameState.score >= 25 && window.gameState.combo >= 2",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "win-condition",
+      "check_id": "win-condition",
+      "kind": "interaction",
+      "description": "通关条件",
+      "setup": [
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "(() => { window.gameState.matchedCount = window.gameState.totalPairs; window.checkWin(); return true; })()" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": {
+        "eval": "window.gameState.phase === 'win'",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "lose-condition",
+      "check_id": "lose-condition",
+      "kind": "interaction",
+      "description": "失败条件",
+      "setup": [
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "(() => { window.gameState.timeLeft = 0; window.checkLose(); return true; })()" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": {
+        "eval": "window.gameState.phase === 'lose'",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "retry-flow",
+      "check_id": "retry-flow",
+      "kind": "interaction",
+      "description": "重试流程",
+      "setup": [
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "(() => { window.gameState.phase = 'lose'; window.gameState.score = 100; window.render(); return true; })()" },
+        { "action": "wait", "ms": 200 },
+        { "action": "click", "selector": "#btn-retry" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": {
+        "eval": "window.gameState.phase === 'playing' && window.gameState.score === 0",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "next-level-flow",
+      "check_id": "next-level-flow",
+      "kind": "interaction",
+      "description": "下一关流程",
+      "setup": [
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "(() => { window.gameState.phase = 'win'; window.gameState.level = 1; window.render(); return true; })()" },
+        { "action": "wait", "ms": 200 },
+        { "action": "click", "selector": "#btn-next" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": {
+        "eval": "window.gameState.level === 2 && window.gameState.phase === 'playing'",
+        "op": "truthy",
+        "value": true
+      }
+    }
+  ],
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-time-limit",
+      "hard_rule_id": "time-limit",
+      "kind": "hard-rule",
+      "description": "每关必须有明确的倒计时，超时即失败",
+      "setup": [
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "eval": "window.gameState.timeLeft > 0 && window.gameState.timeLeft <= 60",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "hard-rule-score-rules",
+      "hard_rule_id": "score-rules",
+      "kind": "hard-rule",
+      "description": "匹配成功+10分",
+      "setup": [
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "(() => { window.gameState.score = 0; const state = window.gameState; const en = state.cards.find(c => c.side === 'en' && !c.matched); const zh = state.cards.find(c => c.side === 'zh' && c.pairId === en.pairId && !c.matched); if (en && zh) { state.selectedCards = [en, zh]; window.checkMatch(); return true; } return false; })()" },
+        { "action": "wait", "ms": 400 }
+      ],
+      "expect": {
+        "eval": "window.gameState.score === 10",
+        "op": "equals",
+        "value": 10
+      }
+    }
+  ]
+}

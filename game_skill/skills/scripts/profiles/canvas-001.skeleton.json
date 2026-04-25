@@ -1,0 +1,172 @@
+{
+  "case_id": "canvas-001",
+  "description": "canvas-001 - 从 PRD @check 自动生成的骨架，需人工补 setup/expect",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "prd_hash": "543511789bb9fe0e9e0bab1c987988da5464769e",
+  "prd_path": "cases/canvas-001/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "playable-loop",
+      "check_id": "playable-loop",
+      "kind": "state",
+      "description": "主循环可玩",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 打开 game/index.html → 点击开始 → 完成至少一对配对\"",
+      "_prd_expect": "\"window.gameState.score > 0 且 window.gameState.phase === 'playing'\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(playable-loop) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "match-logic",
+      "check_id": "match-logic",
+      "kind": "state",
+      "description": "配对逻辑正确",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 选两张匹配卡片 → 观察状态变化\"",
+      "_prd_expect": "\"matched = true ; score 增加 ; cards 消失\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(match-logic) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "match-fail-logic",
+      "check_id": "match-fail-logic",
+      "kind": "state",
+      "description": "配对失败逻辑",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 选两张不匹配卡片 → 观察状态变化\"",
+      "_prd_expect": "\"combo = 0 ; timeLeft 减少 ; cards 恢复未选中\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(match-fail-logic) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "same-side-exclusive",
+      "check_id": "same-side-exclusive",
+      "kind": "state",
+      "description": "同侧互斥选择",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 选左侧第一张卡片 → 再选左侧第二张卡片\"",
+      "_prd_expect": "\"只有第二张卡片处于 selected 状态\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(same-side-exclusive) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "time-limit",
+      "check_id": "time-limit",
+      "kind": "state",
+      "description": "时间限制生效",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 进入游戏 → 等待超时\"",
+      "_prd_expect": "\"window.gameState.phase === 'lose'\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(time-limit) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "level-complete",
+      "check_id": "level-complete",
+      "kind": "state",
+      "description": "关卡完成",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 完成所有配对\"",
+      "_prd_expect": "\"window.gameState.phase === 'win'\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(level-complete) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "combo-system",
+      "check_id": "combo-system",
+      "kind": "state",
+      "description": "连击系统",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 连续完成3次正确配对\"",
+      "_prd_expect": "\"combo >= 3 且 score 包含连击加成\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(combo-system) 的 expect 改成真实判定"
+      }
+    }
+  ],
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-click-interaction",
+      "hard_rule_id": "click-interaction",
+      "kind": "hard-rule",
+      "description": "点击交互",
+      "_todo": "根据 @constraint 填真实断言",
+      "setup": [],
+      "expect": {
+        "selector": "// TODO",
+        "op": "truthy",
+        "value": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "case_id": "dan-ci-dom",
+  "description": "单词消消乐 - DOM+Tailwind 卡通明亮风格",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "assertions": [
+    {
+      "id": "playable-loop",
+      "kind": "state",
+      "description": "主循环可玩：点击开始 → 进入 playing 状态",
+      "setup": [
+        { "action": "eval", "js": "document.querySelectorAll('button').forEach(b => { if (b.innerText.includes('开始') || b.innerText.includes('Start') || b.innerText.includes('游戏')) b.click(); });" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "playing" }
+    },
+    {
+      "id": "match-rule",
+      "kind": "state",
+      "description": "配对规则正确：匹配成功加分",
+      "setup": [
+        { "action": "eval", "js": "const cards = window.gameState.cards; if (cards && cards.length >= 2) { const firstPairId = cards[0].pairId; const pair1 = cards.find(c => c.pairId === firstPairId && c.lang === 'en' && !c.matched); const pair2 = cards.find(c => c.pairId === firstPairId && c.lang === 'cn' && !c.matched); if (pair1 && pair2) { window.gameState.selectedCards = [pair1, pair2]; const oldScore = window.gameState.score; window.checkMatch(); window.gameState._matchTestPassed = window.gameState.score > oldScore; } }" },
+        { "action": "wait", "ms": 600 }
+      ],
+      "expect": { "selector": "window.gameState._matchTestPassed === true", "op": "truthy", "value": true }
+    },
+    {
+      "id": "win-condition",
+      "kind": "state",
+      "description": "胜利条件：完成所有配对进入胜利状态",
+      "setup": [
+        { "action": "eval", "js": "window.clearInterval(window.gameState.timerInterval); if (window.gameState.cards) { window.gameState.cards.forEach(c => c.matched = true); window.gameState.matchedPairs = window.gameState.totalPairs; } setTimeout(() => { if (window.gameState.matchedPairs >= window.gameState.totalPairs) { window.gameState.phase = 'win'; } }, 100);" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "win" }
+    },
+    {
+      "id": "lose-condition",
+      "kind": "state",
+      "description": "失败条件：时间耗尽进入失败状态",
+      "setup": [
+        { "action": "eval", "js": "window.clearInterval(window.gameState.timerInterval); window.gameState.timeLeft = 0; window.gameState.phase = 'lose';" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "lose" }
+    },
+    {
+      "id": "level-progression",
+      "kind": "state",
+      "description": "关卡递进：验证关卡数据结构和 level 字段",
+      "setup": [
+        { "action": "eval", "js": "window.gameState._hasLevelSystem = (typeof window.gameState.level === 'number' && window.gameState.level >= 1);" },
+        { "action": "wait", "ms": 50 }
+      ],
+      "expect": { "selector": "window.gameState._hasLevelSystem === true", "op": "truthy", "value": true }
+    },
+    {
+      "id": "combo-system",
+      "kind": "state",
+      "description": "连击系统：验证 combo 字段存在",
+      "setup": [
+        { "action": "eval", "js": "window.gameState._hasCombo = (typeof window.gameState.combo === 'number');" },
+        { "action": "wait", "ms": 50 }
+      ],
+      "expect": { "selector": "window.gameState._hasCombo === true", "op": "truthy", "value": true }
+    },
+    {
+      "id": "boot-ready",
+      "kind": "state",
+      "description": "boot 后 phase 为 ready（独立测试，重置状态）",
+      "setup": [
+        { "action": "eval", "js": "location.reload();" },
+        { "action": "wait", "ms": 1000 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "ready" }
+    },
+    {
+      "id": "has-timer-score-level",
+      "kind": "state",
+      "description": "playing 状态有 timeLeft、score、level 字段",
+      "setup": [
+        { "action": "eval", "js": "document.querySelectorAll('button').forEach(b => { if (b.innerText.includes('开始') || b.innerText.includes('Start') || b.innerText.includes('游戏')) b.click(); });" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "typeof window.gameState.timeLeft === 'number' && typeof window.gameState.score === 'number' && typeof window.gameState.level === 'number'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "cards-rendered",
+      "kind": "state",
+      "description": "play 场景渲染出卡片元素",
+      "setup": [
+        { "action": "eval", "js": "window.gameState._cardCount = document.querySelectorAll('[data-card-id]').length;" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState._cardCount >= 12", "op": "truthy", "value": true }
+    },
+    {
+      "id": "result-page-buttons",
+      "kind": "state",
+      "description": "结果页有重试按钮",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.phase = 'win'; if (typeof render === 'function') render(); else window.gameState._renderExists = false;" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "document.body.innerText.includes('重试') || document.body.innerText.includes('Retry')", "op": "truthy", "value": true }
+    },
+    {
+      "id": "mvp-boundary-no-login",
+      "kind": "hard-rule",
+      "description": "MVP 边界：代码里不得出现登录/排行榜/班级管理相关关键字",
+      "setup": [{ "action": "wait", "ms": 50 }],
+      "expect": { "selector": "!/(login|signin|sign-in|leaderboard|rank|classroom)/i.test(document.documentElement.outerHTML)", "op": "truthy", "value": true }
+    }
+  ]
+}

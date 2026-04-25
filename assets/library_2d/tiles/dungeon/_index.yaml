@@ -1,0 +1,778 @@
+# Tiny Dungeon - 瓦片语义索引
+# 来源: kenney_tiny-dungeon
+# 网格: 12列 × 11行, 每格 16×16px, 共 132 个瓦片
+# 文件名: tile_{编号:04d}.png
+#
+# ── 风格与适用范围 ──
+# 视觉风格: pixel-retro / dark-neon（像素复古 / 暗黑霓虹）
+# 适用游戏类型: Roguelike、地牢探索、RPG、回合制策略、棋盘格冒险
+# 不适用: 户外/城镇场景（请用 tiny-town 代替）、平台跳跃（请用 pixel-platformer 代替）
+#
+# ── 分组概要（用途与组合关系）──
+#
+# 地板 (0000-0007):
+#   用途: 地牢房间/走廊的可行走地面
+#   组合: 石地板(0000-0003)做主要房间，土地板(0004-0005)做洞穴/泥土区域，破洞(0006)做陷阱提示，楼梯口(0007)连接楼层
+#   提示: 多个变体随机铺设可避免重复感
+#
+# 墙壁 (0008-0019):
+#   用途: 构建地牢房间的边界，阻挡玩家移动
+#   组合: 顶(0008-0011)+中(0012-0015)+底(0016-0019)，每排有左/中/右/单独四种
+#   提示: "single"变体用于1格宽的柱子或窄墙
+#
+# 门 (0020-0023):
+#   用途: 房间之间的通道，可做开关机制
+#   组合: 木门(0020关/0021开) 普通房间用；铁门(0022关/0023开) Boss 房/宝藏室用
+#   搭配: 常与钥匙(0081-0082)配合使用
+#
+# 楼梯 (0024-0025):
+#   用途: 楼层间切换的入口/出口
+#
+# 宝箱 (0026-0029):
+#   用途: 战利品/奖励容器
+#   组合: 关闭(0026)→打开(0027)→空(0028) 表示三种状态；宝箱怪(0029)做陷阱变体
+#
+# 英雄角色 (0030-0037):
+#   用途: 玩家可操控角色，4 种职业各含站立+行走 2 帧
+#   组合: 骑士(0030-0031) 近战坦克；法师(0032-0033) 远程魔法；盗贼(0034-0035) 敏捷型；游侠(0036-0037) 远程物理
+#   提示: 2 帧做简单行走动画，idle 用站立帧
+#
+# NPC (0038-0041):
+#   用途: 非战斗交互角色，用于对话/任务/商店
+#   角色: 老人(0038) 任务提示；女性(0039) 支线任务；孩子(0040) 引导教学；商人(0041) 商店
+#
+# 低级怪物 (0042-0059):
+#   用途: 普通敌人，每种含站立+移动 2 帧
+#   难度递增: 骷髅(0042-0043) → 僵尸(0044-0045) → 幽灵(0046-0047) → 蝙蝠(0048-0049) → 蜘蛛(0050-0051) → 蛇(0052-0053) → 绿史莱姆(0054-0055) → 蓝史莱姆(0056-0057) → 老鼠(0058-0059)
+#
+# Boss 怪物 (0060-0063):
+#   用途: 关卡 Boss 或精英怪
+#   角色: 恶魔(0060-0061) 中级 Boss；龙(0062-0063) 最终 Boss
+#
+# 武器与盾牌 (0064-0071):
+#   用途: 装备系统的图标，或地面上的可拾取物品
+#   组合: 剑(0064)配盾(0070-0071)；弓(0068)配箭(0093)；法杖(0069)配魔法球(0094)
+#
+# 药水 (0072-0075):
+#   用途: 消耗品，按颜色区分效果。红(0072)回血，蓝(0073)回蓝，绿(0074)解毒/毒药，黄(0075)加速
+#
+# 货币与宝石 (0076-0080):
+#   用途: 经济系统。金币(0076)基础货币，银币(0077)小额，宝石(0078-0080)高价值
+#
+# 钥匙 (0081-0082):
+#   用途: 开锁道具。金钥匙(0081)开宝箱/Boss门，银钥匙(0082)开普通门
+#
+# 杂项消耗品 (0083-0095):
+#   卷轴(0083): 技能/传送
+#   书本(0084)/地图(0085): 知识/导航
+#   戒指(0086)/护身符(0087): 装备饰品
+#   食物(0088-0091): 回血替代品
+#   炸弹(0092): 破墙/范围伤害
+#   箭矢(0093): 弓的弹药
+#   魔法球(0094)/灯笼(0095): 特殊道具
+#
+# 装饰物 (0096-0109):
+#   用途: 丰富地牢视觉，不影响玩法
+#   氛围类: 火把(0096亮/0097灭/0098地面)、蜡烛(0099) — 照明装饰
+#   恐怖类: 蛛网(0100)、骸骨(0101)、骷髅头(0102)、血迹(0103) — 增加阴暗氛围
+#   破旧类: 裂缝(0104)、藤蔓(0105) — 暗示区域年代久远
+#   容器类: 木桶(0106)、木箱(0107)、陶罐(0108) — 可破坏/搜索的装饰
+#   信息类: 告示牌(0109) — 提示/教学文本载体
+#
+# 陷阱 (0110-0114):
+#   用途: 对玩家造成伤害的地形机关
+#   类型: 尖刺(0110缩回/0111伸出)、火焰(0112)、毒气(0113)、箭矢(0114)
+#
+# 特效 (0115-0119):
+#   用途: 动作反馈的视觉效果
+#   类型: 爆炸(0115-0116) 炸弹引爆；魔法(0117-0118) 技能释放；烟雾(0119) 消失/传送
+#
+# UI 元素 (0120-0131):
+#   用途: 游戏内 HUD 显示
+#   生命: 满心(0120)/半心(0121)/空心(0122) — 与 ui-pixel-adventure 的心(0031-0033)功能相同但风格略异
+#   魔力: 满(0123)/空(0124) — 法师类角色专用
+#   经验: 经验球(0125)/升级标记(0126) — 成长系统
+#   辅助: 小地图标记(0127)/空装备栏(0128)/高亮框(0129)/阴影(0130)/空白(0131)
+
+tiles:
+  # ── Row 0: 地板与墙顶 (0000-0011) ──
+  - id: "0000"
+    name: floor_stone_1
+    cn: "石地板变体1"
+    size: "16x16"
+    tags: [floor, stone, ground, terrain]
+  - id: "0001"
+    name: floor_stone_2
+    cn: "石地板变体2"
+    size: "16x16"
+    tags: [floor, stone, ground, terrain]
+  - id: "0002"
+    name: floor_stone_3
+    cn: "石地板变体3"
+    size: "16x16"
+    tags: [floor, stone, ground, terrain]
+  - id: "0003"
+    name: floor_stone_4
+    cn: "石地板变体4"
+    size: "16x16"
+    tags: [floor, stone, ground, terrain]
+  - id: "0004"
+    name: floor_dirt_1
+    cn: "土地板变体1"
+    size: "16x16"
+    tags: [floor, dirt, ground, terrain]
+  - id: "0005"
+    name: floor_dirt_2
+    cn: "土地板变体2"
+    size: "16x16"
+    tags: [floor, dirt, ground, terrain]
+  - id: "0006"
+    name: floor_hole
+    cn: "地板破洞"
+    size: "16x16"
+    tags: [floor, hole, hazard, terrain]
+  - id: "0007"
+    name: floor_ladder
+    cn: "梯子入口"
+    size: "16x16"
+    tags: [floor, ladder, stairs, transition]
+  - id: "0008"
+    name: wall_top_left
+    cn: "墙顶左端"
+    size: "16x16"
+    tags: [wall, top, left, structure]
+  - id: "0009"
+    name: wall_top_mid
+    cn: "墙顶中段"
+    size: "16x16"
+    tags: [wall, top, mid, structure]
+  - id: "0010"
+    name: wall_top_right
+    cn: "墙顶右端"
+    size: "16x16"
+    tags: [wall, top, right, structure]
+  - id: "0011"
+    name: wall_top_single
+    cn: "墙顶单独"
+    size: "16x16"
+    tags: [wall, top, single, structure]
+
+  # ── Row 1: 墙体与门 (0012-0023) ──
+  - id: "0012"
+    name: wall_mid_left
+    cn: "墙中左端"
+    size: "16x16"
+    tags: [wall, mid, left, structure]
+  - id: "0013"
+    name: wall_mid
+    cn: "墙中段"
+    size: "16x16"
+    tags: [wall, mid, structure]
+  - id: "0014"
+    name: wall_mid_right
+    cn: "墙中右端"
+    size: "16x16"
+    tags: [wall, mid, right, structure]
+  - id: "0015"
+    name: wall_mid_single
+    cn: "墙中单独"
+    size: "16x16"
+    tags: [wall, mid, single, structure]
+  - id: "0016"
+    name: wall_bottom_left
+    cn: "墙底左端"
+    size: "16x16"
+    tags: [wall, bottom, left, structure]
+  - id: "0017"
+    name: wall_bottom_mid
+    cn: "墙底中段"
+    size: "16x16"
+    tags: [wall, bottom, mid, structure]
+  - id: "0018"
+    name: wall_bottom_right
+    cn: "墙底右端"
+    size: "16x16"
+    tags: [wall, bottom, right, structure]
+  - id: "0019"
+    name: wall_bottom_single
+    cn: "墙底单独"
+    size: "16x16"
+    tags: [wall, bottom, single, structure]
+  - id: "0020"
+    name: door_closed
+    cn: "木门-关闭"
+    size: "16x16"
+    tags: [door, wood, closed, interactive]
+  - id: "0021"
+    name: door_open
+    cn: "木门-打开"
+    size: "16x16"
+    tags: [door, wood, open, interactive]
+  - id: "0022"
+    name: door_iron_closed
+    cn: "铁门-关闭"
+    size: "16x16"
+    tags: [door, iron, closed, interactive]
+  - id: "0023"
+    name: door_iron_open
+    cn: "铁门-打开"
+    size: "16x16"
+    tags: [door, iron, open, interactive]
+
+  # ── Row 2: 楼梯、宝箱、英雄 (0024-0035) ──
+  - id: "0024"
+    name: stairs_up
+    cn: "楼梯-上行"
+    size: "16x16"
+    tags: [stairs, up, transition, structure]
+  - id: "0025"
+    name: stairs_down
+    cn: "楼梯-下行"
+    size: "16x16"
+    tags: [stairs, down, transition, structure]
+  - id: "0026"
+    name: chest_closed
+    cn: "宝箱-关闭"
+    size: "16x16"
+    tags: [chest, closed, loot, interactive]
+  - id: "0027"
+    name: chest_open
+    cn: "宝箱-打开"
+    size: "16x16"
+    tags: [chest, open, loot, interactive]
+  - id: "0028"
+    name: chest_empty
+    cn: "宝箱-空"
+    size: "16x16"
+    tags: [chest, empty, loot, interactive]
+  - id: "0029"
+    name: chest_mimic
+    cn: "宝箱怪"
+    size: "16x16"
+    tags: [chest, mimic, enemy, trap]
+  - id: "0030"
+    name: hero_knight
+    cn: "骑士英雄"
+    size: "16x16"
+    tags: [hero, knight, player, character, idle]
+  - id: "0031"
+    name: hero_knight_walk
+    cn: "骑士英雄行走"
+    size: "16x16"
+    tags: [hero, knight, player, character, walk]
+  - id: "0032"
+    name: hero_mage
+    cn: "法师英雄"
+    size: "16x16"
+    tags: [hero, mage, player, character, idle]
+  - id: "0033"
+    name: hero_mage_walk
+    cn: "法师英雄行走"
+    size: "16x16"
+    tags: [hero, mage, player, character, walk]
+  - id: "0034"
+    name: hero_rogue
+    cn: "盗贼英雄"
+    size: "16x16"
+    tags: [hero, rogue, player, character, idle]
+  - id: "0035"
+    name: hero_rogue_walk
+    cn: "盗贼英雄行走"
+    size: "16x16"
+    tags: [hero, rogue, player, character, walk]
+
+  # ── Row 3: 更多角色与NPC (0036-0047) ──
+  - id: "0036"
+    name: hero_ranger
+    cn: "游侠英雄"
+    size: "16x16"
+    tags: [hero, ranger, player, character, idle]
+  - id: "0037"
+    name: hero_ranger_walk
+    cn: "游侠英雄行走"
+    size: "16x16"
+    tags: [hero, ranger, player, character, walk]
+  - id: "0038"
+    name: npc_old_man
+    cn: "老人NPC"
+    size: "16x16"
+    tags: [npc, old_man, character, friendly]
+  - id: "0039"
+    name: npc_woman
+    cn: "女性NPC"
+    size: "16x16"
+    tags: [npc, woman, character, friendly]
+  - id: "0040"
+    name: npc_child
+    cn: "孩子NPC"
+    size: "16x16"
+    tags: [npc, child, character, friendly]
+  - id: "0041"
+    name: npc_merchant
+    cn: "商人NPC"
+    size: "16x16"
+    tags: [npc, merchant, character, friendly, shop]
+  - id: "0042"
+    name: skeleton
+    cn: "骷髅兵"
+    size: "16x16"
+    tags: [enemy, skeleton, undead, idle]
+  - id: "0043"
+    name: skeleton_walk
+    cn: "骷髅兵行走"
+    size: "16x16"
+    tags: [enemy, skeleton, undead, walk]
+  - id: "0044"
+    name: zombie
+    cn: "僵尸"
+    size: "16x16"
+    tags: [enemy, zombie, undead, idle]
+  - id: "0045"
+    name: zombie_walk
+    cn: "僵尸行走"
+    size: "16x16"
+    tags: [enemy, zombie, undead, walk]
+  - id: "0046"
+    name: ghost
+    cn: "幽灵"
+    size: "16x16"
+    tags: [enemy, ghost, undead, idle]
+  - id: "0047"
+    name: ghost_walk
+    cn: "幽灵飘动"
+    size: "16x16"
+    tags: [enemy, ghost, undead, walk, float]
+
+  # ── Row 4: 怪物 (0048-0059) ──
+  - id: "0048"
+    name: bat
+    cn: "蝙蝠"
+    size: "16x16"
+    tags: [enemy, bat, flying, idle]
+  - id: "0049"
+    name: bat_fly
+    cn: "蝙蝠飞行"
+    size: "16x16"
+    tags: [enemy, bat, flying, walk]
+  - id: "0050"
+    name: spider
+    cn: "蜘蛛"
+    size: "16x16"
+    tags: [enemy, spider, bug, idle]
+  - id: "0051"
+    name: spider_walk
+    cn: "蜘蛛爬行"
+    size: "16x16"
+    tags: [enemy, spider, bug, walk]
+  - id: "0052"
+    name: snake
+    cn: "蛇"
+    size: "16x16"
+    tags: [enemy, snake, reptile, idle]
+  - id: "0053"
+    name: snake_move
+    cn: "蛇移动"
+    size: "16x16"
+    tags: [enemy, snake, reptile, walk]
+  - id: "0054"
+    name: slime_green
+    cn: "绿色史莱姆"
+    size: "16x16"
+    tags: [enemy, slime, green, idle]
+  - id: "0055"
+    name: slime_green_move
+    cn: "绿色史莱姆移动"
+    size: "16x16"
+    tags: [enemy, slime, green, walk]
+  - id: "0056"
+    name: slime_blue
+    cn: "蓝色史莱姆"
+    size: "16x16"
+    tags: [enemy, slime, blue, idle]
+  - id: "0057"
+    name: slime_blue_move
+    cn: "蓝色史莱姆移动"
+    size: "16x16"
+    tags: [enemy, slime, blue, walk]
+  - id: "0058"
+    name: rat
+    cn: "老鼠"
+    size: "16x16"
+    tags: [enemy, rat, vermin, idle]
+  - id: "0059"
+    name: rat_walk
+    cn: "老鼠走动"
+    size: "16x16"
+    tags: [enemy, rat, vermin, walk]
+
+  # ── Row 5: Boss怪物与武器 (0060-0071) ──
+  - id: "0060"
+    name: demon
+    cn: "恶魔"
+    size: "16x16"
+    tags: [enemy, demon, boss, idle]
+  - id: "0061"
+    name: demon_walk
+    cn: "恶魔行走"
+    size: "16x16"
+    tags: [enemy, demon, boss, walk]
+  - id: "0062"
+    name: dragon
+    cn: "龙"
+    size: "16x16"
+    tags: [enemy, dragon, boss, idle]
+  - id: "0063"
+    name: dragon_fly
+    cn: "龙飞行"
+    size: "16x16"
+    tags: [enemy, dragon, boss, walk, flying]
+  - id: "0064"
+    name: sword_basic
+    cn: "基础剑"
+    size: "16x16"
+    tags: [weapon, sword, melee, item]
+  - id: "0065"
+    name: sword_gold
+    cn: "金剑"
+    size: "16x16"
+    tags: [weapon, sword, gold, melee, item]
+  - id: "0066"
+    name: axe
+    cn: "斧头"
+    size: "16x16"
+    tags: [weapon, axe, melee, item]
+  - id: "0067"
+    name: hammer
+    cn: "锤子"
+    size: "16x16"
+    tags: [weapon, hammer, melee, item]
+  - id: "0068"
+    name: bow
+    cn: "弓"
+    size: "16x16"
+    tags: [weapon, bow, ranged, item]
+  - id: "0069"
+    name: staff
+    cn: "法杖"
+    size: "16x16"
+    tags: [weapon, staff, magic, item]
+  - id: "0070"
+    name: shield_wood
+    cn: "木盾"
+    size: "16x16"
+    tags: [armor, shield, wood, item]
+  - id: "0071"
+    name: shield_iron
+    cn: "铁盾"
+    size: "16x16"
+    tags: [armor, shield, iron, item]
+
+  # ── Row 6: 物品与消耗品 (0072-0083) ──
+  - id: "0072"
+    name: potion_red
+    cn: "红药水-生命"
+    size: "16x16"
+    tags: [item, potion, red, health, consumable]
+  - id: "0073"
+    name: potion_blue
+    cn: "蓝药水-魔法"
+    size: "16x16"
+    tags: [item, potion, blue, mana, consumable]
+  - id: "0074"
+    name: potion_green
+    cn: "绿药水-毒药"
+    size: "16x16"
+    tags: [item, potion, green, poison, consumable]
+  - id: "0075"
+    name: potion_yellow
+    cn: "黄药水-速度"
+    size: "16x16"
+    tags: [item, potion, yellow, speed, consumable]
+  - id: "0076"
+    name: coin_gold
+    cn: "金币"
+    size: "16x16"
+    tags: [item, coin, gold, currency, loot]
+  - id: "0077"
+    name: coin_silver
+    cn: "银币"
+    size: "16x16"
+    tags: [item, coin, silver, currency, loot]
+  - id: "0078"
+    name: gem_red
+    cn: "红宝石"
+    size: "16x16"
+    tags: [item, gem, red, treasure, loot]
+  - id: "0079"
+    name: gem_blue
+    cn: "蓝宝石"
+    size: "16x16"
+    tags: [item, gem, blue, treasure, loot]
+  - id: "0080"
+    name: gem_green
+    cn: "绿宝石"
+    size: "16x16"
+    tags: [item, gem, green, treasure, loot]
+  - id: "0081"
+    name: key_gold
+    cn: "金钥匙"
+    size: "16x16"
+    tags: [item, key, gold, interactive]
+  - id: "0082"
+    name: key_silver
+    cn: "银钥匙"
+    size: "16x16"
+    tags: [item, key, silver, interactive]
+  - id: "0083"
+    name: scroll
+    cn: "卷轴"
+    size: "16x16"
+    tags: [item, scroll, magic, consumable]
+
+  # ── Row 7: 更多物品与食物 (0084-0095) ──
+  - id: "0084"
+    name: book
+    cn: "书本"
+    size: "16x16"
+    tags: [item, book, knowledge, interactive]
+  - id: "0085"
+    name: map
+    cn: "地图"
+    size: "16x16"
+    tags: [item, map, navigation, interactive]
+  - id: "0086"
+    name: ring
+    cn: "戒指"
+    size: "16x16"
+    tags: [item, ring, accessory, equipment]
+  - id: "0087"
+    name: amulet
+    cn: "护身符"
+    size: "16x16"
+    tags: [item, amulet, accessory, equipment]
+  - id: "0088"
+    name: food_meat
+    cn: "肉/食物"
+    size: "16x16"
+    tags: [item, food, meat, consumable, health]
+  - id: "0089"
+    name: food_bread
+    cn: "面包"
+    size: "16x16"
+    tags: [item, food, bread, consumable, health]
+  - id: "0090"
+    name: food_apple
+    cn: "苹果"
+    size: "16x16"
+    tags: [item, food, apple, consumable, health]
+  - id: "0091"
+    name: food_cheese
+    cn: "奶酪"
+    size: "16x16"
+    tags: [item, food, cheese, consumable, health]
+  - id: "0092"
+    name: bomb
+    cn: "炸弹"
+    size: "16x16"
+    tags: [item, bomb, explosive, consumable]
+  - id: "0093"
+    name: arrow
+    cn: "箭矢"
+    size: "16x16"
+    tags: [item, arrow, ammo, ranged]
+  - id: "0094"
+    name: magic_orb
+    cn: "魔法球"
+    size: "16x16"
+    tags: [item, orb, magic, consumable]
+  - id: "0095"
+    name: lantern
+    cn: "灯笼/提灯"
+    size: "16x16"
+    tags: [item, lantern, light, equipment]
+
+  # ── Row 8: 装饰物 (0096-0107) ──
+  - id: "0096"
+    name: torch_wall
+    cn: "墙壁火把-亮"
+    size: "16x16"
+    tags: [decoration, torch, wall, light, lit]
+  - id: "0097"
+    name: torch_wall_off
+    cn: "墙壁火把-灭"
+    size: "16x16"
+    tags: [decoration, torch, wall, light, unlit]
+  - id: "0098"
+    name: torch_floor
+    cn: "地面火把"
+    size: "16x16"
+    tags: [decoration, torch, floor, light]
+  - id: "0099"
+    name: candle
+    cn: "蜡烛"
+    size: "16x16"
+    tags: [decoration, candle, light]
+  - id: "0100"
+    name: cobweb
+    cn: "蜘蛛网"
+    size: "16x16"
+    tags: [decoration, cobweb, web, spooky]
+  - id: "0101"
+    name: bones
+    cn: "骸骨"
+    size: "16x16"
+    tags: [decoration, bones, dead, spooky]
+  - id: "0102"
+    name: skull
+    cn: "骷髅头"
+    size: "16x16"
+    tags: [decoration, skull, dead, spooky]
+  - id: "0103"
+    name: blood_splat
+    cn: "血迹"
+    size: "16x16"
+    tags: [decoration, blood, gore, spooky]
+  - id: "0104"
+    name: crack
+    cn: "裂缝"
+    size: "16x16"
+    tags: [decoration, crack, damage, wall]
+  - id: "0105"
+    name: vine
+    cn: "藤蔓"
+    size: "16x16"
+    tags: [decoration, vine, plant, nature]
+  - id: "0106"
+    name: barrel
+    cn: "木桶"
+    size: "16x16"
+    tags: [decoration, barrel, container, interactive]
+  - id: "0107"
+    name: crate
+    cn: "木箱"
+    size: "16x16"
+    tags: [decoration, crate, container, interactive]
+
+  # ── Row 9: 陷阱与特效 (0108-0119) ──
+  - id: "0108"
+    name: pot
+    cn: "陶罐"
+    size: "16x16"
+    tags: [decoration, pot, container, interactive]
+  - id: "0109"
+    name: sign
+    cn: "告示牌"
+    size: "16x16"
+    tags: [decoration, sign, interactive, info]
+  - id: "0110"
+    name: spike_trap
+    cn: "尖刺陷阱-缩回"
+    size: "16x16"
+    tags: [trap, spike, hidden, hazard]
+  - id: "0111"
+    name: spike_trap_active
+    cn: "尖刺陷阱-伸出"
+    size: "16x16"
+    tags: [trap, spike, active, hazard]
+  - id: "0112"
+    name: fire_trap
+    cn: "火焰陷阱"
+    size: "16x16"
+    tags: [trap, fire, hazard]
+  - id: "0113"
+    name: poison_trap
+    cn: "毒气陷阱"
+    size: "16x16"
+    tags: [trap, poison, hazard]
+  - id: "0114"
+    name: arrow_trap
+    cn: "箭矢陷阱"
+    size: "16x16"
+    tags: [trap, arrow, ranged, hazard]
+  - id: "0115"
+    name: explosion_1
+    cn: "爆炸效果1"
+    size: "16x16"
+    tags: [effect, explosion, vfx]
+  - id: "0116"
+    name: explosion_2
+    cn: "爆炸效果2"
+    size: "16x16"
+    tags: [effect, explosion, vfx]
+  - id: "0117"
+    name: magic_effect_1
+    cn: "魔法效果1"
+    size: "16x16"
+    tags: [effect, magic, vfx]
+  - id: "0118"
+    name: magic_effect_2
+    cn: "魔法效果2"
+    size: "16x16"
+    tags: [effect, magic, vfx]
+  - id: "0119"
+    name: smoke
+    cn: "烟雾效果"
+    size: "16x16"
+    tags: [effect, smoke, vfx]
+
+  # ── Row 10: UI元素 (0120-0131) ──
+  - id: "0120"
+    name: heart_full
+    cn: "满心-HUD"
+    size: "16x16"
+    tags: [ui, heart, full, health, hud]
+  - id: "0121"
+    name: heart_half
+    cn: "半心-HUD"
+    size: "16x16"
+    tags: [ui, heart, half, health, hud]
+  - id: "0122"
+    name: heart_empty
+    cn: "空心-HUD"
+    size: "16x16"
+    tags: [ui, heart, empty, health, hud]
+  - id: "0123"
+    name: mana_full
+    cn: "满魔力"
+    size: "16x16"
+    tags: [ui, mana, full, magic, hud]
+  - id: "0124"
+    name: mana_empty
+    cn: "空魔力"
+    size: "16x16"
+    tags: [ui, mana, empty, magic, hud]
+  - id: "0125"
+    name: xp_orb
+    cn: "经验球"
+    size: "16x16"
+    tags: [ui, xp, experience, hud]
+  - id: "0126"
+    name: level_up
+    cn: "升级标记"
+    size: "16x16"
+    tags: [ui, level_up, effect, hud]
+  - id: "0127"
+    name: minimap_marker
+    cn: "小地图标记"
+    size: "16x16"
+    tags: [ui, minimap, marker, hud]
+  - id: "0128"
+    name: empty_slot
+    cn: "空装备栏"
+    size: "16x16"
+    tags: [ui, slot, empty, inventory, hud]
+  - id: "0129"
+    name: highlight
+    cn: "高亮选择框"
+    size: "16x16"
+    tags: [ui, highlight, selection, hud]
+  - id: "0130"
+    name: shadow
+    cn: "阴影"
+    size: "16x16"
+    tags: [ui, shadow, effect]
+  - id: "0131"
+    name: blank
+    cn: "空白瓦片"
+    size: "16x16"
+    tags: [ui, blank, empty, transparent]

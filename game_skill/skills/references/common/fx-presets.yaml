@@ -1,0 +1,275 @@
+# ═══════════════════════════════════════════════════════════
+# 游戏特效预设库 — fx-presets.yaml
+# ═══════════════════════════════════════════════════════════
+#
+# 用途：codegen 阶段根据 color-scheme.fx-hint 选择对应特效预设，
+#       结合 color-scheme 的色值生成具体特效代码。
+#
+# 与 color-palettes.yaml 的关系：
+#   color-palettes.yaml 的每个色板有一个 fx-hint 字段（soft/pixel/glow/bounce/ink），
+#   codegen 通过 fx-hint 查到本文件的对应预设，再用色板的具体色值填充粒子颜色等。
+#
+# 这样做的好处：
+#   - 色板和特效完全解耦，可独立扩充
+#   - 同一个 fx-hint 可被多个色板复用
+#   - 粒子颜色不硬编码在特效预设中，而是动态取自当前色板
+#
+# ═══════════════════════════════════════════════════════════
+
+
+# ───────────────────────────────────────────────────────────
+# 1. soft — 柔和过渡型
+#    适用场景：通用默认、棋盘、牌桌、养成、海洋、中世纪、森林等
+# ───────────────────────────────────────────────────────────
+soft:
+  description: "柔和过渡型特效 — 缓动平滑、阴影柔和、粒子圆形小颗粒"
+
+  # 特效层级实现
+  L0-interaction:
+    hover: "scale(1.05) + 0.2s ease-out + box-shadow 扩展"
+    select: "border 2px solid ${accent} + scale(1.02)"
+
+  L1-feedback:
+    success: "绿色脉冲闪烁 2 次 + 轻微 scale bounce"
+    failure: "红色闪烁 + translateX 左右抖动 (±4px, 3 次, 0.3s)"
+
+  L2-reward:
+    score-popup: "数字飘字 +N 向上淡出 (1.2s, ease-out)"
+    combo: "文字 scale 1.0→1.5→1.0 + 色彩从 ${primary} 渐变到 ${accent}"
+    particles:
+      shape: "circle"
+      count: "8-15"
+      size: "2-6px"
+      lifetime: "0.6-1.2s"
+      colors: "从当前 color-scheme 取 [primary, accent, secondary]"
+      easing: "ease-out"
+
+  L3-climax:
+    victory: "全屏粒子喷射 (count: 40-60) + 背景 brightness 脉冲"
+    defeat: "灰度滤镜 (0.5s) + 粒子下坠散落"
+
+  particle-emitter:
+    engine-phaser: |
+      this.add.particles(x, y, 'particle', {
+        speed: { min: 50, max: 150 },
+        scale: { start: 0.6, end: 0 },
+        alpha: { start: 1, end: 0 },
+        lifespan: { min: 600, max: 1200 },
+        quantity: 12,
+        tint: [PRIMARY_HEX, ACCENT_HEX]  // 从 color-scheme 动态取
+      });
+    engine-pixijs: |
+      // 使用 @pixi/particle-emitter
+      emitter.emit = true;
+      emitter.particleConfig = {
+        lifetime: { min: 0.6, max: 1.2 },
+        frequency: 0.02,
+        maxParticles: 15,
+        pos: { x, y },
+        behaviors: [
+          { type: 'scale', config: { scale: { start: 0.6, end: 0 } } },
+          { type: 'color', config: { color: { list: [PRIMARY, ACCENT] } } }
+        ]
+      };
+    engine-canvas: |
+      // 手写粒子数组
+      particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 3,
+        vy: -Math.random() * 4,
+        size: 2 + Math.random() * 4,
+        alpha: 1,
+        color: [PRIMARY, ACCENT][Math.random() > 0.5 ? 1 : 0],
+        life: 0.6 + Math.random() * 0.6
+      });
+    engine-dom: |
+      // CSS animation 粒子
+      const el = document.createElement('div');
+      el.style.cssText = `
+        position:absolute; left:${x}px; top:${y}px;
+        width:6px; height:6px; border-radius:50%;
+        background: ${PRIMARY};
+        pointer-events:none;
+      `;
+      el.animate([
+        { transform: 'translateY(0) scale(1)', opacity: 1 },
+        { transform: `translateY(-${40+Math.random()*40}px) scale(0)`, opacity: 0 }
+      ], { duration: 800, easing: 'ease-out' });
+    engine-three: |
+      // Three.js 粒子系统
+      const geo = new THREE.BufferGeometry();
+      // ... 点状粒子，使用 PointsMaterial，color 从 color-scheme 动态取
+
+
+# ───────────────────────────────────────────────────────────
+# 2. pixel — 像素硬边型
+#    适用场景：像素复古、贪吃蛇网格、俄罗斯方块
+# ───────────────────────────────────────────────────────────
+pixel:
+  description: "像素硬边型特效 — 无缓动步进动画、方块粒子、无 blur"
+
+  L0-interaction:
+    hover: "outline 2px solid ${accent} (no transition, instant)"
+    select: "invert color 1 frame flash"
+
+  L1-feedback:
+    success: "全元素 2 帧白闪 (steps(2), 0.2s)"
+    failure: "水平位移 ±2px (steps(4), 0.3s)"
+
+  L2-reward:
+    score-popup: "数字 scale steps(3) 1→1.5→1 + 向上移 20px (steps(5), 0.8s)"
+    combo: "背景色 flash cycle（primary→accent→primary, steps(6), 0.5s）"
+    particles:
+      shape: "square"
+      count: "6-10"
+      size: "2x2px ~ 4x4px (整数像素，不用小数)"
+      lifetime: "0.4-0.8s"
+      colors: "从 color-scheme 取 [primary, accent, success, error]"
+      easing: "steps(8)"  # 步进，不用平滑
+
+  L3-climax:
+    victory: "全屏方块雨 (count: 30-40) + 屏幕 2 帧白闪"
+    defeat: "逐行消除（从底到顶, steps(20), 1.5s）"
+
+  禁止:
+    - "ease-in-out"
+    - "blur"
+    - "gradient"
+    - "border-radius > 0"
+    - "sub-pixel rendering"
+
+
+# ───────────────────────────────────────────────────────────
+# 3. glow — 发光辉光型
+#    适用场景：科技霓虹、军事、赛车、暗黑RPG
+# ───────────────────────────────────────────────────────────
+glow:
+  description: "发光辉光型特效 — 荧光描边、光晕脉冲、bloom 效果"
+
+  L0-interaction:
+    hover: "box-shadow: 0 0 12px ${primary}80 + text-shadow: 0 0 8px ${primary}"
+    select: "box-shadow: 0 0 20px ${accent} + border-color: ${accent}"
+
+  L1-feedback:
+    success: "glow 脉冲 (shadow spread 0→20px→0, 0.4s) + 绿色"
+    failure: "红色 glow 闪烁 3 次 + 微震"
+
+  L2-reward:
+    score-popup: "发光飘字 (text-shadow: 0 0 10px ${accent}) + 上浮淡出"
+    combo: "光环扩散 (ring expand from center, 0→100px, opacity 1→0)"
+    particles:
+      shape: "circle (with glow)"
+      count: "10-20"
+      size: "1-4px + blur 4px"
+      lifetime: "0.5-1.0s"
+      colors: "从 color-scheme 取 [primary, accent]，带 alpha 渐变"
+      easing: "ease-out"
+      trail: true  # 尾迹效果，粒子运动轨迹残留 3-5 帧
+
+  L3-climax:
+    victory: "全屏光线爆发 + bloom filter + 粒子向外辐射 (count: 50+)"
+    defeat: "颜色去饱和 (grayscale filter 0.8s) + 光点逐个熄灭"
+
+  引擎特殊:
+    phaser: "camera postFX pipeline 可加 bloom"
+    pixijs: "使用 @pixi/filter-glow + @pixi/filter-bloom"
+    canvas: "使用 ctx.shadowBlur + ctx.shadowColor 模拟"
+    dom: "使用 CSS filter: drop-shadow() + box-shadow"
+    three: "使用 UnrealBloomPass (postprocessing 库)"
+
+
+# ───────────────────────────────────────────────────────────
+# 4. bounce — 弹跳活泼型
+#    适用场景：动作冒险、糖果休闲、教育校园、派对社交
+# ───────────────────────────────────────────────────────────
+bounce:
+  description: "弹跳活泼型特效 — 弹性缓动、夸张缩放、Q弹粒子"
+
+  L0-interaction:
+    hover: "scale(1.08) + cubic-bezier(0.175, 0.885, 0.32, 1.275) (过冲弹跳)"
+    select: "scale 1→1.15→0.95→1.05→1 (spring animation, 0.4s)"
+
+  L1-feedback:
+    success: "scale bounce (1→1.3→0.9→1.1→1, 0.5s) + 旋转 ±5°"
+    failure: "水平弹跳抖动 (±8px, ease-elastic, 0.4s)"
+
+  L2-reward:
+    score-popup: "数字弹出 scale(0)→scale(1.3)→scale(1) + 向上弧线运动"
+    combo: "连击数字 scale 爆炸 (1→2→1, 0.3s) + 周围星星弹射"
+    particles:
+      shape: "star / heart / circle (随机混合)"
+      count: "12-20"
+      size: "4-10px"
+      lifetime: "0.8-1.5s"
+      colors: "从 color-scheme 取 [primary, accent, secondary]"
+      easing: "cubic-bezier(0.175, 0.885, 0.32, 1.275)"  # 弹性过冲
+      gravity: true  # 粒子有重力，先向上再落下
+
+  L3-climax:
+    victory: "全屏五彩纸屑 (count: 60-80, mixed shapes) + 大文字弹入 + 屏幕轻震"
+    defeat: "元素逐个缩小消失 (scale→0, stagger 0.05s)"
+
+  关键缓动函数:
+    spring: "cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+    bounce-out: "cubic-bezier(0.34, 1.56, 0.64, 1)"
+
+
+# ───────────────────────────────────────────────────────────
+# 5. ink — 水墨晕染型
+#    适用场景：古风水墨、手绘绘本
+# ───────────────────────────────────────────────────────────
+ink:
+  description: "水墨晕染型特效 — 墨滴扩散、纸质感、不规则边缘"
+
+  L0-interaction:
+    hover: "opacity 0.7→1 + 轻微旋转 (±1°, 0.3s)"
+    select: "墨点扩散边框 (border 从 solid 变为不规则虚线)"
+
+  L1-feedback:
+    success: "墨滴溅射 (3-5 个随机位置的圆形墨点，大小不一)"
+    failure: "红色墨点 + 纸张褶皱效果 (轻微 skew)"
+
+  L2-reward:
+    score-popup: "毛笔书写动画（stroke-dasharray 从 100% 到 0，模拟笔画）"
+    combo: "印章盖下效果 (scale 1.5→1 + 旋转 ±3°, 0.3s)"
+    particles:
+      shape: "irregular blob (不规则圆形，border-radius 随机变化)"
+      count: "5-10"
+      size: "3-12px (大小差异大)"
+      lifetime: "0.8-2.0s"
+      colors: "墨黑 #1a1a1a (80%) + 朱红 ${accent} (20%)"
+      easing: "ease-out"
+      spread: "从中心向外晕染扩散"
+
+  L3-climax:
+    victory: "全屏水墨晕染（从中心向外扩散黑色渐变圆, 1.5s）+ 金色文字浮现"
+    defeat: "纸张泛黄折叠效果 (perspective transform)"
+
+  禁止:
+    - "霓虹色"
+    - "高饱和渐变"
+    - "光效 blur"
+    - "硬阴影"
+
+
+# ═══════════════════════════════════════════════════════════
+# 使用指南
+# ═══════════════════════════════════════════════════════════
+#
+# codegen 消费流程：
+#   1. 从 PRD front-matter 读取 color-scheme.fx-hint（如 "bounce"）
+#   2. 查本文件的对应预设段
+#   3. 根据引擎类型选对应的实现代码
+#   4. 将模板中的 ${primary}、${accent} 等替换为 color-scheme 的实际色值
+#   5. PRIMARY_HEX = parseInt(color-scheme.primary.slice(1), 16)（Phaser/PixiJS 用整数色值）
+#
+# 特效层级要求（不变）：
+#   - Phaser / PixiJS / Three.js 项目：必须覆盖 L0-L2
+#   - DOM / Canvas 项目：必须覆盖 L0-L1
+#   - L3 为可选增强
+#
+# 粒子颜色原则：
+#   - 永远从当前 color-scheme 动态取，不硬编码
+#   - 主粒子色 = primary（60%）+ accent（30%）+ secondary（10%）
+#   - 成功粒子 = success 色
+#   - 失败粒子 = error 色

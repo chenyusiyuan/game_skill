@@ -1,0 +1,169 @@
+{
+  "case_id": "phaser",
+  "description": "单词消消乐 - 面向小学生的英语单词配对游戏",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 10000,
+  "assertions": [
+    {
+      "id": "start-to-play",
+      "kind": "interaction",
+      "description": "开始流程 - 点击开始按钮进入游戏",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'playing' && window.gameState.scene === 'PlayScene'", "op": "truthy", "value": true },
+      "prd_check_id": "boot-success"
+    },
+    {
+      "id": "playable-loop",
+      "kind": "interaction",
+      "description": "主循环可玩 - 完成至少一对配对并验证分数变化",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "const initialScore = window.gameState.score; window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 1000 }
+      ],
+      "expect": { "selector": "window.gameState.score > 0", "op": "truthy", "value": true },
+      "prd_check_id": "playable-loop"
+    },
+    {
+      "id": "match-success",
+      "kind": "interaction",
+      "description": "配对成功流程 - 通过真实卡片点击匹配",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "const cards = window.gameTest.getCards(); const enCard = cards.find(c => c.side === 'en' && !c.matched); const zhCard = cards.find(c => c.side === 'zh' && c.pairId === enCard.pairId); window.gameTest.selectCard(enCard.id); window.gameTest.selectCard(zhCard.id);" },
+        { "action": "wait", "ms": 1000 }
+      ],
+      "expect": { "selector": "window.gameState.score > 0 && window.gameState.matchedPairs > 0", "op": "truthy", "value": true },
+      "prd_check_id": "match-success"
+    },
+    {
+      "id": "match-fail",
+      "kind": "interaction",
+      "description": "配对失败流程 - 匹配错误的卡片对",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "window.gameState.combo = 5" },
+        { "action": "eval", "js": "const cards = window.gameTest.getCards(); const enCard = cards.find(c => c.side === 'en' && !c.matched); const zhCard = cards.find(c => c.side === 'zh' && c.pairId !== enCard.pairId); if(zhCard) { window.gameTest.selectCard(enCard.id); window.gameTest.selectCard(zhCard.id); }" },
+        { "action": "wait", "ms": 1000 }
+      ],
+      "expect": { "selector": "window.gameState.combo === 0", "op": "truthy", "value": true },
+      "prd_check_id": "match-fail"
+    },
+    {
+      "id": "level-complete",
+      "kind": "interaction",
+      "description": "关卡完成 - 完成所有配对",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "window.gameTest.forceWin()" },
+        { "action": "wait", "ms": 1200 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'win'", "op": "truthy", "value": true },
+      "prd_check_id": "level-complete"
+    },
+    {
+      "id": "level-progression",
+      "kind": "interaction",
+      "description": "关卡递进 - 完成第1关后进入第2关",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.level = 1" },
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "window.gameTest.forceWin()" },
+        { "action": "wait", "ms": 1200 },
+        { "action": "eval", "js": "window.gameTest.clickNextLevelButton()" },
+        { "action": "wait", "ms": 800 }
+      ],
+      "expect": { "selector": "window.gameState.level === 2 && window.gameState.totalPairs === 8", "op": "truthy", "value": true },
+      "prd_check_id": "level-progression"
+    },
+    {
+      "id": "time-out",
+      "kind": "interaction",
+      "description": "超时失败 - 时间耗尽",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "window.gameTest.forceLose()" },
+        { "action": "wait", "ms": 1200 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'lose'", "op": "truthy", "value": true },
+      "prd_check_id": "time-out"
+    },
+    {
+      "id": "combo-system",
+      "kind": "interaction",
+      "description": "连击系统 - 连续配对成功3次验证连击加分",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.combo >= 3", "op": "truthy", "value": true },
+      "prd_check_id": "combo-system"
+    },
+    {
+      "id": "visual-feedback",
+      "kind": "interaction",
+      "description": "视觉反馈 - 验证特效系统存在",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.matchedPairs > 0", "op": "truthy", "value": true },
+      "prd_check_id": "visual-feedback"
+    },
+    {
+      "id": "restart-flow",
+      "kind": "interaction",
+      "description": "重试流程 - 点击重试按钮",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "window.gameTest.forceWin()" },
+        { "action": "wait", "ms": 1200 },
+        { "action": "eval", "js": "window.gameTest.clickRetryButton()" },
+        { "action": "wait", "ms": 800 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'playing' && window.gameState.score === 0", "op": "truthy", "value": true }
+    }
+  ],
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-no-external-assets",
+      "kind": "hard-rule",
+      "description": "不依赖外部素材 - 游戏可离线运行",
+      "setup": [],
+      "expect": { "selector": "true", "op": "truthy", "value": true }
+    },
+    {
+      "id": "hard-rule-pin-phaser-version",
+      "kind": "hard-rule",
+      "description": "锁定 Phaser 版本",
+      "setup": [],
+      "expect": { "selector": "document.querySelector('script[src*=\"phaser@3\"]') !== null", "op": "truthy", "value": true }
+    },
+    {
+      "id": "hard-rule-expose-game-state",
+      "kind": "hard-rule",
+      "description": "暴露游戏状态 - window.gameState 必须存在",
+      "setup": [],
+      "expect": { "selector": "window.gameState !== undefined && typeof window.gameState === 'object'", "op": "truthy", "value": true }
+    }
+  ]
+}

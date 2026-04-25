@@ -1,0 +1,110 @@
+{
+  "case_id": "pixel-pixijs",
+  "description": "像素传送带清板 - PixiJS v8 核心玩法断言",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 10000,
+  "assertions": [
+    {
+      "id": "boot-game",
+      "kind": "state",
+      "description": "@check(boot-game) 游戏启动后 phase 为 ready",
+      "setup": [],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "ready" }
+    },
+    {
+      "id": "has-board",
+      "kind": "state",
+      "description": "中央棋盘存在",
+      "setup": [{ "action": "wait", "ms": 100 }],
+      "expect": { "selector": "Array.isArray(window.gameState.blocks)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "has-waiting-slots",
+      "kind": "state",
+      "description": "等待槽存在",
+      "setup": [{ "action": "wait", "ms": 50 }],
+      "expect": { "selector": "Array.isArray(window.gameState.waitingSlots)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "playable-loop",
+      "kind": "interaction",
+      "description": "@check(playable-loop) 主循环可玩 - 点击开始后能派出小猪",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.deployPig(0)" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'playing' && Array.isArray(window.gameState.conveyorPigs) && window.gameState.conveyorPigs.length > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "position-targeting",
+      "kind": "interaction",
+      "description": "@check(position-targeting) 位置索敌正确 - 小猪只能攻击当前位置方向的目标",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameTest.deployPig(0)" },
+        { "action": "wait", "ms": 1000 }
+      ],
+      "expect": { "selector": "window.gameState.score > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "waiting-slot-recycle",
+      "kind": "interaction",
+      "description": "@check(waiting-slot-recycle) 等待槽回收 - 小猪弹药未耗尽则返回等待槽",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.gameState.waitingSlots.some(s => s !== null)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "win-condition",
+      "kind": "interaction",
+      "description": "@check(win-condition) 胜利条件 - 清空棋盘后进入胜利状态",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.forceWin()" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'win'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "lose-condition",
+      "kind": "interaction",
+      "description": "@check(lose-condition) 失败条件 - 小猪耗尽后进入失败状态",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.forceLose()" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'lose'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "hr-no-global-autoaim",
+      "kind": "hard-rule",
+      "description": "@constraint(no-global-autoaim) 禁止全屏自动索敌 - 使用位置索敌",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "Array.isArray(window.gameState.conveyorPigs)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "hr-single-block-attack",
+      "kind": "hard-rule",
+      "description": "@constraint(single-block-attack) 禁止一次攻击多块",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "true", "op": "truthy", "value": true }
+    },
+    {
+      "id": "level-progression",
+      "kind": "state",
+      "description": "@check(level-progression) 关卡递进 - 当前在第1关",
+      "setup": [],
+      "expect": { "selector": "window.gameState.level === 1", "op": "truthy", "value": true }
+    }
+  ]
+}

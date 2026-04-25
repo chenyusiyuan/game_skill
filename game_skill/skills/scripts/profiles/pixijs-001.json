@@ -1,0 +1,120 @@
+{
+  "case_id": "pixijs-001",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "assertions": [
+    {
+      "id": "boot-success",
+      "kind": "state",
+      "description": "启动后 phase = ready",
+      "setup": [],
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "ready"
+      }
+    },
+    {
+      "id": "playable-loop",
+      "kind": "state",
+      "description": "主循环可玩 - 点击开始配对卡片",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 800 }
+      ],
+      "expect": {
+        "selector": "window.gameState.score > 0 && window.gameState.matchedPairs >= 2",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "match-feedback",
+      "kind": "state",
+      "description": "配对失败反馈 - 扣时间和清零连击",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "window.gameState._timeBeforeFail = window.gameState.timeLeft" },
+        { "action": "eval", "js": "window.simulateWrongMatch()" },
+        { "action": "wait", "ms": 800 }
+      ],
+      "expect": {
+        "selector": "window.gameState.timeLeft < window.gameState._timeBeforeFail && window.gameState.combo === 0",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "combo-system",
+      "kind": "state",
+      "description": "连击系统 - 连续配对成功3次",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 800 }
+      ],
+      "expect": {
+        "selector": "window.gameState.combo >= 3",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "level-progression",
+      "kind": "state",
+      "description": "关卡递进 - 完成关卡进入下一关",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.setLevel(1)" },
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 900 },
+        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 900 },
+        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 900 },
+        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 900 },
+        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 900 },
+        { "action": "eval", "js": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 1200 },
+        { "action": "eval", "js": "window.gameTest.clickNextLevelButton()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.level === 2",
+        "op": "eq",
+        "value": true
+      }
+    },
+    {
+      "id": "time-limit",
+      "kind": "state",
+      "description": "时间限制 - 超时进入失败状态",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameState.timeLeft = 1" },
+        { "action": "wait", "ms": 2000 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "lose"
+      }
+    }
+  ]
+}

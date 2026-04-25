@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<!-- ENGINE: canvas | VERSION: browser-native | RUN: file -->
+<meta charset="UTF-8">
+<title>Canvas Template Game</title>
+<style>
+  body { margin: 0; background: #0f172a; color: #e2e8f0;
+         font-family: system-ui, sans-serif;
+         display: flex; flex-direction: column; align-items: center;
+         justify-content: center; min-height: 100vh; gap: 12px; }
+  canvas { background: #1e293b; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+  p { font-size: 14px; opacity: .7; }
+</style>
+</head>
+<body>
+  <canvas id="game" width="640" height="480"></canvas>
+  <p>Click the canvas to start / score.</p>
+
+  <script>
+    // Default run mode for simple canvas games is file, so this template stays inline.
+    // If you need modular code, switch the marker to `RUN: local-http` and split into ./src/*.js.
+
+    // ===== state =====
+    const state = {
+      phase: "ready",     // ready | playing | win | lose
+      score: 0,
+      t: 0,
+    };
+    window.gameState = state;
+
+    // ===== update =====
+    function update(state, dt) {
+      if (state.phase !== "playing") return;
+      state.t += dt;
+    }
+
+    // ===== draw =====
+    function draw(ctx, state) {
+      const { width: w, height: h } = ctx.canvas;
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "bold 28px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`phase: ${state.phase}`, w / 2, 60);
+      ctx.fillText(`score: ${state.score}`, w / 2, 100);
+
+      if (state.phase === "ready") {
+        ctx.font = "16px system-ui";
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillText("click to start", w / 2, h / 2);
+      } else if (state.phase === "playing") {
+        const x = (Math.sin(state.t / 300) + 1) * (w - 40) / 2 + 20;
+        ctx.fillStyle = "#0ea5e9";
+        ctx.fillRect(x - 20, h - 80, 40, 40);
+      }
+    }
+
+    // ===== main / loop =====
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    let last = 0;
+    function loop(ts) {
+      const dt = last === 0 ? 0 : ts - last;
+      last = ts;
+      update(state, dt);
+      draw(ctx, state);
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    canvas.addEventListener("pointerdown", () => {
+      if (state.phase === "ready") state.phase = "playing";
+      else if (state.phase === "playing") state.score += 1;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+{
+  "case_id": "pixel-dom-002",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "assertions": [
+    {
+      "id": "a-boot-state",
+      "kind": "state",
+      "description": "boot 后 phase = ready",
+      "setup": [],
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "ready"
+      }
+    },
+    {
+      "id": "a-start-click",
+      "kind": "state",
+      "description": "点击开始进入 playing",
+      "setup": [
+        { "action": "click", "selector": "[data-action='start']" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "playing"
+      }
+    },
+    {
+      "id": "a-pig-deploy",
+      "kind": "state",
+      "description": "点击等待槽中的小猪派出到传送带",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "wait", "ms": 100 },
+        { "action": "click", "selector": "[data-action='start']" },
+        { "action": "wait", "ms": 300 },
+        { "action": "click", "selector": "[data-pig-id]:not([data-on-belt='true'])" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": {
+        "selector": "window.gameState.conveyorBelt.length",
+        "op": "gte",
+        "value": 1
+      }
+    },
+    {
+      "id": "a-pig-movement",
+      "kind": "state",
+      "description": "小猪沿传送带移动",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "wait", "ms": 100 },
+        { "action": "click", "selector": "[data-action='start']" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "const s = window.gameState; s.conveyorBelt = [{id:'test-pig', color:'red', ammo:5, position:0, onBelt:true}]; s.waitingSlot = s.waitingSlot.filter(p => p.id !== 'test-pig');" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": {
+        "selector": "window.gameState.conveyorBelt[0].position",
+        "op": "gte",
+        "value": 1
+      }
+    },
+    {
+      "id": "hr-attack-by-position",
+      "kind": "hard-rule",
+      "description": "按位置索敌：只能攻击正对方向的第一个同色块",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "wait", "ms": 100 },
+        { "action": "click", "selector": "[data-action='start']" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameState.blocks.forEach(b => b.cleared = true); window.gameState.blocks[0] = {id:'b0', color:'red', durability:1, row:0, col:0, cleared:false}; window.gameState.blocks[1] = {id:'b1', color:'red', durability:1, row:2, col:0, cleared:false}; window.gameState.conveyorBelt = [{id:'p1', color:'red', ammo:3, position:0, onBelt:true}]; window.gameState.waitingSlot = [];" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.blocks[1].cleared",
+        "op": "eq",
+        "value": false
+      }
+    },
+    {
+      "id": "no-penetration-attack",
+      "kind": "hard-rule",
+      "description": "禁止穿透攻击：不能跳过前方异色块攻击后方目标",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "wait", "ms": 100 },
+        { "action": "click", "selector": "[data-action='start']" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameState.blocks.forEach(b => b.cleared = true); window.gameState.blocks[0] = {id:'b0', color:'blue', durability:1, row:0, col:0, cleared:false}; window.gameState.blocks[1] = {id:'b1', color:'red', durability:1, row:1, col:0, cleared:false}; window.gameState.conveyorBelt = [{id:'p1', color:'red', ammo:3, position:0, onBelt:true}]; window.gameState.waitingSlot = [];" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.blocks[1].cleared",
+        "op": "eq",
+        "value": false
+      }
+    },
+    {
+      "id": "single-attack",
+      "kind": "hard-rule",
+      "description": "单次攻击：每次攻击只消耗1点弹药，只处理1个目标块",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "wait", "ms": 100 },
+        { "action": "click", "selector": "[data-action='start']" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameState.blocks.forEach(b => b.cleared = true); window.gameState.blocks[0] = {id:'b0', color:'red', durability:2, row:0, col:5, cleared:false}; window.gameState.blocks[1] = {id:'b1', color:'red', durability:1, row:0, col:4, cleared:false}; window.gameState.conveyorBelt = [{id:'p1', color:'red', ammo:5, position:7, onBelt:true}]; window.gameState.waitingSlot = []; window.gameState.blocksLeft = 2;" },
+        { "action": "wait", "ms": 150 }
+      ],
+      "expect": {
+        "selector": "window.gameState.blocks[0].durability",
+        "op": "eq",
+        "value": 1
+      }
+    },
+    {
+      "id": "a-waiting-slot-return",
+      "kind": "state",
+      "description": "弹药未耗尽的小猪回到等待槽",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "wait", "ms": 100 },
+        { "action": "click", "selector": "[data-action='start']" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameState.blocks.forEach(b => b.cleared = true); window.gameState.conveyorBelt = [{id:'p1', color:'red', ammo:3, position:31, onBelt:true}]; window.gameState.waitingSlot = [];" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": {
+        "selector": "window.gameState.waitingSlot.length",
+        "op": "gte",
+        "value": 1
+      }
+    },
+    {
+      "id": "a-win-condition",
+      "kind": "state",
+      "description": "清空所有目标块判定胜利",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "wait", "ms": 100 },
+        { "action": "click", "selector": "[data-action='start']" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameState.blocks.forEach(b => b.cleared = true); window.gameState.conveyorBelt = []; window.gameState.waitingSlot = [];" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "win"
+      }
+    },
+    {
+      "id": "a-lose-condition",
+      "kind": "state",
+      "description": "小猪耗尽且棋盘未清空判定失败",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "wait", "ms": 100 },
+        { "action": "click", "selector": "[data-action='start']" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameState.conveyorBelt = []; window.gameState.waitingSlot = []; window.gameState.blocks.some(b => !b.cleared) || (window.gameState.blocks[0].cleared = false);" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "lose"
+      }
+    },
+    {
+      "id": "a-level-progression",
+      "kind": "state",
+      "description": "关卡递进：胜利后可进入下一关",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "wait", "ms": 100 },
+        { "action": "click", "selector": "[data-action='start']" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameState.blocks.forEach(b => b.cleared = true); window.gameState.conveyorBelt = []; window.gameState.waitingSlot = [];" },
+        { "action": "wait", "ms": 300 },
+        { "action": "click", "selector": "[data-action='next']" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": {
+        "selector": "window.gameState.currentLevel",
+        "op": "eq",
+        "value": 2
+      }
+    },
+    {
+      "id": "a-visual-style",
+      "kind": "state",
+      "description": "像素复古视觉风格：使用 Press Start 2P 字体",
+      "setup": [],
+      "expect": {
+        "selector": "document.body.style.fontFamily.includes('Press Start 2P') || document.querySelector('link[href*=\"Press+Start+2P\"]') !== null",
+        "op": "truthy",
+        "value": null
+      }
+    }
+  ]
+}

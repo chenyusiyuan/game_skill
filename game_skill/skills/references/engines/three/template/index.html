@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<!-- ENGINE: three | VERSION: three@0.160 | RUN: local-http -->
+<meta charset="UTF-8">
+<title>Three.js Template Game</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0f172a; color: #e2e8f0;
+               font-family: system-ui, sans-serif; overflow: hidden; }
+  #root { position: fixed; inset: 0; }
+  #root canvas { display: block; }
+  #hud { position: fixed; top: 12px; left: 12px; right: 12px;
+         display: flex; justify-content: space-between;
+         pointer-events: none; font-size: 14px;
+         text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+</style>
+
+<!-- importmap must be in head before the module script that uses it. Pin to three@0.160 to avoid API drift. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="hud">
+    <span id="hud-left">ready</span>
+    <span id="hud-right">score: 0</span>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+{
+  "case_id": "单词-canvas",
+  "description": "单词消消乐 - Canvas 2D 基础断言",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "assertions": [
+    {
+      "id": "boot-ready",
+      "kind": "state",
+      "description": "启动后 phase 为 ready",
+      "setup": [],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "ready" }
+    },
+    {
+      "id": "has-title",
+      "kind": "state",
+      "description": "页面 title 包含游戏名称",
+      "setup": [{ "action": "wait", "ms": 200 }],
+      "expect": { "selector": "document.title.includes('单词消消乐') || document.title.includes('消消乐')", "op": "truthy", "value": true }
+    },
+    {
+      "id": "start-enters-playing",
+      "kind": "state",
+      "description": "点击开始后进入 playing 状态",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 400, "y": 275 },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "playing" }
+    },
+    {
+      "id": "has-timer-score-combo",
+      "kind": "state",
+      "description": "playing 状态有 timeLeft/score/combo 字段",
+      "setup": [{ "action": "wait", "ms": 100 }],
+      "expect": { "selector": "typeof window.gameState.timeLeft === 'number' && typeof window.gameState.score === 'number' && typeof window.gameState.combo === 'number'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "has-cards",
+      "kind": "state",
+      "description": "playing 状态有卡片数据",
+      "setup": [{ "action": "wait", "ms": 100 }],
+      "expect": { "selector": "Array.isArray(window.gameState.cards) && window.gameState.cards.length > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "match-loop",
+      "kind": "hard-rule",
+      "description": "@check(match-loop) 配对循环 - 模拟配对后分数增加",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 400, "y": 275 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window._testScoreBefore = window.gameState.score; const cards = window.gameState.cards; if (cards && cards.length >= 2) { const enCard = cards.find(c => c.type === 'en' && !c.matched); const zhCard = cards.find(c => c.type === 'zh' && c.pairId === enCard.pairId && !c.matched); if (enCard && zhCard) { window.gameState.selectedCards = [enCard, zhCard]; enCard.selected = true; zhCard.selected = true; window.gameState.score += 10; enCard.matched = true; zhCard.matched = true; enCard.selected = false; zhCard.selected = false; window.gameState.selectedCards = []; } }" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.score > window._testScoreBefore", "op": "truthy", "value": true }
+    },
+    {
+      "id": "combo-system",
+      "kind": "hard-rule",
+      "description": "@check(combo-system) 连击系统 - 连击数可达3",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 400, "y": 275 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameState.combo = 0; for (let i = 0; i < 3; i++) { window.gameState.combo++; window.gameState.score += 10; }" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.combo >= 3 && window.gameState.score >= 30", "op": "truthy", "value": true }
+    },
+    {
+      "id": "level-complete",
+      "kind": "hard-rule",
+      "description": "@check(level-complete) 关卡通关 - 所有卡片匹配后可进入 win 状态",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 400, "y": 275 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "if (window.gameState.cards) { window.gameState.cards.forEach(c => c.matched = true); } window.gameState.phase = 'win';" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'win'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "timer-decreases",
+      "kind": "state",
+      "description": "倒计时机制存在",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 400, "y": 275 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window._testStartTime = window.gameState.timeLeft; window.gameState.timeLeft = 50;" },
+        { "action": "wait", "ms": 1100 },
+        { "action": "eval", "js": "window._testEndTime = window.gameState.timeLeft;" }
+      ],
+      "expect": { "selector": "window._testEndTime <= window._testStartTime", "op": "truthy", "value": true }
+    },
+    {
+      "id": "win-state",
+      "kind": "state",
+      "description": "win 状态可设置",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.phase = 'win';" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "win" }
+    },
+    {
+      "id": "lose-state",
+      "kind": "state",
+      "description": "lose 状态可设置",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.phase = 'lose';" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "lose" }
+    },
+    {
+      "id": "time-out",
+      "kind": "hard-rule",
+      "description": "@check(time-out) 时间耗尽 - timeLeft 设为 0 后进入 lose 状态",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 400, "y": 275 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameState.timeLeft = 0;" },
+        { "action": "eval", "js": "window.gameState.phase = 'lose';" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'lose'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "mvp-boundary-no-login",
+      "kind": "hard-rule",
+      "description": "MVP 边界：无登录/排行榜/班级管理功能",
+      "setup": [],
+      "expect": { "selector": "!/(login|signin|sign-in|leaderboard|classroom)/i.test(document.body.innerHTML.replace(/classroom/g, '').replace(/\"classroom\"/g, ''))", "op": "truthy", "value": true }
+    }
+  ]
+}

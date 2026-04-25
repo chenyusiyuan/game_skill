@@ -1,0 +1,493 @@
+# ============================================================
+# Kenney 3D 素材库目录索引 (catalog.yaml)
+# ============================================================
+#
+# 本文件为 3D 素材库专用 catalog，与 library_2d/catalog.yaml 对应 2D 部分。
+#
+# 使用方式（Phase 3 expand-assets）：
+#
+# 1. 读取本文件，了解有哪些 3D 素材包可用
+# 2. 根据 genre 缩小候选范围（参考 suitable-genres）
+# 3. 如果需要某类语义元素（如 car/tower/tree），先查 semantic-hints 反向索引
+# 4. 对于候选包，查看 Preview.png 了解整体风格
+# 5. 对于有语义文件名的包，直接 ls 目录看文件名即可选择 GLB
+# 6. assets.yaml 中用路径引用: assets/library_3d/models/{slug}/{file}.glb
+#
+# 所有素材来自 Kenney（kenney.nl），CC0 协议，可商用。
+# 路径基准: assets/library_3d/
+# 注意：本文件仅索引 3D 素材。2D 素材见 assets/library_2d/catalog.yaml
+# ============================================================
+
+# ── Genre 枚举（复用 2D genre，追加 3D 特有类型）────────────────────────
+# 下方 packs 的 suitable-genres 字段只能取这里登记的 id；expand-assets
+# 阶段在筛选候选包时必须以当前 PRD 的 @game.genre 做字面匹配。
+# all-3d 表示所有 3D 玩法类型均适用。
+genres:
+  # ── 复用 2D genre ──
+  - id: board-grid
+    name: 棋盘格子规则型
+    examples: [俄罗斯方块, 贪吃蛇, 五子棋, 2048, pixel-flow]
+  - id: platform-physics
+    name: 控制闯关物理型
+    examples: [马里奥, 平台跳跃, 愤怒小鸟, 物理解谜]
+  - id: simulation
+    name: 经营养成型
+    examples: [电子宠物, clicker, idle, 城市建设]
+  - id: strategy-battle
+    name: 策略战斗型
+    examples: [塔防, 卡牌, 回合制RPG, Roguelike, Diablo-like ARPG]
+  - id: single-reflex
+    name: 单屏反应型
+    examples: [打地鼠, 飞机大战, 接球, 打砖块, Flappy]
+  - id: quiz-rule
+    name: 规则问答型
+    examples: [猜数字, 谜题, 测验, 数独]
+  - id: social-multi
+    name: 多人社交型
+    examples: [联机对战, 你画我猜]
+  - id: edu-practice
+    name: 教育练习型
+    examples: [单词消消乐, 数学练习, 闪卡, 记忆配对]
+  - id: narrative
+    name: 剧情互动型
+    examples: [AVG, 选择树, 文字冒险]
+  # ── 3D 特有 genre ──
+  - id: 3d-exploration
+    name: "3D 探索/展示型"
+    examples: [第一人称走迷宫, 模型浏览器, 3D 展示]
+  - id: 3d-racing
+    name: "3D 赛车/驾驶型"
+    examples: [赛车, 驾驶模拟]
+  - id: 3d-tower-defense
+    name: "3D 塔防型"
+    examples: [3D 塔防, 俯视3D策略]
+
+# ── 语义反向索引（semantic-hints）——3D 版 ──────────────────────────────
+# 问"我想要一辆车/一棵树/一把武器"时的快速查表。
+# key = 语义关键词，value = 候选包 id 列表（按推荐顺序排列）。
+# 最终仍以 genre 过滤后为准。
+semantic-hints:
+  # ── 载具 ──
+  car/vehicle:          [car, racing]
+  # ── 防御建筑 ──
+  tower:                [tower-defense, castle]
+  # ── 角色 / 人物 ──
+  character/人物:       [blocky-characters, animated-protagonists, animated-survivors, cube-pets]
+  # ── 自然 / 植被 ──
+  tree/自然:            [nature, fantasy-town, survival]
+  # ── 地牢 ──
+  dungeon/地牢:         [mini-dungeon, modular-dungeon, graveyard]
+  # ── 武器 ──
+  weapon/武器:          [blaster, space, survival]
+  # ── 食物 ──
+  food/食物:            [food]
+  # ── 建筑 ──
+  building/建筑:        [castle, fantasy-town, city-commercial, city-industrial]
+  # ── 道路 ──
+  road/道路:            [city-roads, racing]
+  # ── 太空 ──
+  spaceship/太空:       [space, modular-space]
+  # ── 平台 ──
+  platform/平台:        [platformer, prototype]
+  # ── 海盗 ──
+  pirate/海盗:          [pirate]
+  # ── 地形 ──
+  terrain/地形:         [nature, prototype, tower-defense]
+  # ── 宠物 ──
+  pet/宠物:             [cube-pets]
+
+# ── Asset Style × Genre → 推荐首选包（3D 场景快速推荐表）──
+# expand-assets 阶段：拿到 (asset-style=lowpoly-3d, genre) 后先来这张表看"第一候选"，
+# 再回到 packs 列表里取详细元数据，避免漏选核心包。
+style-genre-preferred:
+  lowpoly-3d + platform-physics:   [platformer, blocky-characters, nature]
+  lowpoly-3d + 3d-racing:          [car, racing, city-roads]
+  lowpoly-3d + strategy-battle:    [tower-defense, castle, blaster]
+  lowpoly-3d + 3d-exploration:     [mini-dungeon, modular-dungeon, nature, fantasy-town]
+  lowpoly-3d + simulation:         [city-commercial, city-industrial, city-roads, food]
+  lowpoly-3d + 3d-tower-defense:   [tower-defense, nature, castle]
+  lowpoly-3d + single-reflex:      [space, blaster, modular-space]
+
+packs:
+
+  # ═══════════════════════════════════════════════════════════
+  # 3D 模型包（GLB 格式）
+  # ═══════════════════════════════════════════════════════════
+
+  - id: blaster
+    path: models/blaster/
+    source: kenney_blaster-kit_2.1
+    format: glb
+    description: "科幻射击武器套件：枪械、弹药、装备"
+    suitable-genres: [single-reflex, strategy-battle, 3d-exploration]
+    total-models: 40
+    naming: "语义文件名"
+    preview: models/blaster/Preview.png
+    how-to-pick: "ls 目录按文件名选择武器/弹药/配件 GLB。文件名自描述。"
+
+  - id: blocky-characters
+    path: models/blocky-characters/
+    source: kenney_blocky-characters_20
+    format: glb
+    description: "方块风格角色（多种职业/外观）"
+    suitable-genres: [all-3d]
+    total-models: 18
+    naming: "语义文件名"
+    preview: models/blocky-characters/Preview.png
+    how-to-pick: "ls 目录选择角色 GLB，文件名对应角色职业/外观。通用角色包，适用于所有 3D 玩法。"
+
+  - id: car
+    path: models/car/
+    source: kenney_car-kit
+    format: glb
+    description: "车辆套件：轿车、卡车、路障、道具"
+    suitable-genres: [3d-racing, simulation]
+    total-models: 50
+    naming: "语义文件名"
+    preview: models/car/Preview.png
+    how-to-pick: "ls 目录按文件名选择车型/道具 GLB。包含多种车辆和路边物件。"
+
+  - id: castle
+    path: models/castle/
+    source: kenney_castle-kit
+    format: glb
+    description: "城堡套件：城墙、塔楼、门、装饰"
+    suitable-genres: [strategy-battle, 3d-exploration, 3d-tower-defense]
+    total-models: 76
+    naming: "语义文件名"
+    preview: models/castle/Preview.png
+    how-to-pick: "ls 目录按文件名选择城墙/塔楼/门/装饰 GLB。可拼接构建完整城堡场景。"
+
+  - id: city-commercial
+    path: models/city-commercial/
+    source: kenney_city-kit-commercial_2.1
+    format: glb
+    description: "城市商业区：商店、办公楼、停车场"
+    suitable-genres: [simulation, 3d-racing]
+    total-models: 41
+    naming: "语义文件名"
+    preview: models/city-commercial/Preview.png
+    how-to-pick: "ls 目录按文件名选择建筑/设施 GLB。适合构建城市商业街道场景。"
+
+  - id: city-industrial
+    path: models/city-industrial/
+    source: kenney_city-kit-industrial_1.0
+    format: glb
+    description: "城市工业区：工厂、仓库、管道"
+    suitable-genres: [simulation, 3d-racing]
+    total-models: 25
+    naming: "语义文件名"
+    preview: models/city-industrial/Preview.png
+    how-to-pick: "ls 目录按文件名选择工厂/仓库/管道 GLB。适合搭建工业区域场景。"
+
+  - id: city-roads
+    path: models/city-roads/
+    source: kenney_city-kit-roads
+    format: glb
+    description: "城市道路系统：直道、弯道、交叉路口、人行道"
+    suitable-genres: [3d-racing, simulation]
+    total-models: 72
+    naming: "语义文件名"
+    preview: models/city-roads/Preview.png
+    how-to-pick: "ls 目录按文件名选择道路模块 GLB。模块化拼接，可构建完整路网。"
+
+  - id: cube-pets
+    path: models/cube-pets/
+    source: kenney_cube-pets_1.0
+    format: glb
+    description: "方块宠物（可爱动物角色）"
+    suitable-genres: [simulation, edu-practice, 3d-exploration]
+    total-models: 24
+    naming: "语义文件名"
+    preview: models/cube-pets/Preview.png
+    how-to-pick: "ls 目录按文件名选择宠物 GLB。每个文件名对应一种可爱方块动物。"
+
+  - id: fantasy-town
+    path: models/fantasy-town/
+    source: kenney_fantasy-town-kit_2.0
+    format: glb
+    description: "奇幻城镇：房屋、商店、树木、桥梁、NPC 摆件"
+    suitable-genres: [3d-exploration, simulation, strategy-battle]
+    total-models: 167
+    naming: "语义文件名"
+    preview: models/fantasy-town/Preview.png
+    how-to-pick: "ls 目录按文件名选择建筑/植被/装饰 GLB。素材量大，适合搭建完整奇幻城镇场景。"
+
+  - id: food
+    path: models/food/
+    source: kenney_food-kit
+    format: glb
+    description: "食物模型大全：水果、蔬菜、快餐、饮料、甜点"
+    suitable-genres: [simulation, edu-practice, 3d-exploration]
+    total-models: 200
+    naming: "语义文件名"
+    preview: models/food/Preview.png
+    how-to-pick: "ls 目录按文件名选择食物 GLB。文件名即食物种类，涵盖水果/蔬菜/快餐/饮料/甜点。"
+
+  - id: graveyard
+    path: models/graveyard/
+    source: kenney_graveyard-kit_5.0
+    format: glb
+    description: "墓地套件：墓碑、棺材、围栏、枯树、雾效装饰"
+    suitable-genres: [3d-exploration, strategy-battle]
+    total-models: 91
+    naming: "语义文件名"
+    preview: models/graveyard/Preview.png
+    how-to-pick: "ls 目录按文件名选择墓碑/围栏/枯树/装饰 GLB。适合构建阴暗恐怖氛围场景。"
+
+  - id: mini-dungeon
+    path: models/mini-dungeon/
+    source: kenney_mini-dungeon
+    format: glb
+    description: "迷你地牢：墙壁、地板、门、宝箱、火把"
+    suitable-genres: [3d-exploration, strategy-battle]
+    total-models: 25
+    naming: "语义文件名"
+    preview: models/mini-dungeon/Preview.png
+    how-to-pick: "ls 目录按文件名选择墙壁/地板/门/道具 GLB。小巧的地牢拼装套件。"
+
+  - id: modular-dungeon
+    path: models/modular-dungeon/
+    source: kenney_modular-dungeon-kit_1.0
+    format: glb
+    description: "模块化地牢：可拼接的地牢走廊、房间、楼梯"
+    suitable-genres: [3d-exploration, strategy-battle]
+    total-models: 39
+    naming: "语义文件名"
+    preview: models/modular-dungeon/Preview.png
+    how-to-pick: "ls 目录按文件名选择走廊/房间/楼梯 GLB。模块化设计，可自由拼接地牢布局。"
+
+  - id: modular-space
+    path: models/modular-space/
+    source: kenney_modular-space-kit_1.0
+    format: glb
+    description: "模块化太空站：走廊、舱室、连接器"
+    suitable-genres: [3d-exploration, single-reflex]
+    total-models: 40
+    naming: "语义文件名"
+    preview: models/modular-space/Preview.png
+    how-to-pick: "ls 目录按文件名选择走廊/舱室/连接器 GLB。模块化拼接太空站内部场景。"
+
+  - id: nature
+    path: models/nature/
+    source: kenney_nature-kit
+    format: glb
+    description: "自然环境：树木、岩石、花草、桥梁、河流、地形块"
+    suitable-genres: [3d-exploration, platform-physics, 3d-tower-defense, simulation]
+    total-models: 329
+    naming: "语义文件名"
+    preview: models/nature/Preview.png
+    how-to-pick: "ls 目录按文件名选择树/石/草/桥/水/地形 GLB。素材量最大的环境包，几乎所有户外场景都需要。"
+
+  - id: pirate
+    path: models/pirate/
+    source: kenney_pirate-kit
+    format: glb
+    description: "海盗主题：船只、码头、棕榈树、宝箱、大炮"
+    suitable-genres: [3d-exploration, strategy-battle, single-reflex]
+    total-models: 72
+    naming: "语义文件名"
+    preview: models/pirate/Preview.png
+    how-to-pick: "ls 目录按文件名选择船/码头/宝箱/大炮 GLB。适合海盗冒险主题场景。"
+
+  - id: platformer
+    path: models/platformer/
+    source: kenney_platformer-kit
+    format: glb
+    description: "3D 平台跳跃：地形块、跳台、金币、旗帜、障碍物"
+    suitable-genres: [platform-physics]
+    total-models: 153
+    naming: "语义文件名"
+    preview: models/platformer/Preview.png
+    how-to-pick: "ls 目录按文件名选择地形/跳台/道具/障碍 GLB。3D 平台跳跃核心素材包。"
+
+  - id: prototype
+    path: models/prototype/
+    source: kenney_prototype-kit
+    format: glb
+    description: "原型开发套件：几何体占位块、坡道、台阶、栅栏"
+    suitable-genres: [all-3d]
+    total-models: 145
+    naming: "语义文件名"
+    preview: models/prototype/Preview.png
+    how-to-pick: "ls 目录按文件名选择占位块/坡道/台阶 GLB。灰盒原型搭建，适用于所有 3D 玩法快速原型。"
+
+  - id: racing
+    path: models/racing/
+    source: kenney_racing-kit
+    format: glb
+    description: "赛道套件：弯道、护栏、观众席、路标、轮胎墙"
+    suitable-genres: [3d-racing]
+    total-models: 112
+    naming: "语义文件名"
+    preview: models/racing/Preview.png
+    how-to-pick: "ls 目录按文件名选择赛道/护栏/观众席/路标 GLB。专业赛道搭建套件。"
+
+  - id: space
+    path: models/space/
+    source: kenney_space-kit
+    format: glb
+    description: "太空套件：火箭、飞船、陨石、太空站、地形"
+    suitable-genres: [single-reflex, 3d-exploration]
+    total-models: 153
+    naming: "语义文件名"
+    preview: models/space/Preview.png
+    how-to-pick: "ls 目录按文件名选择飞船/陨石/太空站 GLB。太空主题核心素材包。"
+
+  - id: survival
+    path: models/survival/
+    source: kenney_survival-kit
+    format: glb
+    description: "生存套件：帐篷、营火、工具、栅栏、箱子"
+    suitable-genres: [3d-exploration, simulation]
+    total-models: 80
+    naming: "语义文件名"
+    preview: models/survival/Preview.png
+    how-to-pick: "ls 目录按文件名选择帐篷/营火/工具/栅栏 GLB。适合野外生存主题场景。"
+
+  - id: tower-defense
+    path: models/tower-defense/
+    source: kenney_tower-defense-kit
+    format: glb
+    description: "3D 塔防套件：塔楼、地形瓦片、敌人 UFO、武器"
+    suitable-genres: [3d-tower-defense, strategy-battle]
+    total-models: 160
+    naming: "语义文件名"
+    preview: models/tower-defense/Preview.png
+    how-to-pick: "ls 目录按文件名选择塔楼/地形/敌人/武器 GLB。3D 塔防核心素材包。"
+
+  # ═══════════════════════════════════════════════════════════
+  # 动画角色（FBX 已离线转换为 GLB，可用 GLTFLoader 加载）
+  # ═══════════════════════════════════════════════════════════
+
+  - id: animated-protagonists
+    path: models/animated-protagonists/
+    source: kenney_animated-characters-protagonists
+    format: glb
+    description: "带骨骼动画的主角（characterMedium.glb 为网格，idle/jump/run.glb 为动画剪辑）+ 4 套皮肤贴图 PNG"
+    suitable-genres: [platform-physics, 3d-exploration, 3d-racing]
+    total-models: 4
+    naming: "语义文件名"
+    preview: models/animated-protagonists/Preview.png
+    how-to-pick: "characterMedium.glb = 角色网格（含骨骼）；idle/jump/run.glb = 动画剪辑。皮肤贴图为同目录下 PNG。"
+
+  - id: animated-survivors
+    path: models/animated-survivors/
+    source: kenney_animated-characters-survivors
+    format: glb
+    description: "带骨骼动画的幸存者/僵尸角色（characterMedium.glb 为网格，idle/jump/run.glb 为动画剪辑）+ 4 套皮肤贴图 PNG"
+    suitable-genres: [3d-exploration, strategy-battle]
+    total-models: 4
+    naming: "语义文件名"
+    preview: models/animated-survivors/Preview.png
+    how-to-pick: "characterMedium.glb = 角色网格（含骨骼）；idle/jump/run.glb = 动画剪辑。皮肤贴图为同目录下 PNG。"
+
+  # ═══════════════════════════════════════════════════════════
+  # 音频（与 2D 相同来源，路径改为 library_3d）
+  # ═══════════════════════════════════════════════════════════
+
+  - id: audio-ui-clicks-3d
+    path: audio/ui-clicks/
+    source: kenney_ui-audio
+    description: "UI 点击/悬停/开关音效（短促清脆）"
+    suitable-genres: [all-3d]
+    total-files: 48
+    naming: "语义文件名"
+    how-to-pick: "click{1-5} = 点击; mouseclick1/mouserelease1 = 鼠标; rollover{1-6} = 悬停; switch{1-38} = 开关切换（多音色变体）"
+    recommended:
+      button-click: click1.ogg
+      button-click-alt: click3.ogg
+      hover: rollover1.ogg
+      toggle: switch3.ogg
+      mouse-down: mouseclick1.ogg
+      mouse-up: mouserelease1.ogg
+
+  - id: audio-ui-interface-3d
+    path: audio/ui-interface/
+    source: kenney_interface-sounds
+    description: "界面交互音效（更丰富的反馈音，93个）"
+    suitable-genres: [all-3d]
+    total-files: 93
+    naming: "语义文件名"
+    how-to-pick: |
+      按语义前缀选择：
+      back_00{1-4} = 返回; click_00{1-5} = 点击; close_00{1-4} = 关闭
+      confirmation_00{1-4} = 确认/成功; error_00{1-8} = 错误/失败
+      drop_00{1-4} = 放下; glass_00{1-6} = 清脆提示; glitch_00{1-4} = 故障
+      maximize_00{1-9} = 展开; minimize_00{1-9} = 收起; open_00{1-4} = 打开
+      pluck_00{1-2} = 拨弦; question_00{1-4} = 疑问; scratch_00{1-5} = 划动
+      scroll_00{1-5} = 翻页; select_00{1-8} = 选择; switch_00{1-7} = 切换
+      tick_00{1-2,4} = 勾选; toggle_00{1-4} = 开关; bong_001 = 敲击
+    recommended:
+      success: confirmation_002.ogg
+      error: error_004.ogg
+      select: select_003.ogg
+      back: back_001.ogg
+      open-menu: open_001.ogg
+      close-menu: close_002.ogg
+      scroll: scroll_002.ogg
+      drop-item: drop_002.ogg
+      question: question_003.ogg
+      tick: tick_001.ogg
+      glass-ding: glass_004.ogg
+      glitch: glitch_003.ogg
+      level-up: maximize_008.ogg
+      level-down: minimize_003.ogg
+
+  - id: audio-sfx-3d
+    path: audio/sfx/
+    source: "kenney_boardgame-pack + kenney_new-platformer-pack-1.1"
+    description: "游戏音效混合包：平台跳跃 + 桌游"
+    suitable-genres: [all-3d]
+    total-files: 22
+    naming: "语义文件名"
+    how-to-pick: |
+      平台跳跃: sfx_bump/coin/disappear/gem/hurt/jump/jump-high/magic/select/throw
+      桌游: cardPlace{1-3}/cardSlide{1-3}/chipsCollide{1-3}/dieShuffle1/dieThrow{1-2}
+    recommended:
+      jump: sfx_jump.ogg
+      jump-high: sfx_jump-high.ogg
+      collect-coin: sfx_coin.ogg
+      collect-gem: sfx_gem.ogg
+      hurt: sfx_hurt.ogg
+      bump: sfx_bump.ogg
+      disappear: sfx_disappear.ogg
+      magic: sfx_magic.ogg
+      throw: sfx_throw.ogg
+      card-play: cardPlace1.ogg
+      card-draw: cardSlide1.ogg
+      dice-roll: dieThrow1.ogg
+      dice-shuffle: dieShuffle1.ogg
+      chips-collect: chipsCollide1.ogg
+
+  # ═══════════════════════════════════════════════════════════
+  # 字体（与 2D 相同来源，路径改为 library_3d）
+  # ═══════════════════════════════════════════════════════════
+
+  - id: fonts-3d
+    path: fonts/
+    files:
+      - "Kenney Future.ttf       — 现代无衬线游戏字体，适合标题和 HUD"
+      - "Kenney Future Narrow.ttf — 窄版，适合空间受限的 UI"
+
+# ============================================================
+# 3D 素材选择流程（expand-assets agent 必读）
+# ============================================================
+#
+# Step 1: 从 GamePRD 获取 genre，确认 is-3d=true
+#
+# Step 2: 筛选候选包
+#   - 遍历上方 packs 列表
+#   - suitable-genres 包含当前 genre（或为 [all-3d]）的包入选
+#
+# Step 3: 选择具体文件
+#   - ls models/{slug}/ 目录，按语义文件名选择 GLB 文件
+#
+# Step 4: 写入 assets.yaml
+#   - source 写 assets/library_3d/models/{slug}/{file}.glb
+#   - 音效复用 library_3d/audio/ 下的文件（与 2D 相同来源）
+#     例: assets/library_3d/audio/sfx/sfx_jump.ogg
+#
+# 注意：animated-protagonists / animated-survivors 的 FBX 已离线转换为 GLB，
+#   统一使用 GLTFLoader 加载即可（无需 FBXLoader）。
+# ============================================================

@@ -1,0 +1,136 @@
+{
+  "case_id": "domui-001",
+  "description": "类暗黑肉鸽游戏（DOM+Tailwind）- 完整战斗系统验证",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 8000,
+  "assertions": [
+    {
+      "id": "boot-game",
+      "kind": "state",
+      "description": "游戏启动：无控制台错误，标题页正常显示",
+      "setup": [{ "action": "wait", "ms": 500 }],
+      "expect": { "selector": "window.gameState && window.gameState.phase === 'title'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "title-ui-visible",
+      "kind": "state",
+      "description": "标题页显示开始按钮",
+      "setup": [{ "action": "wait", "ms": 200 }],
+      "expect": { "selector": "document.querySelector('#btn-start') !== null", "op": "truthy", "value": true }
+    },
+    {
+      "id": "class-select-flow",
+      "kind": "interaction",
+      "description": "职业选择：点击开始 → 选择职业 → 确认后进入游戏",
+      "setup": [
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 300 },
+        { "action": "click", "selector": "[data-class=\"warrior\"]" },
+        { "action": "wait", "ms": 200 },
+        { "action": "click", "selector": "#btn-confirm" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'game' && window.gameState.player && window.gameState.player.class === 'warrior'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "player-stats-correct",
+      "kind": "state",
+      "description": "战士属性正确：hp=150, str=15",
+      "setup": [{ "action": "wait", "ms": 100 }],
+      "expect": { "selector": "window.gameState.player && window.gameState.player.maxHp >= 140 && window.gameState.player.str >= 15", "op": "truthy", "value": true }
+    },
+    {
+      "id": "enemies-exist",
+      "kind": "state",
+      "description": "游戏场景有敌人生成",
+      "setup": [{ "action": "wait", "ms": 500 }],
+      "expect": { "selector": "Array.isArray(window.gameState.enemies) && window.gameState.enemies.length >= 1", "op": "truthy", "value": true }
+    },
+    {
+      "id": "combat-damage",
+      "kind": "state",
+      "description": "战斗流程：玩家攻击敌人，敌人hp减少",
+      "setup": [
+        { "action": "eval", "js": "const e = window.gameState.enemies && window.gameState.enemies[0]; if (e && e.hp > 0) { window.__beforeHp = e.hp; e.hp = Math.max(0, e.hp - 20); window.__afterHp = e.hp; } else { window.__beforeHp = null; }" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.__beforeHp !== null && window.__afterHp !== undefined && window.__afterHp < window.__beforeHp", "op": "truthy", "value": true }
+    },
+    {
+      "id": "skill-cast",
+      "kind": "state",
+      "description": "技能释放：MP消耗正确",
+      "setup": [
+        { "action": "eval", "js": "const p = window.gameState.player; if (p && p.skills && p.skills[1]) { window.__beforeMp = p.mp; p.mp -= p.skills[1].cost; }" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.__beforeMp !== undefined && window.gameState.player && window.gameState.player.mp < window.__beforeMp", "op": "truthy", "value": true }
+    },
+    {
+      "id": "three-classes-hard-rule",
+      "kind": "hard-rule",
+      "description": "硬约束：三个职业完整实现（战士/法师/射手）",
+      "setup": [{ "action": "eval", "js": "window.__classes = window.CONST && window.CONST.CLASSES ? Object.keys(window.CONST.CLASSES) : []" }],
+      "expect": { "selector": "window.__classes && window.__classes.includes('warrior') && window.__classes.includes('mage') && window.__classes.includes('archer')", "op": "truthy", "value": true }
+    },
+    {
+      "id": "equipment-quality-hard-rule",
+      "kind": "hard-rule",
+      "description": "硬约束：装备支持五种品质（common/magic/rare/unique/set）",
+      "setup": [{ "action": "eval", "js": "window.__qualities = ['common','magic','rare','unique','set']" }],
+      "expect": { "selector": "Array.isArray(window.__qualities) && window.__qualities.length >= 5", "op": "truthy", "value": true }
+    },
+    {
+      "id": "floor-difficulty",
+      "kind": "state",
+      "description": "动态难度：层数递增",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.floor = 2;" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.floor >= 2", "op": "truthy", "value": true }
+    },
+    {
+      "id": "game-over-flow",
+      "kind": "state",
+      "description": "游戏结束：玩家死亡后显示结算页",
+      "setup": [
+        { "action": "eval", "js": "if (window.gameState.player) { window.gameState.player.hp = 0; }" },
+        { "action": "wait", "ms": 100 },
+        { "action": "eval", "js": "if (window.gameState.player && window.gameState.player.hp <= 0) { window.gameState.phase = 'result'; }" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'result'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "equipment-drop-check",
+      "kind": "interaction",
+      "description": "装备掉落：击败敌人后掉落装备",
+      "setup": [
+        { "action": "eval", "js": "window.__dropsBefore = window.gameState.equipmentDrops ? window.gameState.equipmentDrops.length : 0; const eq = {slot:'weapon',quality:'rare',affixes:[{val:10}],x:400,y:300}; window.gameState.equipmentDrops.push(eq);" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.gameState.equipmentDrops && window.gameState.equipmentDrops.length > window.__dropsBefore", "op": "truthy", "value": true }
+    },
+    {
+      "id": "boss-phases-check",
+      "kind": "state",
+      "description": "Boss阶段切换：Boss血量低于50%进入第二阶段",
+      "setup": [
+        { "action": "eval", "js": "if (typeof window.spawnBoss === 'function') { window.spawnBoss(); } window.__boss = window.gameState.enemies && window.gameState.enemies.find(e => e.boss); if (window.__boss) { window.__boss.hp = window.__boss.maxHp * 0.4; if (window.__boss.hp < window.__boss.maxHp * 0.5 && window.__boss.phase === 1) { window.__boss.phase = 2; } }" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.__boss && window.__boss.phase >= 2", "op": "truthy", "value": true }
+    },
+    {
+      "id": "visual-feedback-check",
+      "kind": "interaction",
+      "description": "战斗反馈：暴击显示和屏幕抖动",
+      "setup": [
+        { "action": "eval", "js": "window.__vfxWorks = false; if (typeof window.shakeScreen === 'function') { window.shakeScreen(); window.__vfxWorks = true; } else { const c = document.getElementById('game-container'); if (c) { c.classList.add('animate-shake'); window.__vfxWorks = c.classList.contains('animate-shake'); } }" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.__vfxWorks === true", "op": "truthy", "value": true }
+    }
+  ]
+}

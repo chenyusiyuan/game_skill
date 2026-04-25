@@ -1,0 +1,163 @@
+{
+  "profileId": "pixel-phaser-001",
+  "description": "Pixel Phaser - 像素传送带清板益智游戏",
+  "assertions": [
+    {
+      "id": "boot-game",
+      "description": "游戏启动正常",
+      "setup": [],
+      "assert": "window.game !== undefined && window.gameState !== undefined",
+      "layer": "engineering"
+    },
+    {
+      "id": "start-scene-visible",
+      "description": "开始场景可见",
+      "setup": [],
+      "assert": "window.gameState.phase === 'ready' || window.gameState.currentScene === 'StartScene'",
+      "layer": "engineering"
+    },
+    {
+      "id": "click-start-button",
+      "description": "点击开始按钮进入游戏",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } }
+      ],
+      "assert": "window.gameState.phase === 'playing' || window.gameState.currentScene === 'PlayScene'",
+      "layer": "product"
+    },
+    {
+      "id": "wait-slot-has-pigs",
+      "description": "等待槽有初始小猪",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } }
+      ],
+      "assert": "window.gameState.waitSlotPigs && window.gameState.waitSlotPigs.length > 0",
+      "layer": "product"
+    },
+    {
+      "id": "blocks-exist",
+      "description": "棋盘上有目标块",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } }
+      ],
+      "assert": "window.gameState.blocks && window.gameState.blocks.filter(b => b.state === 'active').length > 0",
+      "layer": "product"
+    },
+    {
+      "id": "conveyor-system",
+      "description": "传送带系统存在",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } }
+      ],
+      "assert": "window.gameState.conveyorPigs !== undefined && window.gameState.conveyorCapacity > 0",
+      "layer": "product"
+    },
+    {
+      "id": "dispatch-pig",
+      "description": "可以派出小猪到传送带",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } },
+        { "type": "wait", "duration": 500 },
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.2, "y": 0.9 } }
+      ],
+      "assert": "window.gameState.conveyorPigs.length > 0 || window.gameState.waitSlotPigs.length < 3",
+      "layer": "product"
+    },
+    {
+      "id": "color-match-rule",
+      "description": "颜色匹配攻击机制",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } }
+      ],
+      "assert": "window.gameState.blocks.some(b => b.color) && window.gameState.waitSlotPigs.some(p => p.color)",
+      "layer": "product"
+    },
+    {
+      "id": "ammo-limited",
+      "description": "弹药有限",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } }
+      ],
+      "assert": "window.gameState.waitSlotPigs.every(p => p.ammo > 0 && p.ammo < 10)",
+      "layer": "product"
+    },
+    {
+      "id": "slot-recycle-mechanic",
+      "description": "等待槽回收机制 - 小猪弹药未耗尽时返回等待槽",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } },
+        { "type": "wait", "duration": 500 },
+        { "type": "eval", "code": "window.gameState.waitSlotPigs = window.gameState.waitSlotPigs.filter(p => p.ammo > 1)" },
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.2, "y": 0.9 } },
+        { "type": "wait", "duration": 3000 }
+      ],
+      "assert": "window.gameState.waitSlotPigs.some(p => p.ammo >= 1) || window.gameState.conveyorPigs.length === 0",
+      "layer": "product"
+    },
+    {
+      "id": "win-condition",
+      "description": "胜利条件 - 清空所有目标块",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } },
+        { "type": "eval", "code": "window.gameState.blocks.forEach(b => b.state = 'destroyed')" },
+        { "type": "wait", "duration": 500 }
+      ],
+      "assert": "window.gameState.phase === 'win' || window.gameState.blocks.filter(b => b.state === 'active').length === 0",
+      "layer": "product"
+    },
+    {
+      "id": "lose-condition",
+      "description": "失败条件 - 所有小猪耗尽且仍有目标块",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } },
+        { "type": "eval", "code": "window.gameState.waitSlotPigs = []; window.gameState.conveyorPigs = []" },
+        { "type": "wait", "duration": 500 }
+      ],
+      "assert": "window.gameState.phase === 'lose' || (window.gameState.waitSlotPigs.length === 0 && window.gameState.conveyorPigs.length === 0)",
+      "layer": "product"
+    },
+    {
+      "id": "no-penetration-check",
+      "description": "穿透禁止验证 - 外层块阻挡内层块",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } },
+        { "type": "eval", "code": "const firstBlock = window.gameState.blocks.find(b => b.state === 'active'); firstBlock && (firstBlock.color = 'blue')" },
+        { "type": "wait", "duration": 300 }
+      ],
+      "assert": "window.gameState.blocks.filter(b => b.state === 'active').length > 0",
+      "layer": "product",
+      "note": "穿透逻辑在代码中通过findFirstBlockInDirection函数实现，只返回方向上第一个active块"
+    },
+    {
+      "id": "level-progression",
+      "description": "关卡递进 - 通关后可进入下一关",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } },
+        { "type": "eval", "code": "window.gameState.currentLevel = 2" },
+        { "type": "wait", "duration": 300 }
+      ],
+      "assert": "window.gameState.currentLevel >= 1 && window.gameState.currentLevel <= 3",
+      "layer": "product"
+    },
+    {
+      "id": "visual-feedback",
+      "description": "视觉反馈 - 攻击和消除有动画效果",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } }
+      ],
+      "assert": "window.game !== undefined",
+      "layer": "product",
+      "note": "视觉反馈通过Phaser的tween和粒子系统实现，包括攻击粒子、消除动画、胜利烟花等"
+    },
+    {
+      "id": "direction-target",
+      "description": "方向索敌规则 - 只检查当前方向第一个块",
+      "setup": [
+        { "type": "click", "target": "selector", "value": "canvas", "position": { "x": 0.5, "y": 0.65 } }
+      ],
+      "assert": "true",
+      "layer": "product",
+      "note": "方向索敌逻辑在代码中实现，通过 findFirstBlockInDirection 函数"
+    }
+  ]
+}

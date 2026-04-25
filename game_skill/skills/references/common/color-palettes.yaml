@@ -1,0 +1,418 @@
+# ═══════════════════════════════════════════════════════════
+# 游戏预设色板库 — color-palettes.yaml
+# ═══════════════════════════════════════════════════════════
+#
+# 用途：Phase 2 PRD 阶段，从 brief 关键词自动推断专属配色方案。
+# 替代旧的 5 选 1 视觉风格模板（visual-styles.md 的固定枚举已废弃）。
+#
+# 推断流程：
+#   1. 从 brief/PRD 提取 theme-keywords（如 [太空, 射击, 科幻]）
+#   2. 按 visual-styles.md 的确定性打分规则匹配 palettes[].keywords
+#   3. 选最佳匹配的 palette → 写入 PRD front-matter 的 color-scheme 段
+#   4. codegen 直接消费 color-scheme 的硬值，禁止自由发挥
+#
+# 如果无任何关键词匹配 → 使用 fallback-default
+#
+# ═══════════════════════════════════════════════════════════
+
+# ── 兜底默认（60% 的需求不指定风格） ──────────────────────
+fallback-default:
+  id: neutral-clean
+  description: "通用默认 — 白底中性灰 + 蓝色主色 + 橙色强调，适合任何类型"
+  primary: "#3b82f6"
+  secondary: "#64748b"
+  accent: "#f97316"
+  background: "#ffffff"
+  surface: "#f8fafc"
+  text: "#0f172a"
+  text-muted: "#94a3b8"
+  success: "#22c55e"
+  error: "#ef4444"
+  border: "#e2e8f0"
+  font-family: 'ui-sans-serif, system-ui, "PingFang SC", sans-serif'
+  border-radius: "8px"
+  shadow: "0 1px 3px rgba(0,0,0,0.1)"
+  fx-hint: soft
+
+# ═══════════════════════════════════════════════════════════
+# 色板列表
+# ═══════════════════════════════════════════════════════════
+palettes:
+
+  # ─────────────────────────────────────────────────────────
+  # P0 优先级 — 覆盖最大量需求
+  # ─────────────────────────────────────────────────────────
+
+  # ── 棋盘经典 ──────────────────────────────────────────────
+  - id: board-classic
+    keywords: [棋盘, 五子棋, 围棋, 象棋, 跳棋, 国际象棋, 黑白棋, chess, gomoku, board]
+    description: "棋盘经典 — 温暖木纹棕底 + 黑白棋子 + 棋盘线色"
+    primary: "#8B5E3C"
+    secondary: "#D2B48C"
+    accent: "#B8860B"
+    background: "#FFF8E7"
+    surface: "#F5DEB3"
+    text: "#3E2723"
+    text-muted: "#8D6E63"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#D7CCC8"
+    font-family: '"Georgia", "Noto Serif SC", "STSong", serif'
+    border-radius: "4px"
+    shadow: "1px 1px 0 #8D6E63"
+    fx-hint: soft
+
+  # ── 方块消除 ──────────────────────────────────────────────
+  - id: tetris-blocks
+    keywords: [俄罗斯方块, 方块, tetris, 2048, 消消乐, 三消, match-3, 拼图, puzzle, 消除]
+    description: "方块消除 — 深底 + 7 种高饱和方块色，硬方块视觉"
+    primary: "#06b6d4"
+    secondary: "#eab308"
+    accent: "#a855f7"
+    background: "#1e293b"
+    surface: "#334155"
+    text: "#f1f5f9"
+    text-muted: "#94a3b8"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#475569"
+    font-family: '"SF Mono", "Fira Code", "Courier New", monospace'
+    border-radius: "2px"
+    shadow: "none"
+    fx-hint: pixel
+    extra-colors: ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#a855f7"]
+
+  # ── 贪吃蛇/网格 ─────────────────────────────────────────
+  - id: snake-grid
+    keywords: [贪吃蛇, 蛇, snake, 网格, grid, 迷宫, maze, 扫雷, minesweeper]
+    description: "贪吃蛇/网格 — 深色底 + 绿色蛇身 + 红色食物 + 网格线色"
+    primary: "#22c55e"
+    secondary: "#15803d"
+    accent: "#ef4444"
+    background: "#0f172a"
+    surface: "#1e293b"
+    text: "#e2e8f0"
+    text-muted: "#64748b"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#334155"
+    font-family: '"SF Mono", "Fira Code", "Courier New", monospace'
+    border-radius: "0"
+    shadow: "none"
+    fx-hint: pixel
+
+  # ─────────────────────────────────────────────────────────
+  # P1 优先级
+  # ─────────────────────────────────────────────────────────
+
+  # ── 动作冒险/户外 ────────────────────────────────────────
+  - id: adventure-outdoor
+    keywords: [跑酷, 马里奥, 超级玛丽, 闯关, 跳跃, 平台, 冒险, 横版, runner, platformer, 跳一跳]
+    description: "动作冒险/户外 — 蓝天白云 + 草地绿 + 砖块棕，活力横版风"
+    primary: "#22c55e"
+    secondary: "#0ea5e9"
+    accent: "#f59e0b"
+    background: "#e0f2fe"
+    surface: "#ffffff"
+    text: "#1e3a5f"
+    text-muted: "#64748b"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#bae6fd"
+    font-family: '"Baloo 2", "M PLUS Rounded 1c", "PingFang SC", sans-serif'
+    border-radius: "12px"
+    shadow: "0 4px 6px rgba(0,0,0,0.1)"
+    fx-hint: bounce
+
+  # ── 糖果休闲 ──────────────────────────────────────────────
+  - id: candy-pop
+    keywords: [糖果, 甜品, 蛋糕, 可爱, 萌, 接水果, 打地鼠, 休闲, casual, 水果, fruit, 合成大西瓜]
+    description: "糖果休闲 — 高饱和多彩糖果色，圆胖可爱"
+    primary: "#fb7185"
+    secondary: "#fbbf24"
+    accent: "#34d399"
+    background: "#fff7ed"
+    surface: "#ffffff"
+    text: "#be185d"
+    text-muted: "#f472b6"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#fecdd3"
+    font-family: '"Baloo 2", "M PLUS Rounded 1c", "PingFang SC", sans-serif'
+    border-radius: "16px"
+    shadow: "0 8px 25px rgba(251,113,133,0.2)"
+    fx-hint: bounce
+
+  # ── 卡牌/棋牌 ────────────────────────────────────────────
+  - id: card-table
+    keywords: [斗地主, 麻将, 德州扑克, 扑克, poker, 大富翁, 卡牌, 卡组, card, 桌游]
+    description: "卡牌/棋牌 — 深绿牌桌 + 金色装饰 + 扑克红黑"
+    primary: "#15803d"
+    secondary: "#b8860b"
+    accent: "#dc2626"
+    background: "#14532d"
+    surface: "#166534"
+    text: "#f0fdf4"
+    text-muted: "#86efac"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#22c55e"
+    font-family: '"Georgia", "Times New Roman", serif'
+    border-radius: "8px"
+    shadow: "0 4px 12px rgba(0,0,0,0.3)"
+    fx-hint: soft
+
+  # ── 温暖养成 ──────────────────────────────────────────────
+  - id: farm-cozy
+    keywords: [农场, 宠物, 养成, 动物园, 模拟, 种植, 花园, 牧场, farm, pet, garden, 放置, idle, 经营]
+    description: "温暖养成 — 暖黄田园 + 草绿 + 花粉，治愈系养成风"
+    primary: "#84cc16"
+    secondary: "#f59e0b"
+    accent: "#ec4899"
+    background: "#fefce8"
+    surface: "#ffffff"
+    text: "#365314"
+    text-muted: "#84cc16"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#ecfccb"
+    font-family: '"Baloo 2", "M PLUS Rounded 1c", "PingFang SC", sans-serif'
+    border-radius: "16px"
+    shadow: "0 4px 8px rgba(132,204,22,0.15)"
+    fx-hint: soft
+
+  # ─────────────────────────────────────────────────────────
+  # P2 优先级
+  # ─────────────────────────────────────────────────────────
+
+  # ── 军事/战争 ────────────────────────────────────────────
+  - id: military-steel
+    keywords: [射击, 枪战, 坦克, 军事, 战争, 狙击, FPS, 枪, 大炮, 飞机大战, 弹幕]
+    description: "军事/战争 — 迷彩绿灰 + 金属色 + 弹道橙"
+    primary: "#4a5d23"
+    secondary: "#78716c"
+    accent: "#ea580c"
+    background: "#1c1917"
+    surface: "#292524"
+    text: "#e7e5e4"
+    text-muted: "#a8a29e"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#44403c"
+    font-family: '"Rajdhani", "Share Tech", system-ui, sans-serif'
+    border-radius: "2px"
+    shadow: "0 2px 4px rgba(0,0,0,0.4)"
+    fx-hint: glow
+
+  # ── 科技霓虹 ──────────────────────────────────────────────
+  - id: cyber-neon
+    keywords: [赛博, 科幻, 霓虹, 未来, 科技, cyber, neon, 太空, space, 星际, 黑客, hacker, 电子, tron]
+    description: "科技霓虹 — 深色底 + 霓虹发光，赛博朋克视觉"
+    primary: "#00ffff"
+    secondary: "#ff00ff"
+    accent: "#39ff14"
+    background: "#0a0a1a"
+    surface: "#111827"
+    text: "#e0e7ff"
+    text-muted: "#6366f1"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#1e1b4b"
+    font-family: '"Orbitron", "Rajdhani", "Share Tech Mono", sans-serif'
+    border-radius: "2px"
+    shadow: "0 0 10px rgba(0,255,255,0.3)"
+    fx-hint: glow
+
+  # ── 海洋/水下 ────────────────────────────────────────────
+  - id: ocean-deep
+    keywords: [海洋, 水, 鱼, 潜水, 海底, 水下, 海盗, ocean, sea, fish, pirate, 航海]
+    description: "海洋/水下 — 渐变蓝色海洋 + 浅海色背景"
+    primary: "#0077B6"
+    secondary: "#00B4D8"
+    accent: "#90E0EF"
+    background: "#CAF0F8"
+    surface: "#ffffff"
+    text: "#023E8A"
+    text-muted: "#0077B6"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#ADE8F4"
+    font-family: '"Baloo 2", system-ui, sans-serif'
+    border-radius: "12px"
+    shadow: "0 4px 15px rgba(0,119,182,0.15)"
+    fx-hint: soft
+
+  # ── 森林/自然/奇幻 ──────────────────────────────────────
+  - id: forest-mystic
+    keywords: [森林, 树, 自然, 丛林, 精灵, 绿色, forest, nature, jungle, 植物大战僵尸]
+    description: "森林/自然/奇幻 — 深绿自然色 + 清新背景"
+    primary: "#2D6A4F"
+    secondary: "#52B788"
+    accent: "#95D5B2"
+    background: "#D8F3DC"
+    surface: "#ffffff"
+    text: "#1B4332"
+    text-muted: "#40916C"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#B7E4C7"
+    font-family: '"Patrick Hand", system-ui, sans-serif'
+    border-radius: "10px"
+    shadow: "0 3px 10px rgba(45,106,79,0.1)"
+    fx-hint: soft
+
+  # ─────────────────────────────────────────────────────────
+  # P3 优先级
+  # ─────────────────────────────────────────────────────────
+
+  # ── 像素复古 ──────────────────────────────────────────────
+  - id: pixel-retro
+    keywords: [像素, 8-bit, pixel, retro, 复古, roguelike, 地牢, dungeon, 怀旧, 红白机]
+    description: "像素复古 — 深紫黑底 + 高对比像素色，硬边硬阴影"
+    primary: "#ef4444"
+    secondary: "#facc15"
+    accent: "#22c55e"
+    background: "#1a1a2e"
+    surface: "#16213e"
+    text: "#e2e8f0"
+    text-muted: "#94a3b8"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#334155"
+    font-family: '"Press Start 2P", "VT323", monospace'
+    border-radius: "0"
+    shadow: "2px 2px 0 #000"
+    fx-hint: pixel
+
+  # ── 古风/水墨 ────────────────────────────────────────────
+  - id: ink-scroll
+    keywords: [古风, 水墨, 仙侠, 修仙, 中国风, 围棋, 书法, 三国, 武侠, 诗词, 国画, chinese]
+    description: "古风/水墨 — 宣纸色底 + 墨黑笔画 + 朱红印章"
+    primary: "#1a1a1a"
+    secondary: "#dc2626"
+    accent: "#b8860b"
+    background: "#fef9ef"
+    surface: "#fdf6e3"
+    text: "#1a1a1a"
+    text-muted: "#78716c"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#d6ccc2"
+    font-family: '"LXGW WenKai", "Noto Serif SC", "STSong", serif'
+    border-radius: "0"
+    shadow: "1px 1px 0 rgba(0,0,0,0.1)"
+    fx-hint: ink
+
+  # ── 教育/校园 ────────────────────────────────────────────
+  - id: campus-fresh
+    keywords: [教育, 学习, 背单词, 数学, 英语, 口算, 答题, quiz, 知识, 考试, 课堂, 校园, 学校]
+    description: "教育/校园 — 学院蓝 + 正确绿 + 星星黄，清新学习风"
+    primary: "#2563eb"
+    secondary: "#16a34a"
+    accent: "#eab308"
+    background: "#eff6ff"
+    surface: "#ffffff"
+    text: "#1e3a5f"
+    text-muted: "#64748b"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#bfdbfe"
+    font-family: '"Nunito", "M PLUS Rounded 1c", "PingFang SC", sans-serif'
+    border-radius: "12px"
+    shadow: "0 2px 8px rgba(37,99,235,0.1)"
+    fx-hint: bounce
+
+  # ── 暗黑地牢/RPG ────────────────────────────────────────
+  - id: dungeon-dark
+    keywords: [地牢, RPG, 回合制, 暗黑, 魔塔, 勇者, 冒险者, 魔王, 怪物, 宝箱, 地下城, roguelite, 剧情, 侦探]
+    description: "暗黑地牢/RPG — 深紫底 + 魔法紫 + 金色宝藏"
+    primary: "#7c3aed"
+    secondary: "#b91c1c"
+    accent: "#f59e0b"
+    background: "#0f0f1a"
+    surface: "#1a1a2e"
+    text: "#e2e8f0"
+    text-muted: "#a78bfa"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#312e81"
+    font-family: '"Cinzel", "Georgia", serif'
+    border-radius: "4px"
+    shadow: "0 0 15px rgba(124,58,237,0.2)"
+    fx-hint: glow
+
+  # ── 中世纪/城堡 ─────────────────────────────────────────
+  - id: medieval-castle
+    keywords: [中世纪, 城堡, 骑士, 剑, 盾牌, 塔防, tower defense, 王国, kingdom, 攻城]
+    description: "中世纪/城堡 — 羊皮纸底 + 铁锈棕 + 王冠金"
+    primary: "#92400e"
+    secondary: "#78716c"
+    accent: "#ca8a04"
+    background: "#fef3c7"
+    surface: "#fefce8"
+    text: "#451a03"
+    text-muted: "#92400e"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#d6d3d1"
+    font-family: '"Cinzel", "Georgia", serif'
+    border-radius: "4px"
+    shadow: "2px 2px 0 rgba(0,0,0,0.15)"
+    fx-hint: soft
+
+  # ── 赛车/速度 ────────────────────────────────────────────
+  - id: speed-race
+    keywords: [赛车, 竞速, 驾驶, racing, 速度, 漂移, drift, 摩托, F1]
+    description: "赛车/速度 — 深底 + 赛车红 + 赛道黄，高速竞技感"
+    primary: "#dc2626"
+    secondary: "#fbbf24"
+    accent: "#ffffff"
+    background: "#18181b"
+    surface: "#27272a"
+    text: "#fafafa"
+    text-muted: "#a1a1aa"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#3f3f46"
+    font-family: '"Rajdhani", "Orbitron", system-ui, sans-serif'
+    border-radius: "4px"
+    shadow: "0 2px 8px rgba(220,38,38,0.3)"
+    fx-hint: glow
+
+  # ── 手绘/绘本 ────────────────────────────────────────────
+  - id: hand-drawn
+    keywords: [手绘, 绘本, 童话, 纸质, 涂鸦, 蜡笔, 故事, 文字冒险, 分支剧情, storybook]
+    description: "手绘/绘本 — 纸黄底 + 铅笔棕 + 蜡笔色，手绘质感"
+    primary: "#b45309"
+    secondary: "#0d9488"
+    accent: "#e11d48"
+    background: "#fef9c3"
+    surface: "#fffbeb"
+    text: "#451a03"
+    text-muted: "#92400e"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#fde68a"
+    font-family: '"Patrick Hand", "Kalam", "Caveat", cursive'
+    border-radius: "6px 10px 8px 12px"
+    shadow: "3px 3px 0 #333"
+    fx-hint: ink
+
+  # ── 派对/社交多人 ────────────────────────────────────────
+  - id: party-social
+    keywords: [多人, 对战, 派对, party, 排行榜, 联机, PK, 社交, 双人]
+    description: "派对/社交多人 — 浅紫粉底 + 玫红 + 紫 + 青，活力社交"
+    primary: "#e11d48"
+    secondary: "#7c3aed"
+    accent: "#06b6d4"
+    background: "#fdf4ff"
+    surface: "#ffffff"
+    text: "#1e1b4b"
+    text-muted: "#a78bfa"
+    success: "#22c55e"
+    error: "#ef4444"
+    border: "#e9d5ff"
+    font-family: '"Nunito", "Baloo 2", system-ui, sans-serif'
+    border-radius: "16px"
+    shadow: "0 8px 25px rgba(124,58,237,0.15)"
+    fx-hint: bounce

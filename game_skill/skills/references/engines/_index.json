@@ -1,0 +1,63 @@
+{
+  "_comment": "引擎登记表。新增引擎时追加一条，不要删除已有的。runtime 字段必须与 front-matter runtime 完全一致。",
+  "version": "0.1",
+  "engines": [
+    {
+      "id": "phaser3",
+      "name": "Phaser 3",
+      "version-pin": "phaser@3",
+      "current-stable": "3.90.0",
+      "default-run-mode": "local-http",
+      "template": "engines/phaser3/template/",
+      "guide": "engines/phaser3/guide.md",
+      "best-fit": ["控制闯关物理型", "棋盘格子型", "单屏反应型"],
+      "avoid-for": ["规则问答型", "剧情互动型"]
+    },
+    {
+      "id": "pixijs",
+      "name": "PixiJS",
+      "version-pin": "pixi.js@8",
+      "current-stable": "8.18.1",
+      "default-run-mode": "local-http",
+      "template": "engines/pixijs/template/",
+      "guide": "engines/pixijs/guide.md",
+      "best-fit": ["棋盘格子型", "单屏反应型", "经营养成型"],
+      "avoid-for": ["控制闯关物理型", "规则问答型"]
+    },
+    {
+      "id": "canvas",
+      "name": "Native Canvas 2D",
+      "version-pin": "-",
+      "current-stable": "browser-native",
+      "default-run-mode": "file",
+      "template": "engines/canvas/template/",
+      "guide": "engines/canvas/guide.md",
+      "best-fit": ["规则问答型", "棋盘格子型", "教育练习型"],
+      "avoid-for": ["经营养成型", "策略战斗型"]
+    },
+    {
+      "id": "dom-ui",
+      "name": "DOM + Tailwind v4",
+      "version-pin": "@tailwindcss/browser@4",
+      "current-stable": "4.x",
+      "default-run-mode": "file",
+      "template": "engines/dom/template/",
+      "guide": "engines/dom/guide.md",
+      "best-fit": ["规则问答型", "剧情互动型", "教育练习型"],
+      "avoid-for": ["控制闯关物理型", "单屏反应型"]
+    },
+    {
+      "id": "three",
+      "name": "Three.js",
+      "version-pin": "three@0.160",
+      "current-stable": "0.160.0",
+      "default-run-mode": "local-http",
+      "template": "engines/three/template/",
+      "guide": "engines/three/guide.md",
+      "dimension": "3d",
+      "best-fit": ["3D 展示型", "轻量 3D 小游戏", "第一人称走格子", "3D 平台跳跃", "3D 赛车/驾驶", "3D 塔防/俯视"],
+      "avoid-for": ["规则问答型", "剧情互动型", "教育练习型", "2D 像素/卡通"],
+      "activation-rule": "仅当 GamePRD front-matter is-3d=true 或用户明确要求 3D/Three.js 时选用；is-3d=false 禁止使用"
+    }
+  ]
+}

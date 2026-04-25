@@ -1,0 +1,201 @@
+# Board Game Icons - 素材语义索引
+# 来源: kenney_board-game-icons
+# 分辨率: Double (128px)
+# 文件名: 语义文件名
+#
+# ── 风格与适用范围 ──
+# 视觉风格: cartoon-bright / minimal-modern / hand-drawn（卡通明亮 / 简约现代 / 手绘风）
+# 适用游戏类型: 桌游棋盘、问答规则、教育练习
+# 特别适合: 回合制桌游、卡牌游戏、骰子游戏、棋盘策略、教育类游戏 HUD
+#
+# ── 分组概要（用途与组合关系）──
+#
+# 箭头操作 (arrow_*):
+#   arrow_right.png(单向), arrow_cross.png/arrow_cross_divided.png(十字交叉)
+#   arrow_horizontal.png/arrow_diagonal.png(双向), arrow_diagonal_cross.png/arrow_diagonal_cross_divided.png(斜向交叉)
+#   arrow_clockwise.png/arrow_counterclockwise.png(旋转), arrow_rotate.png(翻转)
+#   arrow_right_curve.png(弯箭头), arrow_reserve.png(保留/反转)
+#   用途: 棋子移动方向、回合流程、旋转操作提示
+#
+# 卡牌操作 (card_*/cards_*):
+#   单牌: card.png(基础), card_outline.png(空位), card_add.png/card_subtract.png/card_remove.png(增减)
+#   card_flip.png/card_flipdouble.png(翻牌), card_tap.png/card_tap_up.png/card_tap_down.png(横置/竖置)
+#   card_tap_outline.png/card_tap_outline_up.png/card_tap_outline_down.png(横置轮廓)
+#   card_lift.png/card_place.png(拿起/放下), card_rotate.png(旋转), card_target.png(目标牌)
+#   card_diagonal.png/card_down.png/card_down_outline.png(斜放/朝下)
+#   card_outline_lift.png/card_outline_place.png/card_outline_remove.png(空位操作)
+#   多牌: cards_stack.png/cards_stack_high.png/cards_stack_cross.png(牌堆)
+#   cards_fan.png/cards_fan_outline.png(扇形展开), cards_flip.png(翻堆)
+#   cards_seek.png/cards_seek_top.png(搜牌), cards_shift.png(移牌), cards_order.png(排序)
+#   cards_take.png/cards_under.png/cards_return.png(取牌/垫牌/还牌)
+#   cards_skull.png(弃牌堆), cards_shuffle.png(洗牌)
+#   cards_diagonal.png/cards_collection.png/cards_collection_outline.png(斜叠/收藏)
+#   用途: 卡牌游戏的所有操作提示图标
+#
+# 骰子 (d2-d20, dice_*):
+#   多面骰: d2/d3/d4/d6/d8/d10/d12/d20 各有 实心/数字/轮廓/轮廓数字 四种变体
+#   六面骰面: dice_1~dice_6(点数面), dice.png/dice_detailed.png(通用骰子)
+#   dice_3D.png/dice_3D_detailed.png(3D骰子), dice_empty.png(空白骰)
+#   dice_close.png/dice_out.png(收/出骰), dice_question.png(未知骰)
+#   dice_shield.png/dice_skull.png/dice_sword.png(特殊面: 盾/骷髅/剑)
+#   用途: 所有骰子相关的游戏机制
+#
+# 棋子操作 (pawn_*, character_*):
+#   pawn.png(基础棋子), pawns.png(多棋子)
+#   pawn_up/down/left/right.png(移动方向), pawn_flip.png(翻转), pawn_skip.png(跳过)
+#   pawn_table.png(放置到桌上), pawn_clockwise.png/pawn_counterclockwise.png(旋转)
+#   pawn_reverse.png(倒退)
+#   character.png(角色), character_lift.png/character_place.png/character_remove.png(角色操作)
+#   用途: 棋子移动、回合操作提示
+#
+# 国际象棋 (chess_*):
+#   chess_king.png(国王), chess_queen.png(王后), chess_rook.png(车)
+#   chess_bishop.png(象), chess_knight.png(马), chess_pawn.png(兵)
+#   用途: 国际象棋棋子或策略游戏等级标识
+#
+# 代币 (token_*, tokens_*):
+#   token.png(单代币), tokens.png(多代币), tokens_shadow.png/tokens_stack.png(堆叠)
+#   token_add.png/token_subtract.png/token_remove.png(增减/移除)
+#   token_give.png(给予), token_in.png/token_out.png(收入/支出)
+#   用途: 游戏内货币、积分、资源代币操作
+#
+# 手/操作 (hand_*):
+#   hand.png(空手), hand_card.png(手持卡牌), hand_token.png/hand_token_open.png(手持代币)
+#   hand_cube.png(手持骰子/方块), hand_hexagon.png(手持六边形), hand_cross.png(禁止操作)
+#   用途: 玩家操作提示、交互指引
+#
+# 六边形/形状 (hexagon_*, pentagon_*, rhombus_*):
+#   hexagon.png/hexagon_outline.png(六边形), hexagon_in.png/hexagon_out.png(放入/取出)
+#   hexagon_question.png(未知格), hexagon_switch.png(切换), hexagon_tile.png(地块)
+#   pentagon.png/pentagon_outline.png/pentagon_question.png(五边形)
+#   rhombus.png/rhombus_outline.png/rhombus_question.png(菱形)
+#   用途: 棋盘格子、地图区块、区域标记
+#
+# 资源 (resource_*):
+#   resource_apple.png(苹果/食物), resource_iron.png(铁矿)
+#   resource_lumber.png(原木), resource_planks.png(木板)
+#   resource_wheat.png(小麦), resource_wood.png(木材)
+#   用途: 资源管理类桌游的资源图标
+#
+# 建筑 (structure_*):
+#   structure_church.png(教堂), structure_farm.png(农场), structure_gate.png(城门)
+#   structure_house.png(房屋), structure_tower.png(塔楼)
+#   structure_wall.png(城墙), structure_watchtower.png(瞭望塔)
+#   用途: 建造类桌游的建筑图标
+#
+# 标签/计数 (tag_*):
+#   数字标签: tag_1~tag_10, tag_empty.png(空标签), tag_infinite.png(无限)
+#   骰子标签: tag_d6.png/tag_d6_1~tag_d6_6/tag_d6_check/tag_d6_cross/tag_d6_infinte(骰面标签)
+#   盾牌标签: tag_shield.png/tag_shield_1~tag_shield_10/tag_shield_infinite(盾牌计数)
+#   用途: 回合计数、得分标记、条件标签
+#
+# 计时器 (timer_*, hourglass_*):
+#   timer_0.png/timer_100.png(空/满), timer_CW_25/50/75.png(顺时针进度)
+#   timer_CCW_25/50/75.png(逆时针进度)
+#   hourglass.png(沙漏), hourglass_top.png/hourglass_bottom.png(上半/下半)
+#   用途: 回合计时、限时操作
+#
+# 爆炸骰 (exploding*):
+#   exploding.png(爆炸骰), exploding_6.png(6面爆炸骰)
+#   用途: 特殊骰子机制（骰出最大值可再骰）
+#
+# 翻转 (flip_*):
+#   flip_empty.png(空), flip_half.png(半), flip_full.png(满)
+#   flip_head.png(正面), flip_tails.png(反面)
+#   用途: 硬币翻转、正反面判定
+#
+# 药水 (flask_*):
+#   flask_empty.png(空瓶), flask_half.png(半满), flask_full.png(满瓶)
+#   用途: 药水/资源容量显示
+#
+# 其他:
+#   award.png(奖章), book_closed.png/book_open.png(书本), bow.png(弓)
+#   campfire.png(篝火), crown_a.png/crown_b.png(皇冠), dollar.png(美元)
+#   direction_n/s/e/w.png(方位), fire.png(火焰)
+#   flag_square.png/flag_triangle.png(旗帜), lock_closed.png/lock_open.png(锁)
+#   notepad.png/notepad_write.png(记事本), pouch.png/pouch_add.png/pouch_remove.png(钱袋)
+#   puzzle.png(拼图), shield.png(盾牌), skull.png(骷髅)
+#   spinner.png/spinner_segment.png(转盘), suit_clubs/diamonds/hearts/hearts_broken/spades.png(花色)
+#   sword.png(剑)
+#   用途: 各种桌游通用元素
+
+groups:
+  - name: arrows
+    files: [arrow_right.png, arrow_right_curve.png, arrow_cross.png, arrow_cross_divided.png, arrow_horizontal.png, arrow_diagonal.png, arrow_diagonal_cross.png, arrow_diagonal_cross_divided.png, arrow_clockwise.png, arrow_counterclockwise.png, arrow_rotate.png, arrow_reserve.png]
+    cn: "箭头操作"
+    tags: [arrow, direction, rotate, cross, move, turn]
+
+  - name: cards
+    files: [card.png, card_outline.png, card_add.png, card_subtract.png, card_remove.png, card_flip.png, card_flipdouble.png, card_tap.png, card_tap_up.png, card_tap_down.png, card_tap_outline.png, card_tap_outline_up.png, card_tap_outline_down.png, card_lift.png, card_place.png, card_rotate.png, card_target.png, card_diagonal.png, card_down.png, card_down_outline.png, card_outline_lift.png, card_outline_place.png, card_outline_remove.png, cards_stack.png, cards_stack_high.png, cards_stack_cross.png, cards_fan.png, cards_fan_outline.png, cards_flip.png, cards_seek.png, cards_seek_top.png, cards_shift.png, cards_order.png, cards_take.png, cards_under.png, cards_return.png, cards_skull.png, cards_shuffle.png, cards_diagonal.png, cards_collection.png, cards_collection_outline.png]
+    cn: "卡牌操作"
+    tags: [card, deck, flip, tap, draw, discard, shuffle, stack, hand]
+
+  - name: dice
+    files: [d2.png, d2_number.png, d2_outline.png, d2_outline_number.png, d3.png, d3_number.png, d3_outline.png, d3_outline_number.png, d4.png, d4_number.png, d4_outline.png, d4_outline_number.png, d6.png, d6_number.png, d6_outline.png, d6_outline_number.png, d8.png, d8_number.png, d8_outline.png, d8_outline_number.png, d10.png, d10_number.png, d10_outline.png, d10_outline_number.png, d12.png, d12_number.png, d12_outline.png, d12_outline_number.png, d20.png, d20_number.png, d20_outline.png, d20_outline_number.png, dice.png, dice_detailed.png, dice_1.png, dice_2.png, dice_3.png, dice_4.png, dice_5.png, dice_6.png, dice_3D.png, dice_3D_detailed.png, dice_empty.png, dice_close.png, dice_out.png, dice_question.png, dice_shield.png, dice_skull.png, dice_sword.png]
+    cn: "骰子"
+    tags: [dice, d4, d6, d8, d10, d12, d20, roll, random, polyhedral]
+
+  - name: pawns
+    files: [pawn.png, pawns.png, pawn_up.png, pawn_down.png, pawn_left.png, pawn_right.png, pawn_flip.png, pawn_skip.png, pawn_table.png, pawn_clockwise.png, pawn_counterclockwise.png, pawn_reverse.png, character.png, character_lift.png, character_place.png, character_remove.png]
+    cn: "棋子操作"
+    tags: [pawn, character, move, flip, skip, place, meeple]
+
+  - name: chess
+    files: [chess_king.png, chess_queen.png, chess_rook.png, chess_bishop.png, chess_knight.png, chess_pawn.png]
+    cn: "国际象棋"
+    tags: [chess, king, queen, rook, bishop, knight, pawn, strategy]
+
+  - name: tokens
+    files: [token.png, tokens.png, tokens_shadow.png, tokens_stack.png, token_add.png, token_subtract.png, token_remove.png, token_give.png, token_in.png, token_out.png]
+    cn: "代币"
+    tags: [token, coin, chip, currency, resource, add, remove, give]
+
+  - name: hands
+    files: [hand.png, hand_card.png, hand_token.png, hand_token_open.png, hand_cube.png, hand_hexagon.png, hand_cross.png]
+    cn: "手/操作"
+    tags: [hand, grab, hold, interact, card, token, cube, forbidden]
+
+  - name: shapes
+    files: [hexagon.png, hexagon_outline.png, hexagon_in.png, hexagon_out.png, hexagon_question.png, hexagon_switch.png, hexagon_tile.png, pentagon.png, pentagon_outline.png, pentagon_question.png, rhombus.png, rhombus_outline.png, rhombus_question.png]
+    cn: "六边形/形状"
+    tags: [hexagon, pentagon, rhombus, tile, board, grid, shape, area]
+
+  - name: resources
+    files: [resource_apple.png, resource_iron.png, resource_lumber.png, resource_planks.png, resource_wheat.png, resource_wood.png]
+    cn: "资源"
+    tags: [resource, apple, iron, lumber, wood, wheat, material, gather]
+
+  - name: structures
+    files: [structure_church.png, structure_farm.png, structure_gate.png, structure_house.png, structure_tower.png, structure_wall.png, structure_watchtower.png]
+    cn: "建筑"
+    tags: [structure, building, church, farm, house, tower, wall, gate, construct]
+
+  - name: tags
+    files: [tag_1.png, tag_2.png, tag_3.png, tag_4.png, tag_5.png, tag_6.png, tag_7.png, tag_8.png, tag_9.png, tag_10.png, tag_empty.png, tag_infinite.png, tag_d6.png, tag_d6_1.png, tag_d6_2.png, tag_d6_3.png, tag_d6_4.png, tag_d6_5.png, tag_d6_6.png, tag_d6_check.png, tag_d6_cross.png, tag_d6_infinte.png, tag_shield.png, tag_shield_1.png, tag_shield_2.png, tag_shield_3.png, tag_shield_4.png, tag_shield_5.png, tag_shield_6.png, tag_shield_7.png, tag_shield_8.png, tag_shield_9.png, tag_shield_10.png, tag_shield_infinite.png]
+    cn: "标签/计数"
+    tags: [tag, number, count, score, label, shield, dice, infinite]
+
+  - name: timers
+    files: [timer_0.png, timer_100.png, timer_CW_25.png, timer_CW_50.png, timer_CW_75.png, timer_CCW_25.png, timer_CCW_50.png, timer_CCW_75.png, hourglass.png, hourglass_top.png, hourglass_bottom.png]
+    cn: "计时器"
+    tags: [timer, hourglass, clock, countdown, turn, time]
+
+  - name: exploding
+    files: [exploding.png, exploding_6.png]
+    cn: "爆炸骰"
+    tags: [exploding, dice, special, reroll, burst]
+
+  - name: flip
+    files: [flip_empty.png, flip_half.png, flip_full.png, flip_head.png, flip_tails.png]
+    cn: "翻转"
+    tags: [flip, coin, head, tails, chance, random]
+
+  - name: flasks
+    files: [flask_empty.png, flask_half.png, flask_full.png]
+    cn: "药水"
+    tags: [flask, potion, empty, half, full, health, mana]
+
+  - name: misc
+    files: [award.png, book_closed.png, book_open.png, bow.png, campfire.png, crown_a.png, crown_b.png, direction_n.png, direction_s.png, direction_e.png, direction_w.png, dollar.png, fire.png, flag_square.png, flag_triangle.png, lock_closed.png, lock_open.png, notepad.png, notepad_write.png, pouch.png, pouch_add.png, pouch_remove.png, puzzle.png, shield.png, skull.png, spinner.png, spinner_segment.png, suit_clubs.png, suit_diamonds.png, suit_hearts.png, suit_hearts_broken.png, suit_spades.png, sword.png]
+    cn: "其他"
+    tags: [award, book, bow, campfire, crown, direction, dollar, fire, flag, lock, notepad, pouch, puzzle, shield, skull, spinner, suit, sword]

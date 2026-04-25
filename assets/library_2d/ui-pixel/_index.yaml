@@ -1,0 +1,532 @@
+# UI Pack Pixel Adventure - 瓦片语义索引
+# 来源: kenney_ui-pack-pixel-adventure (Large tiles / Thick outline)
+# 网格: 13列 × 7行, 每格 32×32px, 共 91 个瓦片
+# 文件名: tile_{编号:04d}.png
+#
+# ── 风格与适用范围 ──
+# 视觉风格: pixel-retro（像素复古）
+# 适用游戏类型: 平台跳跃、RPG、动作冒险、像素风休闲游戏
+# 不适用: 现代简约UI、卡通明亮风（请用 ui-pack 代替）
+#
+# ── 分组概要（用途与组合关系）──
+#
+# 面板九宫格 (0000-0012):
+#   用途: 用 9 块拼成任意大小的对话框、菜单面板、信息窗口的背景
+#   组合: 左上(0000)+顶(0001)+右上(0002)+左(0003)+中(0004)+右(0005)+左下(0006)+底(0007)+右下(0008)
+#   提示: 0009-0011 是带装饰花纹的顶边变体，可替换 0000-0002 做更华丽的面板
+#
+# 按钮三段式 (0013-0021):
+#   用途: 水平拼接做任意宽度的按钮，支持默认态和按下态
+#   组合-默认: 左(0013)+中(0014,可重复)+右(0015)，底部阴影: 左(0016)+中(0017)+右(0018)
+#   组合-按下: 左(0019)+中(0020)+右(0021)，按下时无阴影
+#   提示: 按钮高度含阴影约 2 格，按下态比默认态矮 1px（阴影被"压"掉了）
+#
+# 深色面板九宫格 (0022-0030):
+#   用途: 作为输入框背景、物品栏格子、装备槽等"凹陷"区域
+#   组合: 与亮色面板(0000-0012)搭配，形成"面板内嵌暗区"的常见 UI 层次
+#
+# 生命心 (0031-0033):
+#   用途: HUD 区域的生命值显示，标准像素游戏三件套
+#   组合: 满心(0031) + 半心(0032) + 空心(0033)，水平排列表示血量
+#   搭配: 常与进度条(0034-0039)一起放在屏幕顶部 HUD 区
+#
+# 进度条三段式 (0034-0039):
+#   用途: 血条、魔法条、经验条、Boss 血条、加载进度
+#   组合-背景: 左(0034)+中(0035,可重复)+右(0036)
+#   组合-填充: 左(0037)+中(0038,按比例重复)+右(0039)
+#   提示: 填充叠在背景上方，通过调整填充段数量表示百分比
+#
+# 收集物图标 (0040-0043):
+#   用途: HUD 计数图标或游戏内拾取物。金币(0040)、宝石(0041)、星星(0042)、钥匙(0043)
+#   搭配: 配合数字(0063-0072)显示 "×99" 格式的收集数量
+#
+# 箭头与光标 (0044-0051):
+#   用途: 左右箭头(0044-0045)用于翻页/选择；光标(0046-0051)用于鼠标替换或选中指示
+#
+# 边框与缎带 (0052-0062):
+#   用途: 装饰性边框(0052-0059)用于高亮选中区域或卡片装饰；缎带(0060-0062)用于标题栏/成就徽章
+#
+# 像素数字 0-9 (0063-0072):
+#   用途: 计分板、倒计时、伤害数字等需要像素风数字显示的场景
+#   搭配: 配合收集物图标(0040-0043)或心(0031-0033)
+#
+# 杂项 (0073-0090):
+#   旗帜(0073): 关卡完成/检查点
+#   锁(0074-0075): 未解锁/已解锁关卡
+#   钥匙孔(0076): 配合锁使用
+#   滚动条(0077-0080): 长列表/文本区域的滚动指示
+#   复选框(0081-0082)/单选框(0083-0084): 设置菜单选项
+#   滑块(0085-0086): 音量、亮度等连续值设置
+#   开关(0087-0088): 开/关切换（音效、振动等）
+#   对话气泡(0089): NPC 对话提示
+#   感叹号(0090): 任务/事件提示
+
+tiles:
+  # ── Row 0: Panel 9-slice pieces ──────────────────────────────
+  - id: "0000"
+    name: panel_top_left
+    cn: "面板左上角（9-slice）"
+    size: "32x32"
+    tags: [panel, 9slice, corner]
+  - id: "0001"
+    name: panel_top
+    cn: "面板顶边（9-slice）"
+    size: "32x32"
+    tags: [panel, 9slice, edge, top]
+  - id: "0002"
+    name: panel_top_right
+    cn: "面板右上角（9-slice）"
+    size: "32x32"
+    tags: [panel, 9slice, corner]
+  - id: "0003"
+    name: panel_left
+    cn: "面板左边（9-slice）"
+    size: "32x32"
+    tags: [panel, 9slice, edge, left]
+  - id: "0004"
+    name: panel_center
+    cn: "面板中心填充（9-slice）"
+    size: "32x32"
+    tags: [panel, 9slice, fill, center]
+  - id: "0005"
+    name: panel_right
+    cn: "面板右边（9-slice）"
+    size: "32x32"
+    tags: [panel, 9slice, edge, right]
+  - id: "0006"
+    name: panel_bottom_left
+    cn: "面板左下角（9-slice）"
+    size: "32x32"
+    tags: [panel, 9slice, corner]
+  - id: "0007"
+    name: panel_bottom
+    cn: "面板底边（9-slice）"
+    size: "32x32"
+    tags: [panel, 9slice, edge, bottom]
+  - id: "0008"
+    name: panel_bottom_right
+    cn: "面板右下角（9-slice）"
+    size: "32x32"
+    tags: [panel, 9slice, corner]
+  - id: "0009"
+    name: panel_top_deco_left
+    cn: "装饰面板左上角"
+    size: "32x32"
+    tags: [panel, decoration, corner]
+  - id: "0010"
+    name: panel_top_deco
+    cn: "装饰面板顶边"
+    size: "32x32"
+    tags: [panel, decoration, edge, top]
+  - id: "0011"
+    name: panel_top_deco_right
+    cn: "装饰面板右上角"
+    size: "32x32"
+    tags: [panel, decoration, corner]
+  - id: "0012"
+    name: blank
+    cn: "空白"
+    size: "32x32"
+    tags: [blank, empty]
+
+  # ── Row 1: Buttons & more panels ─────────────────────────────
+  - id: "0013"
+    name: button_left
+    cn: "按钮左端-默认"
+    size: "32x32"
+    tags: [button, default, left]
+  - id: "0014"
+    name: button_center
+    cn: "按钮中段-默认"
+    size: "32x32"
+    tags: [button, default, center]
+  - id: "0015"
+    name: button_right
+    cn: "按钮右端-默认"
+    size: "32x32"
+    tags: [button, default, right]
+  - id: "0016"
+    name: button_shadow_left
+    cn: "按钮阴影左"
+    size: "32x32"
+    tags: [button, shadow, left]
+  - id: "0017"
+    name: button_shadow_center
+    cn: "按钮阴影中"
+    size: "32x32"
+    tags: [button, shadow, center]
+  - id: "0018"
+    name: button_shadow_right
+    cn: "按钮阴影右"
+    size: "32x32"
+    tags: [button, shadow, right]
+  - id: "0019"
+    name: button_pressed_left
+    cn: "按钮左端-按下"
+    size: "32x32"
+    tags: [button, pressed, left]
+  - id: "0020"
+    name: button_pressed_center
+    cn: "按钮中段-按下"
+    size: "32x32"
+    tags: [button, pressed, center]
+  - id: "0021"
+    name: button_pressed_right
+    cn: "按钮右端-按下"
+    size: "32x32"
+    tags: [button, pressed, right]
+  - id: "0022"
+    name: panel_dark_top_left
+    cn: "深色面板左上角"
+    size: "32x32"
+    tags: [panel, dark, 9slice, corner]
+  - id: "0023"
+    name: panel_dark_top
+    cn: "深色面板顶边"
+    size: "32x32"
+    tags: [panel, dark, 9slice, edge, top]
+  - id: "0024"
+    name: panel_dark_top_right
+    cn: "深色面板右上角"
+    size: "32x32"
+    tags: [panel, dark, 9slice, corner]
+  - id: "0025"
+    name: panel_dark_left
+    cn: "深色面板左边"
+    size: "32x32"
+    tags: [panel, dark, 9slice, edge, left]
+
+  # ── Row 2: HUD elements ──────────────────────────────────────
+  - id: "0026"
+    name: panel_dark_center
+    cn: "深色面板中心"
+    size: "32x32"
+    tags: [panel, dark, 9slice, fill, center]
+  - id: "0027"
+    name: panel_dark_right
+    cn: "深色面板右边"
+    size: "32x32"
+    tags: [panel, dark, 9slice, edge, right]
+  - id: "0028"
+    name: panel_dark_bottom_left
+    cn: "深色面板左下角"
+    size: "32x32"
+    tags: [panel, dark, 9slice, corner]
+  - id: "0029"
+    name: panel_dark_bottom
+    cn: "深色面板底边"
+    size: "32x32"
+    tags: [panel, dark, 9slice, edge, bottom]
+  - id: "0030"
+    name: panel_dark_bottom_right
+    cn: "深色面板右下角"
+    size: "32x32"
+    tags: [panel, dark, 9slice, corner]
+  - id: "0031"
+    name: heart_full
+    cn: "满心-红"
+    size: "32x32"
+    tags: [heart, health, hud, full]
+  - id: "0032"
+    name: heart_half
+    cn: "半心"
+    size: "32x32"
+    tags: [heart, health, hud, half]
+  - id: "0033"
+    name: heart_empty
+    cn: "空心"
+    size: "32x32"
+    tags: [heart, health, hud, empty]
+  - id: "0034"
+    name: bar_bg_left
+    cn: "进度条背景左端"
+    size: "32x32"
+    tags: [bar, background, progress, left]
+  - id: "0035"
+    name: bar_bg_center
+    cn: "进度条背景中段"
+    size: "32x32"
+    tags: [bar, background, progress, center]
+  - id: "0036"
+    name: bar_bg_right
+    cn: "进度条背景右端"
+    size: "32x32"
+    tags: [bar, background, progress, right]
+  - id: "0037"
+    name: bar_fill_left
+    cn: "进度条填充左端"
+    size: "32x32"
+    tags: [bar, fill, progress, left]
+  - id: "0038"
+    name: bar_fill_center
+    cn: "进度条填充中段"
+    size: "32x32"
+    tags: [bar, fill, progress, center]
+
+  # ── Row 3: Items, arrows, cursors ────────────────────────────
+  - id: "0039"
+    name: bar_fill_right
+    cn: "进度条填充右端"
+    size: "32x32"
+    tags: [bar, fill, progress, right]
+  - id: "0040"
+    name: coin
+    cn: "金币"
+    size: "32x32"
+    tags: [item, coin, collectible, hud]
+  - id: "0041"
+    name: gem
+    cn: "宝石"
+    size: "32x32"
+    tags: [item, gem, collectible, hud]
+  - id: "0042"
+    name: star
+    cn: "星星"
+    size: "32x32"
+    tags: [item, star, collectible, rating]
+  - id: "0043"
+    name: key
+    cn: "钥匙"
+    size: "32x32"
+    tags: [item, key, collectible]
+  - id: "0044"
+    name: arrow_left
+    cn: "左箭头"
+    size: "32x32"
+    tags: [arrow, navigation, left]
+  - id: "0045"
+    name: arrow_right
+    cn: "右箭头"
+    size: "32x32"
+    tags: [arrow, navigation, right]
+  - id: "0046"
+    name: cursor_default
+    cn: "默认光标"
+    size: "32x32"
+    tags: [cursor, pointer, default]
+  - id: "0047"
+    name: cursor_pointer
+    cn: "指针光标"
+    size: "32x32"
+    tags: [cursor, pointer, hand]
+  - id: "0048"
+    name: cursor_crosshair
+    cn: "十字光标"
+    size: "32x32"
+    tags: [cursor, crosshair, aim]
+  - id: "0049"
+    name: cursor_grab
+    cn: "抓取光标"
+    size: "32x32"
+    tags: [cursor, grab, hand]
+  - id: "0050"
+    name: cursor_text
+    cn: "文本光标"
+    size: "32x32"
+    tags: [cursor, text, input]
+  - id: "0051"
+    name: cursor_busy
+    cn: "忙碌光标"
+    size: "32x32"
+    tags: [cursor, busy, loading]
+
+  # ── Row 4: Decorations, borders ──────────────────────────────
+  - id: "0052"
+    name: border_corner_tl
+    cn: "边框左上角"
+    size: "32x32"
+    tags: [border, corner, decoration]
+  - id: "0053"
+    name: border_top
+    cn: "边框上"
+    size: "32x32"
+    tags: [border, edge, top, decoration]
+  - id: "0054"
+    name: border_corner_tr
+    cn: "边框右上角"
+    size: "32x32"
+    tags: [border, corner, decoration]
+  - id: "0055"
+    name: border_left
+    cn: "边框左"
+    size: "32x32"
+    tags: [border, edge, left, decoration]
+  - id: "0056"
+    name: border_right
+    cn: "边框右"
+    size: "32x32"
+    tags: [border, edge, right, decoration]
+  - id: "0057"
+    name: border_corner_bl
+    cn: "边框左下角"
+    size: "32x32"
+    tags: [border, corner, decoration]
+  - id: "0058"
+    name: border_bottom
+    cn: "边框下"
+    size: "32x32"
+    tags: [border, edge, bottom, decoration]
+  - id: "0059"
+    name: border_corner_br
+    cn: "边框右下角"
+    size: "32x32"
+    tags: [border, corner, decoration]
+  - id: "0060"
+    name: ribbon_left
+    cn: "缎带左"
+    size: "32x32"
+    tags: [ribbon, decoration, banner]
+  - id: "0061"
+    name: ribbon_center
+    cn: "缎带中"
+    size: "32x32"
+    tags: [ribbon, decoration, banner]
+  - id: "0062"
+    name: ribbon_right
+    cn: "缎带右"
+    size: "32x32"
+    tags: [ribbon, decoration, banner]
+  - id: "0063"
+    name: digit_0
+    cn: "数字0"
+    size: "32x32"
+    tags: [digit, number, text, hud]
+  - id: "0064"
+    name: digit_1
+    cn: "数字1"
+    size: "32x32"
+    tags: [digit, number, text, hud]
+
+  # ── Row 5: Digits, icons ─────────────────────────────────────
+  - id: "0065"
+    name: digit_2
+    cn: "数字2"
+    size: "32x32"
+    tags: [digit, number, text, hud]
+  - id: "0066"
+    name: digit_3
+    cn: "数字3"
+    size: "32x32"
+    tags: [digit, number, text, hud]
+  - id: "0067"
+    name: digit_4
+    cn: "数字4"
+    size: "32x32"
+    tags: [digit, number, text, hud]
+  - id: "0068"
+    name: digit_5
+    cn: "数字5"
+    size: "32x32"
+    tags: [digit, number, text, hud]
+  - id: "0069"
+    name: digit_6
+    cn: "数字6"
+    size: "32x32"
+    tags: [digit, number, text, hud]
+  - id: "0070"
+    name: digit_7
+    cn: "数字7"
+    size: "32x32"
+    tags: [digit, number, text, hud]
+  - id: "0071"
+    name: digit_8
+    cn: "数字8"
+    size: "32x32"
+    tags: [digit, number, text, hud]
+  - id: "0072"
+    name: digit_9
+    cn: "数字9"
+    size: "32x32"
+    tags: [digit, number, text, hud]
+  - id: "0073"
+    name: flag
+    cn: "旗帜"
+    size: "32x32"
+    tags: [icon, flag, decoration]
+  - id: "0074"
+    name: lock_closed
+    cn: "锁-关闭"
+    size: "32x32"
+    tags: [icon, lock, closed, security]
+  - id: "0075"
+    name: lock_open
+    cn: "锁-打开"
+    size: "32x32"
+    tags: [icon, lock, open, security]
+  - id: "0076"
+    name: keyhole
+    cn: "钥匙孔"
+    size: "32x32"
+    tags: [icon, keyhole, lock, security]
+  - id: "0077"
+    name: scroll_bar_top
+    cn: "滚动条顶"
+    size: "32x32"
+    tags: [scrollbar, top, widget]
+
+  # ── Row 6: Scroll, misc ──────────────────────────────────────
+  - id: "0078"
+    name: scroll_bar_middle
+    cn: "滚动条中段"
+    size: "32x32"
+    tags: [scrollbar, middle, widget]
+  - id: "0079"
+    name: scroll_bar_bottom
+    cn: "滚动条底"
+    size: "32x32"
+    tags: [scrollbar, bottom, widget]
+  - id: "0080"
+    name: scroll_handle
+    cn: "滚动条把手"
+    size: "32x32"
+    tags: [scrollbar, handle, widget]
+  - id: "0081"
+    name: checkbox_unchecked
+    cn: "复选框-未选"
+    size: "32x32"
+    tags: [checkbox, unchecked, widget, form]
+  - id: "0082"
+    name: checkbox_checked
+    cn: "复选框-已选"
+    size: "32x32"
+    tags: [checkbox, checked, widget, form]
+  - id: "0083"
+    name: radio_unchecked
+    cn: "单选框-未选"
+    size: "32x32"
+    tags: [radio, unchecked, widget, form]
+  - id: "0084"
+    name: radio_checked
+    cn: "单选框-已选"
+    size: "32x32"
+    tags: [radio, checked, widget, form]
+  - id: "0085"
+    name: slider_track
+    cn: "滑块轨道"
+    size: "32x32"
+    tags: [slider, track, widget]
+  - id: "0086"
+    name: slider_handle
+    cn: "滑块把手"
+    size: "32x32"
+    tags: [slider, handle, widget]
+  - id: "0087"
+    name: toggle_off
+    cn: "开关-关"
+    size: "32x32"
+    tags: [toggle, off, switch, widget]
+  - id: "0088"
+    name: toggle_on
+    cn: "开关-开"
+    size: "32x32"
+    tags: [toggle, on, switch, widget]
+  - id: "0089"
+    name: speech_bubble
+    cn: "对话气泡"
+    size: "32x32"
+    tags: [speech, bubble, dialog, decoration]
+  - id: "0090"
+    name: exclamation
+    cn: "感叹号"
+    size: "32x32"
+    tags: [icon, exclamation, alert, notification]

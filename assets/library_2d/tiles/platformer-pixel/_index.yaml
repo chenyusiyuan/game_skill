@@ -1,0 +1,989 @@
+# Pixel Platformer Tiles - 瓦片语义索引
+# 来源: kenney_pixel-platformer
+# 网格: 20列 × 9行, 每格 18×18px, 共 180 个瓦片
+# 文件名: tile_{编号:04d}.png
+#
+# ── 风格与适用范围 ──
+# 视觉风格: pixel-retro（像素复古）
+# 适用游戏类型: 横版平台跳跃、像素动作游戏
+# 不适用: 俯视角RPG/模拟经营（请用 tiny-town/tiny-dungeon 代替）
+#
+# ── 分组概要（用途与组合关系）──
+#
+# 地形块 - 4色 (0000-0079):
+#   用途: 构建关卡的地面、平台、悬崖等固体地形
+#   颜色: 棕(0000-0019) 泥土/洞穴风；绿(0020-0039) 草地/森林风；灰(0040-0059) 石头/城堡风；蓝(0060-0079) 冰雪/水晶风
+#   每色20块结构完全相同:
+#     九宫格(+0~+8): tl/top/tr/left/center/right/bl/bottom/br — 拼大块地形
+#     单块(+9): 1×1 的独立小地形
+#     平台(+10~+12): left/mid/right — 薄平台（可从下方跳上）
+#     柱子(+13~+15): top/mid/bottom — 垂直窄柱
+#     半块(+16~+17): left/right — 斜坡/半块
+#     内角(+18~+19): inner_tl/inner_tr — 内凹转角
+#   提示: 同一关卡建议统一用一个颜色；不同区域可换色区分（如地上绿色、地下棕色）
+#
+# 物品与道具 (0080-0099):
+#   收集物: 金币(0080-0081,含旋转帧)/宝石(0082-0083)/钥匙(0084-0085)/心(0086)/星(0087) — 分数/解锁/生命
+#   关卡标记: 旗帜(0088-0089,含飘动帧) 检查点/终点；门(0090-0091) 关卡出入口
+#   攀爬: 梯子(0092顶/0093中/0094底) — 垂直拼接做任意高度梯子
+#   机关: 尖刺(0095) 伤害陷阱；弹簧(0096收/0097弹) 弹跳增强；开关(0098关/0099开) 触发机关
+#
+# 装饰与道具 (0100-0119):
+#   可破坏: 箱子(0100-0101) — 打破掉道具
+#   植物: 植物(0102-0103)/蘑菇(0104-0105) — 背景装饰
+#   自然: 石头(0106-0107) — 小型障碍或装饰
+#   信息: 告示牌(0108-0109) — 教学/提示文本
+#   照明: 火把(0110亮/0111灭) — 洞穴装饰
+#   天空: 云(0112小/0113大) — 背景层装饰
+#   液体: 水(0114顶面/0115水体)/岩浆(0116顶面/0117体) — 垂直堆叠铺满区域
+#   悬挂: 锁链(0118中段/0119端头) — 洞穴/城堡装饰
+#
+# 浮空平台 (0120-0131):
+#   用途: 不与地面相连的浮空跳跃平台
+#   颜色: 棕(0120-0122)/绿(0123-0125)/灰(0126-0128)/蓝(0129-0131)
+#   每色: left/mid/right 三段式拼接
+#   区别: 比地形平台(+10~+12)更窄更薄，更适合做移动平台
+#
+# 弹射与投射 (0132-0139):
+#   蹦床(0132-0133): 踩上去弹跳
+#   炮台(0134右/0135左): 发射炮弹的敌方机关
+#   弹药: 炮弹(0136)/右箭(0137)/左箭(0138)/通用投射物(0139)
+#
+# 敌人 (0140-0149):
+#   用途: 关卡中的敌方角色，每种含 2 帧动画
+#   地面敌人: 史莱姆(0140-0141) 最弱；蜗牛(0142-0143) 带壳
+#   飞行敌人: 苍蝇(0144-0145)；蜜蜂(0146-0147)
+#   固定危险: 刺球(0148) 原地旋转；锯片(0149) 沿轨道移动
+#
+# 特效粒子 (0150-0159):
+#   通用粒子(0150-0152): 碰撞/拾取时的小星星
+#   爆炸(0153-0155): 3 帧序列
+#   烟雾(0156-0158): 3 帧序列，角色消失/重生
+#   冲击(0159): 攻击命中反馈
+#
+# HUD 与数字 (0160-0179):
+#   生命: 满心(0160)/半心(0161)/空心(0162) — 屏幕顶部血量
+#   计数: 金币图标(0163)/宝石图标(0164) — 配合数字显示
+#   数字 0-9 (0165-0174): 用于计分板/倒计时/金币数
+#   符号: 乘号X(0175) — "×99" 格式
+#   导航: 左箭头(0176)/右箭头(0177) — 菜单翻页
+#   状态: 勾(0178) 完成/正确；叉(0179) 失败/错误
+
+tiles:
+  # ── Row 0 (0000-0019): Brown terrain 棕色地形 ──
+  - id: "0000"
+    name: terrain_brown_tl
+    cn: "棕色地形-左上角"
+    size: "18x18"
+    tags: [terrain, brown, corner, ground]
+  - id: "0001"
+    name: terrain_brown_top
+    cn: "棕色地形-顶边"
+    size: "18x18"
+    tags: [terrain, brown, edge, ground]
+  - id: "0002"
+    name: terrain_brown_tr
+    cn: "棕色地形-右上角"
+    size: "18x18"
+    tags: [terrain, brown, corner, ground]
+  - id: "0003"
+    name: terrain_brown_left
+    cn: "棕色地形-左边"
+    size: "18x18"
+    tags: [terrain, brown, edge, ground]
+  - id: "0004"
+    name: terrain_brown_center
+    cn: "棕色地形-中心"
+    size: "18x18"
+    tags: [terrain, brown, fill, ground]
+  - id: "0005"
+    name: terrain_brown_right
+    cn: "棕色地形-右边"
+    size: "18x18"
+    tags: [terrain, brown, edge, ground]
+  - id: "0006"
+    name: terrain_brown_bl
+    cn: "棕色地形-左下角"
+    size: "18x18"
+    tags: [terrain, brown, corner, ground]
+  - id: "0007"
+    name: terrain_brown_bottom
+    cn: "棕色地形-底边"
+    size: "18x18"
+    tags: [terrain, brown, edge, ground]
+  - id: "0008"
+    name: terrain_brown_br
+    cn: "棕色地形-右下角"
+    size: "18x18"
+    tags: [terrain, brown, corner, ground]
+  - id: "0009"
+    name: terrain_brown_single
+    cn: "棕色地形-单块"
+    size: "18x18"
+    tags: [terrain, brown, single, ground]
+  - id: "0010"
+    name: terrain_brown_platform_l
+    cn: "棕色平台-左端"
+    size: "18x18"
+    tags: [terrain, brown, platform, ground]
+  - id: "0011"
+    name: terrain_brown_platform_m
+    cn: "棕色平台-中段"
+    size: "18x18"
+    tags: [terrain, brown, platform, ground]
+  - id: "0012"
+    name: terrain_brown_platform_r
+    cn: "棕色平台-右端"
+    size: "18x18"
+    tags: [terrain, brown, platform, ground]
+  - id: "0013"
+    name: terrain_brown_column_t
+    cn: "棕色柱-顶"
+    size: "18x18"
+    tags: [terrain, brown, column, ground]
+  - id: "0014"
+    name: terrain_brown_column_m
+    cn: "棕色柱-中"
+    size: "18x18"
+    tags: [terrain, brown, column, ground]
+  - id: "0015"
+    name: terrain_brown_column_b
+    cn: "棕色柱-底"
+    size: "18x18"
+    tags: [terrain, brown, column, ground]
+  - id: "0016"
+    name: terrain_brown_half_l
+    cn: "棕色半块-左"
+    size: "18x18"
+    tags: [terrain, brown, half, ground]
+  - id: "0017"
+    name: terrain_brown_half_r
+    cn: "棕色半块-右"
+    size: "18x18"
+    tags: [terrain, brown, half, ground]
+  - id: "0018"
+    name: terrain_brown_inner_tl
+    cn: "棕色内角-左上"
+    size: "18x18"
+    tags: [terrain, brown, inner_corner, ground]
+  - id: "0019"
+    name: terrain_brown_inner_tr
+    cn: "棕色内角-右上"
+    size: "18x18"
+    tags: [terrain, brown, inner_corner, ground]
+
+  # ── Row 1 (0020-0039): Green terrain 绿色地形 ──
+  - id: "0020"
+    name: terrain_green_tl
+    cn: "绿色地形-左上角"
+    size: "18x18"
+    tags: [terrain, green, corner, ground]
+  - id: "0021"
+    name: terrain_green_top
+    cn: "绿色地形-顶边"
+    size: "18x18"
+    tags: [terrain, green, edge, ground]
+  - id: "0022"
+    name: terrain_green_tr
+    cn: "绿色地形-右上角"
+    size: "18x18"
+    tags: [terrain, green, corner, ground]
+  - id: "0023"
+    name: terrain_green_left
+    cn: "绿色地形-左边"
+    size: "18x18"
+    tags: [terrain, green, edge, ground]
+  - id: "0024"
+    name: terrain_green_center
+    cn: "绿色地形-中心"
+    size: "18x18"
+    tags: [terrain, green, fill, ground]
+  - id: "0025"
+    name: terrain_green_right
+    cn: "绿色地形-右边"
+    size: "18x18"
+    tags: [terrain, green, edge, ground]
+  - id: "0026"
+    name: terrain_green_bl
+    cn: "绿色地形-左下角"
+    size: "18x18"
+    tags: [terrain, green, corner, ground]
+  - id: "0027"
+    name: terrain_green_bottom
+    cn: "绿色地形-底边"
+    size: "18x18"
+    tags: [terrain, green, edge, ground]
+  - id: "0028"
+    name: terrain_green_br
+    cn: "绿色地形-右下角"
+    size: "18x18"
+    tags: [terrain, green, corner, ground]
+  - id: "0029"
+    name: terrain_green_single
+    cn: "绿色地形-单块"
+    size: "18x18"
+    tags: [terrain, green, single, ground]
+  - id: "0030"
+    name: terrain_green_platform_l
+    cn: "绿色平台-左端"
+    size: "18x18"
+    tags: [terrain, green, platform, ground]
+  - id: "0031"
+    name: terrain_green_platform_m
+    cn: "绿色平台-中段"
+    size: "18x18"
+    tags: [terrain, green, platform, ground]
+  - id: "0032"
+    name: terrain_green_platform_r
+    cn: "绿色平台-右端"
+    size: "18x18"
+    tags: [terrain, green, platform, ground]
+  - id: "0033"
+    name: terrain_green_column_t
+    cn: "绿色柱-顶"
+    size: "18x18"
+    tags: [terrain, green, column, ground]
+  - id: "0034"
+    name: terrain_green_column_m
+    cn: "绿色柱-中"
+    size: "18x18"
+    tags: [terrain, green, column, ground]
+  - id: "0035"
+    name: terrain_green_column_b
+    cn: "绿色柱-底"
+    size: "18x18"
+    tags: [terrain, green, column, ground]
+  - id: "0036"
+    name: terrain_green_half_l
+    cn: "绿色半块-左"
+    size: "18x18"
+    tags: [terrain, green, half, ground]
+  - id: "0037"
+    name: terrain_green_half_r
+    cn: "绿色半块-右"
+    size: "18x18"
+    tags: [terrain, green, half, ground]
+  - id: "0038"
+    name: terrain_green_inner_tl
+    cn: "绿色内角-左上"
+    size: "18x18"
+    tags: [terrain, green, inner_corner, ground]
+  - id: "0039"
+    name: terrain_green_inner_tr
+    cn: "绿色内角-右上"
+    size: "18x18"
+    tags: [terrain, green, inner_corner, ground]
+
+  # ── Row 2 (0040-0059): Gray terrain 灰色地形 ──
+  - id: "0040"
+    name: terrain_gray_tl
+    cn: "灰色地形-左上角"
+    size: "18x18"
+    tags: [terrain, gray, corner, ground]
+  - id: "0041"
+    name: terrain_gray_top
+    cn: "灰色地形-顶边"
+    size: "18x18"
+    tags: [terrain, gray, edge, ground]
+  - id: "0042"
+    name: terrain_gray_tr
+    cn: "灰色地形-右上角"
+    size: "18x18"
+    tags: [terrain, gray, corner, ground]
+  - id: "0043"
+    name: terrain_gray_left
+    cn: "灰色地形-左边"
+    size: "18x18"
+    tags: [terrain, gray, edge, ground]
+  - id: "0044"
+    name: terrain_gray_center
+    cn: "灰色地形-中心"
+    size: "18x18"
+    tags: [terrain, gray, fill, ground]
+  - id: "0045"
+    name: terrain_gray_right
+    cn: "灰色地形-右边"
+    size: "18x18"
+    tags: [terrain, gray, edge, ground]
+  - id: "0046"
+    name: terrain_gray_bl
+    cn: "灰色地形-左下角"
+    size: "18x18"
+    tags: [terrain, gray, corner, ground]
+  - id: "0047"
+    name: terrain_gray_bottom
+    cn: "灰色地形-底边"
+    size: "18x18"
+    tags: [terrain, gray, edge, ground]
+  - id: "0048"
+    name: terrain_gray_br
+    cn: "灰色地形-右下角"
+    size: "18x18"
+    tags: [terrain, gray, corner, ground]
+  - id: "0049"
+    name: terrain_gray_single
+    cn: "灰色地形-单块"
+    size: "18x18"
+    tags: [terrain, gray, single, ground]
+  - id: "0050"
+    name: terrain_gray_platform_l
+    cn: "灰色平台-左端"
+    size: "18x18"
+    tags: [terrain, gray, platform, ground]
+  - id: "0051"
+    name: terrain_gray_platform_m
+    cn: "灰色平台-中段"
+    size: "18x18"
+    tags: [terrain, gray, platform, ground]
+  - id: "0052"
+    name: terrain_gray_platform_r
+    cn: "灰色平台-右端"
+    size: "18x18"
+    tags: [terrain, gray, platform, ground]
+  - id: "0053"
+    name: terrain_gray_column_t
+    cn: "灰色柱-顶"
+    size: "18x18"
+    tags: [terrain, gray, column, ground]
+  - id: "0054"
+    name: terrain_gray_column_m
+    cn: "灰色柱-中"
+    size: "18x18"
+    tags: [terrain, gray, column, ground]
+  - id: "0055"
+    name: terrain_gray_column_b
+    cn: "灰色柱-底"
+    size: "18x18"
+    tags: [terrain, gray, column, ground]
+  - id: "0056"
+    name: terrain_gray_half_l
+    cn: "灰色半块-左"
+    size: "18x18"
+    tags: [terrain, gray, half, ground]
+  - id: "0057"
+    name: terrain_gray_half_r
+    cn: "灰色半块-右"
+    size: "18x18"
+    tags: [terrain, gray, half, ground]
+  - id: "0058"
+    name: terrain_gray_inner_tl
+    cn: "灰色内角-左上"
+    size: "18x18"
+    tags: [terrain, gray, inner_corner, ground]
+  - id: "0059"
+    name: terrain_gray_inner_tr
+    cn: "灰色内角-右上"
+    size: "18x18"
+    tags: [terrain, gray, inner_corner, ground]
+
+  # ── Row 3 (0060-0079): Blue terrain 蓝色地形 ──
+  - id: "0060"
+    name: terrain_blue_tl
+    cn: "蓝色地形-左上角"
+    size: "18x18"
+    tags: [terrain, blue, corner, ground]
+  - id: "0061"
+    name: terrain_blue_top
+    cn: "蓝色地形-顶边"
+    size: "18x18"
+    tags: [terrain, blue, edge, ground]
+  - id: "0062"
+    name: terrain_blue_tr
+    cn: "蓝色地形-右上角"
+    size: "18x18"
+    tags: [terrain, blue, corner, ground]
+  - id: "0063"
+    name: terrain_blue_left
+    cn: "蓝色地形-左边"
+    size: "18x18"
+    tags: [terrain, blue, edge, ground]
+  - id: "0064"
+    name: terrain_blue_center
+    cn: "蓝色地形-中心"
+    size: "18x18"
+    tags: [terrain, blue, fill, ground]
+  - id: "0065"
+    name: terrain_blue_right
+    cn: "蓝色地形-右边"
+    size: "18x18"
+    tags: [terrain, blue, edge, ground]
+  - id: "0066"
+    name: terrain_blue_bl
+    cn: "蓝色地形-左下角"
+    size: "18x18"
+    tags: [terrain, blue, corner, ground]
+  - id: "0067"
+    name: terrain_blue_bottom
+    cn: "蓝色地形-底边"
+    size: "18x18"
+    tags: [terrain, blue, edge, ground]
+  - id: "0068"
+    name: terrain_blue_br
+    cn: "蓝色地形-右下角"
+    size: "18x18"
+    tags: [terrain, blue, corner, ground]
+  - id: "0069"
+    name: terrain_blue_single
+    cn: "蓝色地形-单块"
+    size: "18x18"
+    tags: [terrain, blue, single, ground]
+  - id: "0070"
+    name: terrain_blue_platform_l
+    cn: "蓝色平台-左端"
+    size: "18x18"
+    tags: [terrain, blue, platform, ground]
+  - id: "0071"
+    name: terrain_blue_platform_m
+    cn: "蓝色平台-中段"
+    size: "18x18"
+    tags: [terrain, blue, platform, ground]
+  - id: "0072"
+    name: terrain_blue_platform_r
+    cn: "蓝色平台-右端"
+    size: "18x18"
+    tags: [terrain, blue, platform, ground]
+  - id: "0073"
+    name: terrain_blue_column_t
+    cn: "蓝色柱-顶"
+    size: "18x18"
+    tags: [terrain, blue, column, ground]
+  - id: "0074"
+    name: terrain_blue_column_m
+    cn: "蓝色柱-中"
+    size: "18x18"
+    tags: [terrain, blue, column, ground]
+  - id: "0075"
+    name: terrain_blue_column_b
+    cn: "蓝色柱-底"
+    size: "18x18"
+    tags: [terrain, blue, column, ground]
+  - id: "0076"
+    name: terrain_blue_half_l
+    cn: "蓝色半块-左"
+    size: "18x18"
+    tags: [terrain, blue, half, ground]
+  - id: "0077"
+    name: terrain_blue_half_r
+    cn: "蓝色半块-右"
+    size: "18x18"
+    tags: [terrain, blue, half, ground]
+  - id: "0078"
+    name: terrain_blue_inner_tl
+    cn: "蓝色内角-左上"
+    size: "18x18"
+    tags: [terrain, blue, inner_corner, ground]
+  - id: "0079"
+    name: terrain_blue_inner_tr
+    cn: "蓝色内角-右上"
+    size: "18x18"
+    tags: [terrain, blue, inner_corner, ground]
+
+  # ── Row 4 (0080-0099): Items and decorations 物品与装饰 ──
+  - id: "0080"
+    name: coin
+    cn: "金币"
+    size: "18x18"
+    tags: [item, coin, collectible, pickup]
+  - id: "0081"
+    name: coin_spin
+    cn: "金币旋转帧"
+    size: "18x18"
+    tags: [item, coin, collectible, pickup, animation]
+  - id: "0082"
+    name: gem
+    cn: "宝石"
+    size: "18x18"
+    tags: [item, gem, collectible, pickup]
+  - id: "0083"
+    name: gem_spin
+    cn: "宝石旋转帧"
+    size: "18x18"
+    tags: [item, gem, collectible, pickup, animation]
+  - id: "0084"
+    name: key
+    cn: "钥匙"
+    size: "18x18"
+    tags: [item, key, collectible, pickup]
+  - id: "0085"
+    name: key_spin
+    cn: "钥匙旋转帧"
+    size: "18x18"
+    tags: [item, key, collectible, pickup, animation]
+  - id: "0086"
+    name: heart
+    cn: "爱心/生命"
+    size: "18x18"
+    tags: [item, heart, life, pickup, health]
+  - id: "0087"
+    name: star
+    cn: "星星"
+    size: "18x18"
+    tags: [item, star, collectible, pickup]
+  - id: "0088"
+    name: flag
+    cn: "旗帜"
+    size: "18x18"
+    tags: [item, flag, checkpoint, goal]
+  - id: "0089"
+    name: flag_wave
+    cn: "旗帜飘动帧"
+    size: "18x18"
+    tags: [item, flag, checkpoint, goal, animation]
+  - id: "0090"
+    name: door
+    cn: "门"
+    size: "18x18"
+    tags: [item, door, exit, entrance]
+  - id: "0091"
+    name: door_open
+    cn: "门打开"
+    size: "18x18"
+    tags: [item, door, exit, entrance, animation]
+  - id: "0092"
+    name: ladder_top
+    cn: "梯子顶"
+    size: "18x18"
+    tags: [item, ladder, climb, top]
+  - id: "0093"
+    name: ladder_mid
+    cn: "梯子中"
+    size: "18x18"
+    tags: [item, ladder, climb, middle]
+  - id: "0094"
+    name: ladder_bottom
+    cn: "梯子底"
+    size: "18x18"
+    tags: [item, ladder, climb, bottom]
+  - id: "0095"
+    name: spike
+    cn: "尖刺陷阱"
+    size: "18x18"
+    tags: [hazard, spike, trap, danger]
+  - id: "0096"
+    name: spring
+    cn: "弹簧-收起"
+    size: "18x18"
+    tags: [item, spring, bounce, mechanism]
+  - id: "0097"
+    name: spring_extend
+    cn: "弹簧-弹出"
+    size: "18x18"
+    tags: [item, spring, bounce, mechanism, animation]
+  - id: "0098"
+    name: switch_off
+    cn: "开关-关"
+    size: "18x18"
+    tags: [item, switch, mechanism, off]
+  - id: "0099"
+    name: switch_on
+    cn: "开关-开"
+    size: "18x18"
+    tags: [item, switch, mechanism, on]
+
+  # ── Row 5 (0100-0119): More decorations and props 更多装饰与道具 ──
+  - id: "0100"
+    name: box
+    cn: "箱子"
+    size: "18x18"
+    tags: [prop, box, crate, breakable]
+  - id: "0101"
+    name: box_alt
+    cn: "箱子变体"
+    size: "18x18"
+    tags: [prop, box, crate, breakable]
+  - id: "0102"
+    name: plant_1
+    cn: "植物1"
+    size: "18x18"
+    tags: [decoration, plant, foliage, nature]
+  - id: "0103"
+    name: plant_2
+    cn: "植物2"
+    size: "18x18"
+    tags: [decoration, plant, foliage, nature]
+  - id: "0104"
+    name: mushroom_red
+    cn: "红蘑菇"
+    size: "18x18"
+    tags: [decoration, mushroom, red, nature]
+  - id: "0105"
+    name: mushroom_brown
+    cn: "棕蘑菇"
+    size: "18x18"
+    tags: [decoration, mushroom, brown, nature]
+  - id: "0106"
+    name: rock_1
+    cn: "石头1"
+    size: "18x18"
+    tags: [decoration, rock, stone, nature]
+  - id: "0107"
+    name: rock_2
+    cn: "石头2"
+    size: "18x18"
+    tags: [decoration, rock, stone, nature]
+  - id: "0108"
+    name: sign
+    cn: "告示牌"
+    size: "18x18"
+    tags: [prop, sign, decoration, info]
+  - id: "0109"
+    name: sign_arrow
+    cn: "箭头告示牌"
+    size: "18x18"
+    tags: [prop, sign, arrow, decoration, info]
+  - id: "0110"
+    name: torch
+    cn: "火把"
+    size: "18x18"
+    tags: [prop, torch, light, decoration]
+  - id: "0111"
+    name: torch_off
+    cn: "火把-灭"
+    size: "18x18"
+    tags: [prop, torch, light, decoration, off]
+  - id: "0112"
+    name: cloud_1
+    cn: "云1-小"
+    size: "18x18"
+    tags: [decoration, cloud, sky, background]
+  - id: "0113"
+    name: cloud_2
+    cn: "云2-大"
+    size: "18x18"
+    tags: [decoration, cloud, sky, background]
+  - id: "0114"
+    name: water_top
+    cn: "水面-顶"
+    size: "18x18"
+    tags: [liquid, water, surface, top]
+  - id: "0115"
+    name: water_body
+    cn: "水体"
+    size: "18x18"
+    tags: [liquid, water, body, fill]
+  - id: "0116"
+    name: lava_top
+    cn: "岩浆-顶"
+    size: "18x18"
+    tags: [liquid, lava, surface, top, hazard]
+  - id: "0117"
+    name: lava_body
+    cn: "岩浆体"
+    size: "18x18"
+    tags: [liquid, lava, body, fill, hazard]
+  - id: "0118"
+    name: chain
+    cn: "锁链"
+    size: "18x18"
+    tags: [prop, chain, decoration, hanging]
+  - id: "0119"
+    name: chain_end
+    cn: "锁链端头"
+    size: "18x18"
+    tags: [prop, chain, decoration, hanging, end]
+
+  # ── Row 6 (0120-0139): Platform variations, moving platforms 平台变体 ──
+  - id: "0120"
+    name: platform_brown_l
+    cn: "棕色浮空平台-左"
+    size: "18x18"
+    tags: [platform, brown, floating, left]
+  - id: "0121"
+    name: platform_brown_m
+    cn: "棕色浮空平台-中"
+    size: "18x18"
+    tags: [platform, brown, floating, middle]
+  - id: "0122"
+    name: platform_brown_r
+    cn: "棕色浮空平台-右"
+    size: "18x18"
+    tags: [platform, brown, floating, right]
+  - id: "0123"
+    name: platform_green_l
+    cn: "绿色浮空平台-左"
+    size: "18x18"
+    tags: [platform, green, floating, left]
+  - id: "0124"
+    name: platform_green_m
+    cn: "绿色浮空平台-中"
+    size: "18x18"
+    tags: [platform, green, floating, middle]
+  - id: "0125"
+    name: platform_green_r
+    cn: "绿色浮空平台-右"
+    size: "18x18"
+    tags: [platform, green, floating, right]
+  - id: "0126"
+    name: platform_gray_l
+    cn: "灰色浮空平台-左"
+    size: "18x18"
+    tags: [platform, gray, floating, left]
+  - id: "0127"
+    name: platform_gray_m
+    cn: "灰色浮空平台-中"
+    size: "18x18"
+    tags: [platform, gray, floating, middle]
+  - id: "0128"
+    name: platform_gray_r
+    cn: "灰色浮空平台-右"
+    size: "18x18"
+    tags: [platform, gray, floating, right]
+  - id: "0129"
+    name: platform_blue_l
+    cn: "蓝色浮空平台-左"
+    size: "18x18"
+    tags: [platform, blue, floating, left]
+  - id: "0130"
+    name: platform_blue_m
+    cn: "蓝色浮空平台-中"
+    size: "18x18"
+    tags: [platform, blue, floating, middle]
+  - id: "0131"
+    name: platform_blue_r
+    cn: "蓝色浮空平台-右"
+    size: "18x18"
+    tags: [platform, blue, floating, right]
+  - id: "0132"
+    name: trampoline
+    cn: "蹦床"
+    size: "18x18"
+    tags: [mechanism, trampoline, bounce, platform]
+  - id: "0133"
+    name: trampoline_bounce
+    cn: "蹦床弹起"
+    size: "18x18"
+    tags: [mechanism, trampoline, bounce, platform, animation]
+  - id: "0134"
+    name: cannon_right
+    cn: "炮台-右"
+    size: "18x18"
+    tags: [hazard, cannon, weapon, right]
+  - id: "0135"
+    name: cannon_left
+    cn: "炮台-左"
+    size: "18x18"
+    tags: [hazard, cannon, weapon, left]
+  - id: "0136"
+    name: cannonball
+    cn: "炮弹"
+    size: "18x18"
+    tags: [hazard, cannonball, projectile, weapon]
+  - id: "0137"
+    name: arrow_right
+    cn: "箭矢-右"
+    size: "18x18"
+    tags: [hazard, arrow, projectile, right]
+  - id: "0138"
+    name: arrow_left
+    cn: "箭矢-左"
+    size: "18x18"
+    tags: [hazard, arrow, projectile, left]
+  - id: "0139"
+    name: projectile
+    cn: "投射物"
+    size: "18x18"
+    tags: [hazard, projectile, weapon, generic]
+
+  # ── Row 7 (0140-0159): Enemies and effects 敌人与特效 ──
+  - id: "0140"
+    name: enemy_slime_1
+    cn: "史莱姆帧1"
+    size: "18x18"
+    tags: [enemy, slime, animation, frame1]
+  - id: "0141"
+    name: enemy_slime_2
+    cn: "史莱姆帧2"
+    size: "18x18"
+    tags: [enemy, slime, animation, frame2]
+  - id: "0142"
+    name: enemy_snail_1
+    cn: "蜗牛帧1"
+    size: "18x18"
+    tags: [enemy, snail, animation, frame1]
+  - id: "0143"
+    name: enemy_snail_2
+    cn: "蜗牛帧2"
+    size: "18x18"
+    tags: [enemy, snail, animation, frame2]
+  - id: "0144"
+    name: enemy_fly_1
+    cn: "苍蝇帧1"
+    size: "18x18"
+    tags: [enemy, fly, animation, frame1]
+  - id: "0145"
+    name: enemy_fly_2
+    cn: "苍蝇帧2"
+    size: "18x18"
+    tags: [enemy, fly, animation, frame2]
+  - id: "0146"
+    name: enemy_bee_1
+    cn: "蜜蜂帧1"
+    size: "18x18"
+    tags: [enemy, bee, animation, frame1]
+  - id: "0147"
+    name: enemy_bee_2
+    cn: "蜜蜂帧2"
+    size: "18x18"
+    tags: [enemy, bee, animation, frame2]
+  - id: "0148"
+    name: enemy_spike
+    cn: "刺球敌人"
+    size: "18x18"
+    tags: [enemy, spike, hazard, stationary]
+  - id: "0149"
+    name: enemy_saw
+    cn: "锯片"
+    size: "18x18"
+    tags: [enemy, saw, hazard, rotating]
+  - id: "0150"
+    name: particle_1
+    cn: "粒子1"
+    size: "18x18"
+    tags: [effect, particle, vfx, small]
+  - id: "0151"
+    name: particle_2
+    cn: "粒子2"
+    size: "18x18"
+    tags: [effect, particle, vfx, small]
+  - id: "0152"
+    name: particle_3
+    cn: "粒子3"
+    size: "18x18"
+    tags: [effect, particle, vfx, small]
+  - id: "0153"
+    name: explosion_1
+    cn: "爆炸帧1"
+    size: "18x18"
+    tags: [effect, explosion, vfx, animation, frame1]
+  - id: "0154"
+    name: explosion_2
+    cn: "爆炸帧2"
+    size: "18x18"
+    tags: [effect, explosion, vfx, animation, frame2]
+  - id: "0155"
+    name: explosion_3
+    cn: "爆炸帧3"
+    size: "18x18"
+    tags: [effect, explosion, vfx, animation, frame3]
+  - id: "0156"
+    name: smoke_1
+    cn: "烟雾帧1"
+    size: "18x18"
+    tags: [effect, smoke, vfx, animation, frame1]
+  - id: "0157"
+    name: smoke_2
+    cn: "烟雾帧2"
+    size: "18x18"
+    tags: [effect, smoke, vfx, animation, frame2]
+  - id: "0158"
+    name: smoke_3
+    cn: "烟雾帧3"
+    size: "18x18"
+    tags: [effect, smoke, vfx, animation, frame3]
+  - id: "0159"
+    name: impact
+    cn: "冲击效果"
+    size: "18x18"
+    tags: [effect, impact, vfx, hit]
+
+  # ── Row 8 (0160-0179): HUD, numbers, misc HUD与数字 ──
+  - id: "0160"
+    name: hud_heart_full
+    cn: "HUD满心"
+    size: "18x18"
+    tags: [hud, heart, full, ui, health]
+  - id: "0161"
+    name: hud_heart_half
+    cn: "HUD半心"
+    size: "18x18"
+    tags: [hud, heart, half, ui, health]
+  - id: "0162"
+    name: hud_heart_empty
+    cn: "HUD空心"
+    size: "18x18"
+    tags: [hud, heart, empty, ui, health]
+  - id: "0163"
+    name: hud_coin
+    cn: "HUD金币图标"
+    size: "18x18"
+    tags: [hud, coin, icon, ui]
+  - id: "0164"
+    name: hud_gem
+    cn: "HUD宝石图标"
+    size: "18x18"
+    tags: [hud, gem, icon, ui]
+  - id: "0165"
+    name: digit_0
+    cn: "数字0"
+    size: "18x18"
+    tags: [hud, digit, number, ui, zero]
+  - id: "0166"
+    name: digit_1
+    cn: "数字1"
+    size: "18x18"
+    tags: [hud, digit, number, ui, one]
+  - id: "0167"
+    name: digit_2
+    cn: "数字2"
+    size: "18x18"
+    tags: [hud, digit, number, ui, two]
+  - id: "0168"
+    name: digit_3
+    cn: "数字3"
+    size: "18x18"
+    tags: [hud, digit, number, ui, three]
+  - id: "0169"
+    name: digit_4
+    cn: "数字4"
+    size: "18x18"
+    tags: [hud, digit, number, ui, four]
+  - id: "0170"
+    name: digit_5
+    cn: "数字5"
+    size: "18x18"
+    tags: [hud, digit, number, ui, five]
+  - id: "0171"
+    name: digit_6
+    cn: "数字6"
+    size: "18x18"
+    tags: [hud, digit, number, ui, six]
+  - id: "0172"
+    name: digit_7
+    cn: "数字7"
+    size: "18x18"
+    tags: [hud, digit, number, ui, seven]
+  - id: "0173"
+    name: digit_8
+    cn: "数字8"
+    size: "18x18"
+    tags: [hud, digit, number, ui, eight]
+  - id: "0174"
+    name: digit_9
+    cn: "数字9"
+    size: "18x18"
+    tags: [hud, digit, number, ui, nine]
+  - id: "0175"
+    name: letter_x
+    cn: "字母X/乘号"
+    size: "18x18"
+    tags: [hud, letter, multiply, ui, symbol]
+  - id: "0176"
+    name: arrow_ui_left
+    cn: "UI左箭头"
+    size: "18x18"
+    tags: [hud, arrow, left, ui, navigation]
+  - id: "0177"
+    name: arrow_ui_right
+    cn: "UI右箭头"
+    size: "18x18"
+    tags: [hud, arrow, right, ui, navigation]
+  - id: "0178"
+    name: checkmark
+    cn: "勾选标记"
+    size: "18x18"
+    tags: [hud, checkmark, confirm, ui, symbol]
+  - id: "0179"
+    name: cross
+    cn: "叉号标记"
+    size: "18x18"
+    tags: [hud, cross, cancel, ui, symbol]

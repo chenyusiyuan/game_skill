@@ -1,0 +1,130 @@
+{
+  "case_id": "phaser-001",
+  "description": "Phaser Diablo-like Roguelike - 像素风类暗黑肉鸽游戏",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "assertions": [
+    {
+      "id": "game-boots",
+      "kind": "state",
+      "description": "游戏启动正常",
+      "setup": [],
+      "expect": { "selector": "window.game !== undefined && window.gameState !== undefined", "op": "truthy", "value": true }
+    },
+    {
+      "id": "class-selection",
+      "kind": "state",
+      "description": "职业选择 - 选择职业后进入游戏",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "playing" }
+    },
+    {
+      "id": "player-initialized",
+      "kind": "state",
+      "description": "玩家已初始化",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 }
+      ],
+      "expect": { "selector": "window.gameState.player !== null && window.gameState.player.class !== undefined", "op": "truthy", "value": true }
+    },
+    {
+      "id": "combat-works",
+      "kind": "state",
+      "description": "战斗可用 - 敌人可生成",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.spawnEnemy('skeleton', 300, 300, false)" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameTest.getEnemies().length > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "skill-usage",
+      "kind": "state",
+      "description": "技能释放 - 玩家有技能",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.player !== null && window.gameState.player.skills && window.gameState.player.skills.length > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "equipment-tiers",
+      "kind": "hard-rule",
+      "description": "装备品质系统存在",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.equipmentCollected !== undefined", "op": "truthy", "value": true }
+    },
+    {
+      "id": "equipment-drop",
+      "kind": "state",
+      "description": "装备掉落 - 击杀敌人可掉落装备",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.spawnEnemy('skeleton', 300, 300, false)" },
+        { "action": "wait", "ms": 200 },
+        { "action": "eval", "js": "const enemies = window.gameTest.getEnemies(); if (enemies.length > 0) { window.gameTest.killEnemy(enemies[0].id) }" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.killCount >= 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "boss-phase",
+      "kind": "state",
+      "description": "Boss阶段 - Boss血量控制",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.setBossHp(0.3)" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'playing'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "floor-progression",
+      "kind": "state",
+      "description": "楼层推进 - 当前楼层有效",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.currentFloor >= 1 && window.gameState.currentFloor <= 5", "op": "truthy", "value": true }
+    },
+    {
+      "id": "visual-style",
+      "kind": "state",
+      "description": "视觉风格 - 游戏画布存在",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "document.querySelector('canvas') !== null", "op": "truthy", "value": true }
+    },
+    {
+      "id": "damage-formula",
+      "kind": "hard-rule",
+      "description": "伤害公式 - 玩家有攻击力属性",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.player !== null && window.gameState.player.atk > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "three-classes",
+      "kind": "hard-rule",
+      "description": "三职业体系 - 开始场景存在",
+      "setup": [],
+      "expect": { "selector": "window.game.scene.getScene('StartScene') !== undefined", "op": "truthy", "value": true }
+    }
+  ]
+}

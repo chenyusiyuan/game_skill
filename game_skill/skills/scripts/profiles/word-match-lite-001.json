@@ -1,0 +1,80 @@
+{
+  "case_id": "word-match-lite-001",
+  "description": "单词消消乐 - Canvas 2D 基础断言",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "assertions": [
+    {
+      "id": "boot-ready",
+      "kind": "state",
+      "description": "boot 后 phase 为 ready",
+      "setup": [],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "ready" }
+    },
+    {
+      "id": "has-title",
+      "kind": "state",
+      "description": "开始页有游戏标题",
+      "setup": [{ "action": "wait", "ms": 200 }],
+      "expect": { "selector": "document.title.includes('单词') || document.title.includes('Word') || document.body.innerText.includes('单词')", "op": "truthy", "value": true }
+    },
+    {
+      "id": "start-enters-playing",
+      "kind": "state",
+      "description": "点击 canvas 开始按钮后进入 playing",
+      "setup": [
+        { "action": "eval", "js": "const canvas = document.getElementById('game'); if (canvas) { const rect = canvas.getBoundingClientRect(); canvas.dispatchEvent(new PointerEvent('pointerdown', { clientX: rect.left + rect.width/2, clientY: rect.top + rect.height*0.6, bubbles: true })); }" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "playing" }
+    },
+    {
+      "id": "has-timer-and-score",
+      "kind": "state",
+      "description": "playing 状态有 timeLeft 和 score 字段",
+      "setup": [{ "action": "wait", "ms": 100 }],
+      "expect": { "selector": "typeof window.gameState.timeLeft === 'number' && typeof window.gameState.score === 'number'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "has-cards",
+      "kind": "state",
+      "description": "playing 状态有 cards 数组",
+      "setup": [{ "action": "wait", "ms": 100 }],
+      "expect": { "selector": "Array.isArray(window.gameState.cards) && window.gameState.cards.length >= 12", "op": "truthy", "value": true }
+    },
+    {
+      "id": "win-transition",
+      "kind": "state",
+      "description": "强制把所有卡片标为 matched 后，phase 变为 win",
+      "setup": [
+        { "action": "eval", "js": "if (window.gameState.cards) { window.gameState.cards.forEach(c => c.matched = true); }" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "win" }
+    },
+    {
+      "id": "lose-transition",
+      "kind": "state",
+      "description": "timeLeft 设为 0 后，phase 变为 lose",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.phase = 'playing'; window.gameState.scene = 'play'; window.gameState.cards = [{matched: false}]; window.gameState.timeLeft = 0;" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "lose" }
+    },
+    {
+      "id": "mvp-boundary-no-login",
+      "kind": "hard-rule",
+      "description": "MVP 边界：代码里不得出现登录/排行榜相关关键字（排除词汇数据）",
+      "setup": [{ "action": "wait", "ms": 50 }],
+      "expect": { "selector": "!/(login|signin|sign-in|leaderboard|rank)/i.test(document.documentElement.outerHTML.replace(/WORD_BANK[\\s\\S]*?\\];/gm, ''))", "op": "truthy", "value": true }
+    },
+    {
+      "id": "no-external-assets",
+      "kind": "hard-rule",
+      "description": "禁止外部资源：无外部图片 CDN 引用",
+      "setup": [],
+      "expect": { "selector": "!/<img[^>]+src\\s*=\\s*['\"]https?:\\/\\//i.test(document.documentElement.outerHTML)", "op": "truthy", "value": true }
+    }
+  ]
+}

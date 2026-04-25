@@ -1,0 +1,74 @@
+{
+  "version": 1,
+
+  "explorer": {
+    "component": "default-tree",
+    "options": {
+      "groupByDirectory": true
+    }
+  },
+
+  "detail": {
+    "routes": [
+      {
+        "match": "*.{html,htm}",
+        "viewer": "html-viewer"
+      },
+      {
+        "match": "*.{md,mdx}",
+        "viewer": "markdown-editor"
+      },
+      {
+        "match": "*.{png,jpg,jpeg,gif,svg,webp}",
+        "viewer": "image-viewer",
+        "readOnly": true
+      },
+      {
+        "match": "*.{ts,tsx}",
+        "viewer": "code-editor"
+      },
+      {
+        "match": "*.{js,jsx,mjs,cjs}",
+        "viewer": "code-editor"
+      },
+      {
+        "match": "*.{json,jsonc}",
+        "viewer": "code-editor"
+      },
+      {
+        "match": "*.{css,scss,less}",
+        "viewer": "code-editor"
+      },
+      {
+        "match": "*.prisma",
+        "viewer": "code-editor"
+      }
+    ],
+    "fallback": "code-editor"
+  },
+
+  "preview": {
+    "routes": []
+  },
+
+  "canvas": {
+    "routes": [
+      {
+        "match": "design|prototype",
+        "viewer": "canvas-viewer",
+        "options": {
+          "platform": "auto",
+          "fileTypes": [".html"]
+        }
+      }
+    ]
+  },
+
+  "layout": {
+    "default": "three",
+    "panels": {
+      "explorer": { "width": 240, "minWidth": 180, "maxWidth": 360 },
+      "chat": { "width": 400, "minWidth": 300, "maxWidth": 560 }
+    }
+  }
+}

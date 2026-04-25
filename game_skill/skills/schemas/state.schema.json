@@ -1,0 +1,158 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GameSkillState",
+  "description": "cases/<slug>/.game/state.json 的统一 schema。v1 开始使用；旧 case 的漂移 schema 保留只读兼容。",
+  "type": "object",
+  "required": ["schemaVersion", "project", "currentPhase", "createdAt", "phases"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "state schema 版本号。未来变更需自增；读取工具按此字段分支处理。"
+    },
+    "project": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "项目 slug（kebab-case）"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "runtime": {
+      "type": "string",
+      "enum": ["phaser3", "pixijs", "canvas", "dom-ui", "three"]
+    },
+    "visualStyle": {
+      "type": "string"
+    },
+    "deliveryTarget": {
+      "type": "string",
+      "enum": ["prototype", "playable-mvp", "feature-complete-lite"]
+    },
+    "currentPhase": {
+      "type": "string",
+      "enum": ["understand", "prd", "expand", "codegen", "verify", "done", "failed"]
+    },
+    "phases": {
+      "type": "object",
+      "required": ["understand", "prd", "expand", "codegen", "verify"],
+      "additionalProperties": false,
+      "properties": {
+        "understand": { "$ref": "#/definitions/phase" },
+        "prd": { "$ref": "#/definitions/phase" },
+        "expand": {
+          "allOf": [
+            { "$ref": "#/definitions/phase" },
+            {
+              "type": "object",
+              "properties": {
+                "subtasks": {
+                  "type": "object",
+                  "description": "Phase 3 expander 与契约生成的子任务状态。主 agent 恢复时据此判断哪些子任务还没完成。",
+                  "additionalProperties": false,
+                  "properties": {
+                    "scene": { "$ref": "#/definitions/subtask" },
+                    "rule": { "$ref": "#/definitions/subtask" },
+                    "data": { "$ref": "#/definitions/subtask" },
+                    "assets": { "$ref": "#/definitions/subtask" },
+                    "event-graph": { "$ref": "#/definitions/subtask" },
+                    "implementation-contract": { "$ref": "#/definitions/subtask" }
+                  }
+                },
+                "outputs": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "最终提交到 specs/ 的文件相对路径。只有所有 subtask 完成且从 specs/.pending/ mv 到 specs/ 后才写入。"
+                }
+              }
+            }
+          ]
+        },
+        "codegen": {
+          "allOf": [
+            { "$ref": "#/definitions/phase" },
+            {
+              "type": "object",
+              "properties": {
+                "runtime": { "type": "string" },
+                "runMode": { "type": "string", "enum": ["file", "local-http"] },
+                "outputs": { "type": "array", "items": { "type": "string" } },
+                "engineVersion": { "type": "string" }
+              }
+            }
+          ]
+        },
+        "verify": {
+          "allOf": [
+            { "$ref": "#/definitions/phase" },
+            {
+              "type": "object",
+              "properties": {
+                "results": {
+                  "type": "object",
+                  "properties": {
+                    "boot": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+                    "project": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+                    "playthrough": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+                    "compliance": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+                    "assertionsTotal": { "type": "integer", "minimum": 0 },
+                    "assertionsPassed": { "type": "integer", "minimum": 0 },
+                    "prdCoverage": { "type": "number", "minimum": 0, "maximum": 100 },
+                    "complianceScore": { "type": "number", "minimum": 0, "maximum": 100 }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "definitions": {
+    "phase": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "running", "completed", "failed", "skipped"]
+        },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "finishedAt": { "type": "string", "format": "date-time" },
+        "attempts": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "该阶段的尝试次数（含修复循环）"
+        },
+        "error": {
+          "type": "string",
+          "description": "failed 时的错误摘要，便于恢复时判断"
+        }
+      }
+    },
+    "subtask": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pending", "running", "completed", "failed"] },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "finishedAt": { "type": "string", "format": "date-time" },
+        "output": {
+          "type": "string",
+          "description": "产物文件相对路径，例如 specs/.pending/scene.yaml（完成时）或 specs/scene.yaml（提交后）"
+        },
+        "error": { "type": "string" }
+      }
+    }
+  }
+}

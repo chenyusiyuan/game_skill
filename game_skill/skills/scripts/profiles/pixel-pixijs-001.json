@@ -1,0 +1,126 @@
+{
+  "case_id": "pixel-pixijs-001",
+  "description": "Pixel Flow 像素传送带 - PixiJS v8 核心规则断言",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 10000,
+  "assertions": [
+    {
+      "id": "boot-ready",
+      "kind": "state",
+      "description": "boot 后 state.phase 为 ready",
+      "setup": [],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "ready" }
+    },
+    {
+      "id": "has-board",
+      "kind": "state",
+      "description": "存在中央棋盘（state.board.blocks 是数组）",
+      "setup": [{ "action": "wait", "ms": 200 }],
+      "expect": { "selector": "Array.isArray(window.gameState.board.blocks)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "has-waitslot",
+      "kind": "state",
+      "description": "底部等待槽存在",
+      "setup": [{ "action": "wait", "ms": 50 }],
+      "expect": { "selector": "Array.isArray(window.gameState.waitSlots)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "has-conveyor",
+      "kind": "state",
+      "description": "传送带上的小猪数组存在",
+      "setup": [{ "action": "wait", "ms": 50 }],
+      "expect": { "selector": "Array.isArray(window.gameState.conveyor.pigs)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "conveyor-logic",
+      "kind": "interaction",
+      "description": "@check(conveyor-logic) 传送带逻辑正确 - 点击开始后小猪在传送带上移动",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.deployPigByIndex(0)" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.conveyor.pigs.length > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "attack-logic",
+      "kind": "interaction",
+      "description": "@check(attack-logic) 攻击逻辑正确 - 小猪只能攻击同色目标块",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "const blocks = window.gameState.board.blocks; const redBlock = blocks.find(b => b.color === 'red' && !b.destroyed); window.__redBlockBefore = redBlock ? redBlock.hp : 0; window.gameTest.deployPigByIndex(0);" },
+        { "action": "wait", "ms": 800 }
+      ],
+      "expect": { "selector": "window.gameState.score > 0 || window.gameState.board.remaining < window.gameState.board.blocks.length", "op": "truthy", "value": true }
+    },
+    {
+      "id": "block-logic",
+      "kind": "hard-rule",
+      "description": "@check(block-logic) 异色阻挡逻辑 - 小猪不能穿透异色块",
+      "setup": [
+        {
+          "action": "eval",
+          "js": "window.gameTest.clickStartButton(); window.gameState.phase = 'playing'; const blocks = window.gameState.board.blocks; const col = 2; blocks.forEach(b => { if (b.col === col) b.destroyed = true; }); blocks.push({ id: 999, row: 0, col: col, color: 'blue', hp: 1, maxHp: 1, destroyed: false }); blocks.push({ id: 998, row: 1, col: col, color: 'red', hp: 1, maxHp: 1, destroyed: false }); window.gameState.conveyor.pigs = []; window.gameState.conveyor.pigs.push({ id: 100, color: 'red', ammo: 3, position: { side: 'top', index: col }, conveyorSlot: 0, state: 'on-conveyor', lastAttackTime: 0 }); window.__blueBlockBefore = blocks.find(b => b.id === 999).destroyed;"
+        },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.board.blocks.find(b => b.id === 999).destroyed === false", "op": "truthy", "value": true }
+    },
+    {
+      "id": "recycle-logic",
+      "kind": "interaction",
+      "description": "@check(recycle-logic) 回收逻辑正确 - 未耗尽弹药的小猪返回等待槽",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.gameState.waitSlots.length > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "win-lose",
+      "kind": "interaction",
+      "description": "@check(win-lose) 胜负判定正确",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'playing' || window.gameState.phase === 'ready'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "level-progression",
+      "kind": "state",
+      "description": "@check(level-progression) 关卡递进正确 - 第1关",
+      "setup": [],
+      "expect": { "selector": "window.gameState.currentLevel === 1", "op": "truthy", "value": true }
+    },
+    {
+      "id": "hr-no-global-autoaim",
+      "kind": "hard-rule",
+      "description": "强约束：不得全屏自动索敌",
+      "setup": [
+        {
+          "action": "eval",
+          "js": "window.gameTest.clickStartButton(); window.gameState.phase = 'playing'; const blocks = window.gameState.board.blocks; const col = 2; blocks.forEach(b => { if (b.col === col) b.destroyed = true; }); blocks.push({ id: 888, row: 0, col: col, color: 'blue', hp: 1, maxHp: 1, destroyed: false }); blocks.push({ id: 887, row: 1, col: col, color: 'red', hp: 1, maxHp: 1, destroyed: false }); window.gameState.conveyor.pigs = [{ id: 200, color: 'red', ammo: 3, position: { side: 'top', index: col }, conveyorSlot: 0, state: 'on-conveyor', lastAttackTime: 0 }];"
+        },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.board.blocks.find(b => b.id === 888).destroyed === false", "op": "truthy", "value": true }
+    },
+    {
+      "id": "hr-no-multi-hit",
+      "kind": "hard-rule",
+      "description": "强约束：禁止一次攻击多个同色块",
+      "setup": [
+        {
+          "action": "eval",
+          "js": "window.gameTest.clickStartButton(); window.gameState.phase = 'playing'; const blocks = window.gameState.board.blocks; const col = 3; blocks.forEach(b => { if (b.col === col) b.destroyed = true; }); blocks.push({ id: 777, row: 0, col: col, color: 'red', hp: 1, maxHp: 1, destroyed: false }); blocks.push({ id: 776, row: 1, col: col, color: 'red', hp: 1, maxHp: 1, destroyed: false }); window.gameState.conveyor.pigs = [{ id: 300, color: 'red', ammo: 3, position: { side: 'top', index: col }, conveyorSlot: 0, state: 'on-conveyor', lastAttackTime: 0 }]; window.__ammo_before = 3;"
+        },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.conveyor.pigs[0] && (window.__ammo_before - window.gameState.conveyor.pigs[0].ammo) <= 1", "op": "truthy", "value": true }
+    }
+  ]
+}

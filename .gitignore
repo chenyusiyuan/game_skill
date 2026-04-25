@@ -1,0 +1,23 @@
+.DS_Store
+
+# Local agent/editor state
+.omc/
+.claude/settings.local.json
+
+# Dependencies
+node_modules/
+
+# Generated case outputs
+cases/.DS_Store
+cases/*/.game/
+cases/*/eval/
+
+# Large analysis artifacts and local secrets
+data_analysis/.env
+data_analysis/data/
+data_analysis/outputs/
+
+# Raw extracted asset dumps; curated libraries stay tracked.
+assets/_extracted/
+assets/2d_resource/
+assets/3d_resource/

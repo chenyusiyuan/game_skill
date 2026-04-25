@@ -1,0 +1,179 @@
+{
+  "case_id": "phaser",
+  "description": "phaser - 从 PRD @check 自动生成的骨架，需人工补 setup/expect",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "prd_hash": "b0f395eac0353ae804c5758afe7cea262efd2909",
+  "prd_path": "cases/phaser/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "playable-loop",
+      "check_id": "playable-loop",
+      "kind": "state",
+      "description": "主循环可玩",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 点击开始 → 完成至少一对配对 → 验证分数变化\"",
+      "_prd_expect": "\"window.gameState.score > 0；window.gameState.phase === 'playing' 或 'win'\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(playable-loop) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "match-success",
+      "check_id": "match-success",
+      "kind": "state",
+      "description": "配对成功流程",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 选中两张匹配卡片 → 验证消除效果\"",
+      "_prd_expect": "\"matched 卡片数量 += 2；score 增加；combo 增加\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(match-success) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "match-fail",
+      "check_id": "match-fail",
+      "kind": "state",
+      "description": "配对失败流程",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 选中两张不匹配卡片 → 验证失败反馈\"",
+      "_prd_expect": "\"combo = 0；卡片恢复未选中状态；时间扣除\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(match-fail) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "time-out",
+      "check_id": "time-out",
+      "kind": "state",
+      "description": "超时失败",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 等待时间耗尽 → 验证失败状态\"",
+      "_prd_expect": "\"window.gameState.phase === 'lose'；显示失败结果页\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(time-out) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "level-complete",
+      "check_id": "level-complete",
+      "kind": "state",
+      "description": "关卡完成",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 完成第1关所有配对 → 验证通关\"",
+      "_prd_expect": "\"window.gameState.phase === 'win'；显示星级评价；下一关按钮可用\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(level-complete) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "level-progression",
+      "check_id": "level-progression",
+      "kind": "state",
+      "description": "关卡递进",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 完成第1关 → 点击下一关 → 验证第2关配置\"",
+      "_prd_expect": "\"卡片数量增加；新词库；计时器重置\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(level-progression) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "combo-system",
+      "check_id": "combo-system",
+      "kind": "state",
+      "description": "连击系统",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 连续配对成功3次 → 验证连击加分\"",
+      "_prd_expect": "\"combo = 3；第3次得分 > 基础分\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(combo-system) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "visual-feedback",
+      "check_id": "visual-feedback",
+      "kind": "state",
+      "description": "视觉反馈",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 触发配对成功/失败 → 验证视觉效果\"",
+      "_prd_expect": "\"success: particles, card remove animation; fail: shake animation\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(visual-feedback) 的 expect 改成真实判定"
+      }
+    }
+  ],
+  "hard_rule_assertions": []
+}

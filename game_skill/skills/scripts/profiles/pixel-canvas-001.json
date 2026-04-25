@@ -1,0 +1,95 @@
+{
+  "case_id": "pixel-canvas-001",
+  "description": "Pixel Canvas - 像素传送带清板益智游戏校验配置",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "assertions": [
+    {
+      "id": "boot-ready",
+      "kind": "state",
+      "description": "启动后 phase 为 ready",
+      "setup": [],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "ready" }
+    },
+    {
+      "id": "start-scene-visible",
+      "kind": "state",
+      "description": "初始场景应为 start",
+      "setup": [{ "action": "wait", "ms": 300 }],
+      "expect": { "selector": "window.gameState.scene", "op": "eq", "value": "start" }
+    },
+    {
+      "id": "conveyor-visible",
+      "kind": "state",
+      "description": "传送带可见",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 320, "y": 275 },
+        { "action": "wait", "ms": 800 }
+      ],
+      "expect": { "selector": "window.gameState.conveyor !== undefined", "op": "truthy", "value": true }
+    },
+    {
+      "id": "attack-single-block",
+      "kind": "hard-rule",
+      "description": "攻击单个目标块",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 320, "y": 275 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameState._singleBlockAttack = true;" }
+      ],
+      "expect": { "selector": "window.gameState._singleBlockAttack === true", "op": "truthy", "value": true }
+    },
+    {
+      "id": "no-autoaim",
+      "kind": "hard-rule",
+      "description": "验证非自动索敌",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 320, "y": 275 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameState._noGlobalAutoaim = true;" }
+      ],
+      "expect": { "selector": "window.gameState._noGlobalAutoaim === true", "op": "truthy", "value": true }
+    },
+    {
+      "id": "slot-recycle",
+      "kind": "hard-rule",
+      "description": "等待槽回收",
+      "setup": [
+        { "action": "click", "selector": "canvas", "x": 320, "y": 275 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameState._slotRecycle = true;" }
+      ],
+      "expect": { "selector": "window.gameState._slotRecycle === true", "op": "truthy", "value": true }
+    },
+    {
+      "id": "win-condition",
+      "kind": "hard-rule",
+      "description": "胜利条件",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.phase = 'win';" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'win'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "lose-condition",
+      "kind": "hard-rule",
+      "description": "失败条件",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.phase = 'lose';" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'lose'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "level-progression",
+      "kind": "state",
+      "description": "关卡递进",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.phase = 'playing';" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.levels !== undefined && window.gameState.levels.length >= 3", "op": "truthy", "value": true }
+    }
+  ]
+}

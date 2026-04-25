@@ -1,0 +1,905 @@
+# Tiny Town - 瓦片语义索引
+# 来源: kenney_tiny-town
+# 网格: 12列 × 11行, 每格 16×16px, 共 132 个瓦片
+# 文件名: tile_{编号:04d}.png
+#
+# ── 风格与适用范围 ──
+# 视觉风格: pixel-retro（像素复古）
+# 适用游戏类型: 模拟经营、城镇建设、俯视角RPG、棋盘格冒险、叙事冒险
+# 不适用: 地牢/室内场景（请用 tiny-dungeon 代替）、横版平台跳跃（请用 pixel-platformer 代替）
+#
+# ── 分组概要（用途与组合关系）──
+#
+# 地形基础 (0000-0011):
+#   用途: 地图的基础铺地层
+#   组合: 草地(0000-0003)做大片绿地；泥土(0004-0005)做路径/耕地；沙地(0006-0007)做海滩/沙漠；水面(0008-0009)做湖泊/河流；水岸(0010-0011)做水陆过渡
+#   提示: 草地变体(0000-0002)随机铺设更自然；带花草地(0003)做公园/花园点缀
+#
+# 道路系统 (0012-0023):
+#   用途: 连接建筑和区域的交通网络
+#   组合: 直路(0012水平/0013垂直) + 弯道(0014-0017四方向) + 十字路口(0018) + T形路口(0019-0022) + 桥(0023过河)
+#   提示: 道路系统是完整的，可以组合出任意路网拓扑
+#
+# 居民建筑 (0024-0035):
+#   用途: 城镇的核心建筑物
+#   层次: 民居(0024-0028,从小到大)→商业(0029商店/0030旅馆/0031铁匠铺)→宗教(0032教堂)→军事(0033塔楼/0034城墙/0035城堡塔)
+#   提示: 小房子适合平民区，大房子适合富人区，城堡组件拼成要塞
+#
+# 功能建筑 (0036-0047):
+#   用途: 有特殊功能的建筑和入口
+#   城防: 城门(0036) — 城墙入口
+#   生产: 风车(0037)/谷仓(0041)/农田(0042)/马厩(0043) — 农业区组合
+#   公共: 水井(0038)/喷泉(0039)/市场(0040) — 城镇广场组合
+#   水域: 码头(0044)/灯塔(0045) — 海岸/港口组合
+#   冒险: 矿洞(0046)/洞穴(0047) — 连接地下区域（可与 tiny-dungeon 衔接）
+#
+# 自然植被 (0048-0059):
+#   用途: 野外区域和城镇绿化装饰
+#   树木: 绿树(0048-0050,大小不同)/秋树(0051)/松树(0052)/枯树(0053) — 不同季节/区域
+#   灌木: 普通(0054-0055)/浆果(0056) — 道路两侧或围栏内
+#   花卉: 红(0057)/蓝(0058)/黄(0059) — 花园/公园装饰
+#
+# 岩石与围栏 (0060-0071):
+#   用途: 区域分隔和自然障碍
+#   岩石: 小(0060-0061)/大(0062) — 不可通行的自然障碍
+#   蘑菇(0063-0064)/树桩(0065)/木头(0066) — 森林装饰
+#   栅栏: 水平(0067)/垂直(0068)/拐角(0069)/端头(0070) — 围出农场/牧场区域
+#   树篱(0071) — 比栅栏更自然的分隔
+#
+# NPC 角色 (0072-0083):
+#   用途: 城镇居民，用于对话/任务/交互
+#   人类: 农民(0072-0073)/商人(0074-0075)/骑士(0076-0077)/公主(0078)/小孩(0079)/老人(0080)
+#   家畜: 鸡(0081)/牛(0082)/猪(0083) — 农场氛围
+#   提示: 每个人类 NPC 有站立+行走 2 帧，可做简单动画
+#
+# 动物与交通 (0084-0095):
+#   动物: 羊(0084)/马(0085)/狗(0086)/猫(0087)/鸟(0088)/鱼(0089) — 丰富世界生态
+#   交通: 马车(0090空/0091满)/小船(0092)/大船(0093)/骑马(0094) — 运输/旅行
+#   装饰: 旗杆(0095) — 城门/广场标志
+#
+# 资源与物品 (0096-0107):
+#   资源: 木材(0096)/石料(0097)/干草(0098) — 建设/贸易材料
+#   容器: 木桶(0099)/木箱(0100)/麻袋(0101) — 仓库/市场装饰
+#   货币: 金币(0102)/银币(0103) — 经济系统
+#   食物: 面包(0104)/苹果(0105)/鱼干(0106) — 消耗品/商品
+#   工具: 斧头(0107) — 伐木工具
+#
+# 工具与武器 (0108-0119):
+#   工具: 镐(0108)/锄头(0109)/锤子(0110) — 采集/建设
+#   武器: 剑(0111)/弓(0112)/盾(0113) — 战斗装备
+#   消耗品: 红药水(0114)/蓝药水(0115) — RPG 元素
+#   任务物品: 钥匙(0116)/信件(0117)/书本(0118)/宝石(0119) — 剧情/收集道具
+#
+# 装饰物 (0120-0131):
+#   照明: 路灯(0120灭/0121亮) — 街道照明，暗示昼夜
+#   信息: 路标(0122)/挂牌(0123)/邮箱(0124) — 导航与通信
+#   休闲: 长椅(0125) — 公园/广场
+#   墓地: 墓碑(0126)/十字架(0127) — 墓地/教堂旁
+#   旗帜: 红旗(0128)/蓝旗(0129)/横幅(0130) — 阵营标识/节日装饰
+#   空白(0131) — 占位/透明
+
+tiles:
+  # ============================================================
+  # Row 0 (0000-0011): Terrain base tiles / 地形基础瓦片
+  # ============================================================
+  - id: "0000"
+    name: grass_1
+    cn: "草地变体1"
+    size: "16x16"
+    tags: [terrain, grass, ground, nature]
+
+  - id: "0001"
+    name: grass_2
+    cn: "草地变体2"
+    size: "16x16"
+    tags: [terrain, grass, ground, nature]
+
+  - id: "0002"
+    name: grass_3
+    cn: "草地变体3"
+    size: "16x16"
+    tags: [terrain, grass, ground, nature]
+
+  - id: "0003"
+    name: grass_flowers
+    cn: "草地带花"
+    size: "16x16"
+    tags: [terrain, grass, ground, nature, flowers, decoration]
+
+  - id: "0004"
+    name: dirt_1
+    cn: "泥土地面1"
+    size: "16x16"
+    tags: [terrain, dirt, ground, path]
+
+  - id: "0005"
+    name: dirt_2
+    cn: "泥土地面2"
+    size: "16x16"
+    tags: [terrain, dirt, ground, path]
+
+  - id: "0006"
+    name: sand_1
+    cn: "沙地1"
+    size: "16x16"
+    tags: [terrain, sand, ground, beach, desert]
+
+  - id: "0007"
+    name: sand_2
+    cn: "沙地2"
+    size: "16x16"
+    tags: [terrain, sand, ground, beach, desert]
+
+  - id: "0008"
+    name: water_1
+    cn: "水面1"
+    size: "16x16"
+    tags: [terrain, water, lake, river, ocean]
+
+  - id: "0009"
+    name: water_2
+    cn: "水面2"
+    size: "16x16"
+    tags: [terrain, water, lake, river, ocean]
+
+  - id: "0010"
+    name: water_shore_top
+    cn: "水岸-上边缘"
+    size: "16x16"
+    tags: [terrain, water, shore, edge, transition]
+
+  - id: "0011"
+    name: water_shore_bottom
+    cn: "水岸-下边缘"
+    size: "16x16"
+    tags: [terrain, water, shore, edge, transition]
+
+  # ============================================================
+  # Row 1 (0012-0023): Roads / 道路
+  # ============================================================
+  - id: "0012"
+    name: road_straight_h
+    cn: "水平直路"
+    size: "16x16"
+    tags: [road, path, horizontal, straight, infrastructure]
+
+  - id: "0013"
+    name: road_straight_v
+    cn: "垂直直路"
+    size: "16x16"
+    tags: [road, path, vertical, straight, infrastructure]
+
+  - id: "0014"
+    name: road_turn_tl
+    cn: "弯道-左上"
+    size: "16x16"
+    tags: [road, path, turn, corner, infrastructure]
+
+  - id: "0015"
+    name: road_turn_tr
+    cn: "弯道-右上"
+    size: "16x16"
+    tags: [road, path, turn, corner, infrastructure]
+
+  - id: "0016"
+    name: road_turn_bl
+    cn: "弯道-左下"
+    size: "16x16"
+    tags: [road, path, turn, corner, infrastructure]
+
+  - id: "0017"
+    name: road_turn_br
+    cn: "弯道-右下"
+    size: "16x16"
+    tags: [road, path, turn, corner, infrastructure]
+
+  - id: "0018"
+    name: road_crossroad
+    cn: "十字路口"
+    size: "16x16"
+    tags: [road, path, crossroad, intersection, infrastructure]
+
+  - id: "0019"
+    name: road_t_top
+    cn: "T形路口-上"
+    size: "16x16"
+    tags: [road, path, t-junction, intersection, infrastructure]
+
+  - id: "0020"
+    name: road_t_bottom
+    cn: "T形路口-下"
+    size: "16x16"
+    tags: [road, path, t-junction, intersection, infrastructure]
+
+  - id: "0021"
+    name: road_t_left
+    cn: "T形路口-左"
+    size: "16x16"
+    tags: [road, path, t-junction, intersection, infrastructure]
+
+  - id: "0022"
+    name: road_t_right
+    cn: "T形路口-右"
+    size: "16x16"
+    tags: [road, path, t-junction, intersection, infrastructure]
+
+  - id: "0023"
+    name: bridge
+    cn: "桥"
+    size: "16x16"
+    tags: [road, bridge, water, crossing, infrastructure]
+
+  # ============================================================
+  # Row 2 (0024-0035): Houses / 房屋建筑
+  # ============================================================
+  - id: "0024"
+    name: house_small_1
+    cn: "小房子1"
+    size: "16x16"
+    tags: [building, house, residential, small]
+
+  - id: "0025"
+    name: house_small_2
+    cn: "小房子2"
+    size: "16x16"
+    tags: [building, house, residential, small]
+
+  - id: "0026"
+    name: house_medium_1
+    cn: "中等房子1"
+    size: "16x16"
+    tags: [building, house, residential, medium]
+
+  - id: "0027"
+    name: house_medium_2
+    cn: "中等房子2"
+    size: "16x16"
+    tags: [building, house, residential, medium]
+
+  - id: "0028"
+    name: house_large
+    cn: "大房子"
+    size: "16x16"
+    tags: [building, house, residential, large]
+
+  - id: "0029"
+    name: shop
+    cn: "商店"
+    size: "16x16"
+    tags: [building, shop, commercial, trade, store]
+
+  - id: "0030"
+    name: inn
+    cn: "旅馆/酒馆"
+    size: "16x16"
+    tags: [building, inn, tavern, rest, accommodation]
+
+  - id: "0031"
+    name: blacksmith
+    cn: "铁匠铺"
+    size: "16x16"
+    tags: [building, blacksmith, workshop, craft, forge]
+
+  - id: "0032"
+    name: church
+    cn: "教堂"
+    size: "16x16"
+    tags: [building, church, religious, landmark]
+
+  - id: "0033"
+    name: tower
+    cn: "塔楼"
+    size: "16x16"
+    tags: [building, tower, defense, military, lookout]
+
+  - id: "0034"
+    name: castle_wall
+    cn: "城墙段"
+    size: "16x16"
+    tags: [building, castle, wall, defense, fortification]
+
+  - id: "0035"
+    name: castle_tower
+    cn: "城堡塔"
+    size: "16x16"
+    tags: [building, castle, tower, defense, fortification]
+
+  # ============================================================
+  # Row 3 (0036-0047): More structures / 更多建筑
+  # ============================================================
+  - id: "0036"
+    name: castle_gate
+    cn: "城门"
+    size: "16x16"
+    tags: [building, castle, gate, entrance, fortification]
+
+  - id: "0037"
+    name: windmill
+    cn: "风车"
+    size: "16x16"
+    tags: [building, windmill, farm, production, landmark]
+
+  - id: "0038"
+    name: well
+    cn: "水井"
+    size: "16x16"
+    tags: [building, well, water, village, utility]
+
+  - id: "0039"
+    name: fountain
+    cn: "喷泉"
+    size: "16x16"
+    tags: [building, fountain, water, decoration, landmark]
+
+  - id: "0040"
+    name: market_stall
+    cn: "市场摊位"
+    size: "16x16"
+    tags: [building, market, stall, trade, commercial]
+
+  - id: "0041"
+    name: barn
+    cn: "谷仓"
+    size: "16x16"
+    tags: [building, barn, farm, storage, agriculture]
+
+  - id: "0042"
+    name: farm_field
+    cn: "农田"
+    size: "16x16"
+    tags: [terrain, farm, field, crop, agriculture]
+
+  - id: "0043"
+    name: stable
+    cn: "马厩"
+    size: "16x16"
+    tags: [building, stable, horse, farm, animal]
+
+  - id: "0044"
+    name: dock
+    cn: "码头"
+    size: "16x16"
+    tags: [building, dock, port, water, boat, infrastructure]
+
+  - id: "0045"
+    name: lighthouse
+    cn: "灯塔"
+    size: "16x16"
+    tags: [building, lighthouse, coast, navigation, landmark]
+
+  - id: "0046"
+    name: mine
+    cn: "矿洞入口"
+    size: "16x16"
+    tags: [building, mine, cave, resource, entrance]
+
+  - id: "0047"
+    name: cave
+    cn: "洞穴入口"
+    size: "16x16"
+    tags: [building, cave, entrance, dungeon, adventure]
+
+  # ============================================================
+  # Row 4 (0048-0059): Nature / 自然植被
+  # ============================================================
+  - id: "0048"
+    name: tree_green_1
+    cn: "绿树1"
+    size: "16x16"
+    tags: [nature, tree, green, vegetation, forest]
+
+  - id: "0049"
+    name: tree_green_2
+    cn: "绿树2"
+    size: "16x16"
+    tags: [nature, tree, green, vegetation, forest]
+
+  - id: "0050"
+    name: tree_green_3
+    cn: "绿树3-大"
+    size: "16x16"
+    tags: [nature, tree, green, vegetation, forest, large]
+
+  - id: "0051"
+    name: tree_autumn
+    cn: "秋树"
+    size: "16x16"
+    tags: [nature, tree, autumn, orange, vegetation, seasonal]
+
+  - id: "0052"
+    name: tree_pine
+    cn: "松树"
+    size: "16x16"
+    tags: [nature, tree, pine, evergreen, vegetation, forest]
+
+  - id: "0053"
+    name: tree_dead
+    cn: "枯树"
+    size: "16x16"
+    tags: [nature, tree, dead, withered, spooky]
+
+  - id: "0054"
+    name: bush_1
+    cn: "灌木1"
+    size: "16x16"
+    tags: [nature, bush, shrub, vegetation, green]
+
+  - id: "0055"
+    name: bush_2
+    cn: "灌木2"
+    size: "16x16"
+    tags: [nature, bush, shrub, vegetation, green]
+
+  - id: "0056"
+    name: bush_berry
+    cn: "浆果灌木"
+    size: "16x16"
+    tags: [nature, bush, berry, food, vegetation, resource]
+
+  - id: "0057"
+    name: flower_red
+    cn: "红花"
+    size: "16x16"
+    tags: [nature, flower, red, decoration, garden]
+
+  - id: "0058"
+    name: flower_blue
+    cn: "蓝花"
+    size: "16x16"
+    tags: [nature, flower, blue, decoration, garden]
+
+  - id: "0059"
+    name: flower_yellow
+    cn: "黄花"
+    size: "16x16"
+    tags: [nature, flower, yellow, decoration, garden]
+
+  # ============================================================
+  # Row 5 (0060-0071): Nature continued, rocks / 岩石与围栏
+  # ============================================================
+  - id: "0060"
+    name: rock_1
+    cn: "岩石1"
+    size: "16x16"
+    tags: [nature, rock, stone, obstacle]
+
+  - id: "0061"
+    name: rock_2
+    cn: "岩石2"
+    size: "16x16"
+    tags: [nature, rock, stone, obstacle]
+
+  - id: "0062"
+    name: rock_3
+    cn: "大岩石"
+    size: "16x16"
+    tags: [nature, rock, stone, obstacle, large, boulder]
+
+  - id: "0063"
+    name: mushroom_1
+    cn: "蘑菇1"
+    size: "16x16"
+    tags: [nature, mushroom, food, forest, vegetation]
+
+  - id: "0064"
+    name: mushroom_2
+    cn: "蘑菇2"
+    size: "16x16"
+    tags: [nature, mushroom, food, forest, vegetation]
+
+  - id: "0065"
+    name: stump
+    cn: "树桩"
+    size: "16x16"
+    tags: [nature, stump, tree, wood, obstacle]
+
+  - id: "0066"
+    name: log
+    cn: "木头"
+    size: "16x16"
+    tags: [nature, log, wood, resource, obstacle]
+
+  - id: "0067"
+    name: fence_h
+    cn: "水平栅栏"
+    size: "16x16"
+    tags: [fence, horizontal, barrier, boundary, farm]
+
+  - id: "0068"
+    name: fence_v
+    cn: "垂直栅栏"
+    size: "16x16"
+    tags: [fence, vertical, barrier, boundary, farm]
+
+  - id: "0069"
+    name: fence_corner
+    cn: "栅栏拐角"
+    size: "16x16"
+    tags: [fence, corner, barrier, boundary, farm]
+
+  - id: "0070"
+    name: fence_end
+    cn: "栅栏端头"
+    size: "16x16"
+    tags: [fence, end, barrier, boundary, farm]
+
+  - id: "0071"
+    name: hedge
+    cn: "树篱"
+    size: "16x16"
+    tags: [nature, hedge, green, barrier, garden, boundary]
+
+  # ============================================================
+  # Row 6 (0072-0083): Characters / NPCs / 角色
+  # ============================================================
+  - id: "0072"
+    name: npc_farmer
+    cn: "农民"
+    size: "16x16"
+    tags: [character, npc, farmer, villager, human]
+
+  - id: "0073"
+    name: npc_farmer_walk
+    cn: "农民行走"
+    size: "16x16"
+    tags: [character, npc, farmer, villager, human, walking, animation]
+
+  - id: "0074"
+    name: npc_merchant
+    cn: "商人"
+    size: "16x16"
+    tags: [character, npc, merchant, trader, human, shop]
+
+  - id: "0075"
+    name: npc_merchant_walk
+    cn: "商人行走"
+    size: "16x16"
+    tags: [character, npc, merchant, trader, human, walking, animation]
+
+  - id: "0076"
+    name: npc_knight
+    cn: "骑士"
+    size: "16x16"
+    tags: [character, npc, knight, warrior, soldier, human, military]
+
+  - id: "0077"
+    name: npc_knight_walk
+    cn: "骑士行走"
+    size: "16x16"
+    tags: [character, npc, knight, warrior, soldier, human, walking, animation]
+
+  - id: "0078"
+    name: npc_princess
+    cn: "公主"
+    size: "16x16"
+    tags: [character, npc, princess, royalty, human]
+
+  - id: "0079"
+    name: npc_child
+    cn: "小孩"
+    size: "16x16"
+    tags: [character, npc, child, kid, human, villager]
+
+  - id: "0080"
+    name: npc_elder
+    cn: "老人"
+    size: "16x16"
+    tags: [character, npc, elder, old, wise, human, villager]
+
+  - id: "0081"
+    name: animal_chicken
+    cn: "鸡"
+    size: "16x16"
+    tags: [character, animal, chicken, farm, poultry, livestock]
+
+  - id: "0082"
+    name: animal_cow
+    cn: "牛"
+    size: "16x16"
+    tags: [character, animal, cow, farm, cattle, livestock]
+
+  - id: "0083"
+    name: animal_pig
+    cn: "猪"
+    size: "16x16"
+    tags: [character, animal, pig, farm, livestock]
+
+  # ============================================================
+  # Row 7 (0084-0095): Animals, vehicles / 动物与交通工具
+  # ============================================================
+  - id: "0084"
+    name: animal_sheep
+    cn: "羊"
+    size: "16x16"
+    tags: [character, animal, sheep, farm, livestock, wool]
+
+  - id: "0085"
+    name: animal_horse
+    cn: "马"
+    size: "16x16"
+    tags: [character, animal, horse, farm, mount, transport]
+
+  - id: "0086"
+    name: animal_dog
+    cn: "狗"
+    size: "16x16"
+    tags: [character, animal, dog, pet, companion]
+
+  - id: "0087"
+    name: animal_cat
+    cn: "猫"
+    size: "16x16"
+    tags: [character, animal, cat, pet, companion]
+
+  - id: "0088"
+    name: animal_bird
+    cn: "鸟"
+    size: "16x16"
+    tags: [character, animal, bird, flying, wildlife]
+
+  - id: "0089"
+    name: animal_fish
+    cn: "鱼"
+    size: "16x16"
+    tags: [character, animal, fish, water, wildlife]
+
+  - id: "0090"
+    name: cart
+    cn: "马车"
+    size: "16x16"
+    tags: [vehicle, cart, transport, road, trade]
+
+  - id: "0091"
+    name: cart_loaded
+    cn: "满载马车"
+    size: "16x16"
+    tags: [vehicle, cart, transport, road, trade, loaded, cargo]
+
+  - id: "0092"
+    name: boat_small
+    cn: "小船"
+    size: "16x16"
+    tags: [vehicle, boat, water, transport, fishing]
+
+  - id: "0093"
+    name: boat_large
+    cn: "大船"
+    size: "16x16"
+    tags: [vehicle, boat, ship, water, transport, large]
+
+  - id: "0094"
+    name: horse_saddle
+    cn: "骑马"
+    size: "16x16"
+    tags: [vehicle, horse, mount, transport, rider]
+
+  - id: "0095"
+    name: flag_pole
+    cn: "旗杆"
+    size: "16x16"
+    tags: [decoration, flag, pole, landmark]
+
+  # ============================================================
+  # Row 8 (0096-0107): Items / 物品
+  # ============================================================
+  - id: "0096"
+    name: wood_pile
+    cn: "木材堆"
+    size: "16x16"
+    tags: [item, resource, wood, lumber, material, storage]
+
+  - id: "0097"
+    name: stone_pile
+    cn: "石料堆"
+    size: "16x16"
+    tags: [item, resource, stone, material, storage]
+
+  - id: "0098"
+    name: hay_bale
+    cn: "干草堆"
+    size: "16x16"
+    tags: [item, resource, hay, farm, agriculture, storage]
+
+  - id: "0099"
+    name: barrel
+    cn: "木桶"
+    size: "16x16"
+    tags: [item, container, barrel, storage, tavern]
+
+  - id: "0100"
+    name: crate
+    cn: "木箱"
+    size: "16x16"
+    tags: [item, container, crate, storage, cargo]
+
+  - id: "0101"
+    name: sack
+    cn: "麻袋"
+    size: "16x16"
+    tags: [item, container, sack, bag, storage, grain]
+
+  - id: "0102"
+    name: coin_gold
+    cn: "金币"
+    size: "16x16"
+    tags: [item, coin, gold, money, currency, treasure]
+
+  - id: "0103"
+    name: coin_silver
+    cn: "银币"
+    size: "16x16"
+    tags: [item, coin, silver, money, currency, treasure]
+
+  - id: "0104"
+    name: bread
+    cn: "面包"
+    size: "16x16"
+    tags: [item, food, bread, consumable, bakery]
+
+  - id: "0105"
+    name: apple
+    cn: "苹果"
+    size: "16x16"
+    tags: [item, food, apple, fruit, consumable]
+
+  - id: "0106"
+    name: fish_item
+    cn: "鱼干"
+    size: "16x16"
+    tags: [item, food, fish, consumable, fishing]
+
+  - id: "0107"
+    name: tool_axe
+    cn: "工具-斧头"
+    size: "16x16"
+    tags: [item, tool, axe, woodcutting, weapon]
+
+  # ============================================================
+  # Row 9 (0108-0119): More items, tools / 更多物品与工具
+  # ============================================================
+  - id: "0108"
+    name: tool_pickaxe
+    cn: "工具-镐"
+    size: "16x16"
+    tags: [item, tool, pickaxe, mining, resource]
+
+  - id: "0109"
+    name: tool_hoe
+    cn: "工具-锄头"
+    size: "16x16"
+    tags: [item, tool, hoe, farming, agriculture]
+
+  - id: "0110"
+    name: tool_hammer
+    cn: "工具-锤子"
+    size: "16x16"
+    tags: [item, tool, hammer, crafting, building]
+
+  - id: "0111"
+    name: sword
+    cn: "剑"
+    size: "16x16"
+    tags: [item, weapon, sword, combat, melee, knight]
+
+  - id: "0112"
+    name: bow
+    cn: "弓"
+    size: "16x16"
+    tags: [item, weapon, bow, combat, ranged, archer]
+
+  - id: "0113"
+    name: shield
+    cn: "盾"
+    size: "16x16"
+    tags: [item, armor, shield, defense, combat, knight]
+
+  - id: "0114"
+    name: potion_red
+    cn: "红药水"
+    size: "16x16"
+    tags: [item, potion, red, health, healing, magic, consumable]
+
+  - id: "0115"
+    name: potion_blue
+    cn: "蓝药水"
+    size: "16x16"
+    tags: [item, potion, blue, mana, magic, consumable]
+
+  - id: "0116"
+    name: key
+    cn: "钥匙"
+    size: "16x16"
+    tags: [item, key, unlock, quest, treasure]
+
+  - id: "0117"
+    name: letter
+    cn: "信件"
+    size: "16x16"
+    tags: [item, letter, message, quest, paper]
+
+  - id: "0118"
+    name: book
+    cn: "书本"
+    size: "16x16"
+    tags: [item, book, knowledge, library, magic, quest]
+
+  - id: "0119"
+    name: gem
+    cn: "宝石"
+    size: "16x16"
+    tags: [item, gem, jewel, treasure, valuable, crystal]
+
+  # ============================================================
+  # Row 10 (0120-0131): Decorations / 装饰物
+  # ============================================================
+  - id: "0120"
+    name: lamp_post
+    cn: "路灯"
+    size: "16x16"
+    tags: [decoration, lamp, light, street, infrastructure]
+
+  - id: "0121"
+    name: lamp_post_lit
+    cn: "亮路灯"
+    size: "16x16"
+    tags: [decoration, lamp, light, street, infrastructure, lit, night]
+
+  - id: "0122"
+    name: sign_post
+    cn: "路标"
+    size: "16x16"
+    tags: [decoration, sign, post, direction, navigation]
+
+  - id: "0123"
+    name: sign_hanging
+    cn: "挂牌"
+    size: "16x16"
+    tags: [decoration, sign, hanging, shop, building]
+
+  - id: "0124"
+    name: mailbox
+    cn: "邮箱"
+    size: "16x16"
+    tags: [decoration, mailbox, mail, letter, village]
+
+  - id: "0125"
+    name: bench
+    cn: "长椅"
+    size: "16x16"
+    tags: [decoration, bench, seat, rest, park, village]
+
+  - id: "0126"
+    name: grave
+    cn: "墓碑"
+    size: "16x16"
+    tags: [decoration, grave, tombstone, cemetery, spooky]
+
+  - id: "0127"
+    name: cross
+    cn: "十字架"
+    size: "16x16"
+    tags: [decoration, cross, cemetery, religious, grave]
+
+  - id: "0128"
+    name: flag_red
+    cn: "红旗"
+    size: "16x16"
+    tags: [decoration, flag, red, banner, military]
+
+  - id: "0129"
+    name: flag_blue
+    cn: "蓝旗"
+    size: "16x16"
+    tags: [decoration, flag, blue, banner, military]
+
+  - id: "0130"
+    name: banner
+    cn: "旗帜/横幅"
+    size: "16x16"
+    tags: [decoration, banner, flag, festive, landmark]
+
+  - id: "0131"
+    name: blank
+    cn: "空白瓦片"
+    size: "16x16"
+    tags: [empty, blank, transparent, placeholder]

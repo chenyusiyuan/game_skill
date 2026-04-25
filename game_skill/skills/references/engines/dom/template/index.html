@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<!-- ENGINE: dom-ui | VERSION: tailwind-v4 | RUN: file -->
+<meta charset="UTF-8">
+<title>DOM Template Game</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center">
+  <div id="app" class="max-w-xl w-full mx-auto p-6"></div>
+
+  <script>
+    // Default run mode for dom-ui is file, so this template keeps logic inline.
+    // If the game grows large, you can switch the marker to `RUN: local-http`
+    // and split the code into ./src/*.js modules.
+
+    // ===== state =====
+    const state = {
+      phase: "ready",           // ready | playing | win | lose
+      score: 0,
+      timeLeft: 0,
+    };
+    window.gameState = state;
+
+    // ===== render =====
+    const app = document.getElementById("app");
+
+    function render() {
+      if (state.phase === "ready") {
+        app.innerHTML = `
+          <div class="text-center space-y-4">
+            <h1 class="text-3xl font-bold text-slate-800">Template Game</h1>
+            <p class="text-slate-600">Fill this in with your actual game UI.</p>
+            <button id="btn-start"
+              class="px-6 py-3 bg-sky-600 text-white rounded-lg hover:bg-sky-700">
+              Start
+            </button>
+          </div>`;
+        document.getElementById("btn-start").onclick = () => {
+          state.phase = "playing";
+          render();
+        };
+      } else if (state.phase === "playing") {
+        app.innerHTML = `
+          <div class="space-y-4">
+            <p class="text-xl">Score: <span>${state.score}</span></p>
+            <button id="btn-score" class="px-4 py-2 bg-emerald-600 text-white rounded">+1</button>
+            <button id="btn-win" class="px-4 py-2 bg-slate-200 rounded">End</button>
+          </div>`;
+        document.getElementById("btn-score").onclick = () => { state.score += 1; render(); };
+        document.getElementById("btn-win").onclick = () => { state.phase = "win"; render(); };
+      } else {
+        app.innerHTML = `
+          <div class="text-center space-y-4">
+            <h2 class="text-2xl font-bold">${state.phase === "win" ? "You Win" : "Game Over"}</h2>
+            <p>Final score: ${state.score}</p>
+            <button id="btn-retry" class="px-6 py-3 bg-sky-600 text-white rounded-lg">Retry</button>
+          </div>`;
+        document.getElementById("btn-retry").onclick = () => {
+          state.phase = "ready";
+          state.score = 0;
+          render();
+        };
+      }
+    }
+
+    // ===== bootstrap =====
+    render();
+  </script>
+</body>
+</html>

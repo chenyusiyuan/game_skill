@@ -1,0 +1,148 @@
+{
+  "case_id": "canvas-001",
+  "description": "canvas-001 单词消消乐 - 完整测试 profile",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "prd_hash": "543511789bb9fe0e9e0bab1c987988da5464769e",
+  "prd_path": "cases/canvas-001/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "playable-loop",
+      "check_id": "playable-loop",
+      "kind": "interaction",
+      "description": "主循环可玩",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase === 'playing' && window.gameState.cards.length > 0",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "match-logic",
+      "check_id": "match-logic",
+      "description": "配对逻辑正确",
+      "kind": "interaction",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 800 }
+      ],
+      "expect": {
+        "selector": "window.gameState.score >= 10 && window.gameState.matchedPairs >= 1",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "match-fail-logic",
+      "check_id": "match-fail-logic",
+      "description": "配对失败逻辑",
+      "kind": "interaction",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.simulateWrongMatch()" },
+        { "action": "wait", "ms": 1000 }
+      ],
+      "expect": {
+        "selector": "window.gameState.combo === 0",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "same-side-exclusive",
+      "check_id": "same-side-exclusive",
+      "description": "同侧互斥选择",
+      "kind": "interaction",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "(function() { const cards = window.gameState.cards.filter(c => c.side === 'en' && !c.matched); if (cards.length >= 2) { window.gameTest.clickCard(cards[0].id); window.gameTest.clickCard(cards[1].id); } })()" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": {
+        "selector": "window.gameState.selectedCards.filter(c => c.side === 'en').length <= 1",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "time-limit",
+      "check_id": "time-limit",
+      "description": "时间限制生效",
+      "kind": "state",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameState.timeLeft = 0.01" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase === 'lose'",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "level-complete",
+      "check_id": "level-complete",
+      "description": "关卡完成",
+      "kind": "state",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameState.matchedPairs = window.gameState.totalPairs; window.gameState.cards.forEach(c => c.matched = true); levelComplete()" },
+        { "action": "wait", "ms": 600 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase === 'win'",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "combo-system",
+      "check_id": "combo-system",
+      "description": "连击系统",
+      "kind": "interaction",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 600 },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 600 },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 600 }
+      ],
+      "expect": {
+        "selector": "window.gameState.combo >= 3",
+        "op": "truthy",
+        "value": true
+      }
+    }
+  ],
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-click-interaction",
+      "hard_rule_id": "click-interaction",
+      "kind": "hard-rule",
+      "description": "点击交互 - 游戏仅支持点击交互",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "typeof window.gameTest.clickCard === 'function'",
+        "op": "truthy",
+        "value": true
+      }
+    }
+  ]
+}

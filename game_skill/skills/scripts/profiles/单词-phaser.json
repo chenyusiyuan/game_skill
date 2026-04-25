@@ -1,0 +1,144 @@
+{
+  "projectId": "单词-phaser",
+  "name": "单词消消乐 Phaser",
+  "genre": "edu-practice",
+  "assertions": [
+    {
+      "id": "game-boots",
+      "description": "游戏启动：window.game 和 gameState 存在",
+      "kind": "state",
+      "setup": [
+        { "action": "wait", "ms": 1500 }
+      ],
+      "expect": {
+        "selector": "typeof window.gameState",
+        "op": "eq",
+        "value": "object"
+      }
+    },
+    {
+      "id": "start-scene",
+      "description": "开始页显示正常",
+      "kind": "state",
+      "expect": {
+        "selector": "window.gameState.scene",
+        "op": "eq",
+        "value": "StartScene"
+      }
+    },
+    {
+      "id": "gameState-phase-ready",
+      "description": "初始状态为 ready",
+      "kind": "state",
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "ready"
+      }
+    },
+    {
+      "id": "word-bank-36",
+      "description": "词库包含 36 个单词（3关×12词）",
+      "kind": "state",
+      "expect": {
+        "selector": "window.gameState.wordBank ? Object.keys(window.gameState.wordBank).reduce((sum, k) => sum + window.gameState.wordBank[k].length, 0) : 0",
+        "op": "eq",
+        "value": 36
+      }
+    },
+    {
+      "id": "3-levels-config",
+      "description": "包含 3 个关卡配置",
+      "kind": "state",
+      "expect": {
+        "selector": "window.gameState.levels ? window.gameState.levels.length : 0",
+        "op": "eq",
+        "value": 3
+      }
+    },
+    {
+      "id": "playable-loop",
+      "description": "主循环可玩：使用 JS 直接触发场景切换",
+      "kind": "interaction",
+      "setup": [
+        { "action": "eval", "js": "window.game.scene.scenes[0].scene.start('PlayScene')" },
+        { "action": "wait", "ms": 1500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.scene",
+        "op": "eq",
+        "value": "PlayScene"
+      }
+    },
+    {
+      "id": "match-rule",
+      "description": "配对规则正确：正确配对得分增加",
+      "kind": "interaction",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.score = 0; window.gameState.cards = [{id:'en-0',pairId:'pair-0',type:'en',text:'apple',matched:false},{id:'cn-0',pairId:'pair-0',type:'cn',text:'苹果',matched:false}]; window.simulateCorrectMatch();" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.score",
+        "op": "gt",
+        "value": 0
+      }
+    },
+    {
+      "id": "fail-rule",
+      "description": "失败规则正确：错误配对扣时间",
+      "kind": "interaction",
+      "setup": [
+        { "action": "eval", "js": "window.__beforeTime = window.gameState.timeLeft; window.simulateWrongMatch();" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": {
+        "selector": "window.gameState.timeLeft < window.__beforeTime",
+        "op": "eq",
+        "value": true
+      }
+    },
+    {
+      "id": "combo-system",
+      "description": "连击系统：连续成功配对增加 combo",
+      "kind": "interaction",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.combo = 0; window.gameState.score = 0; window.gameState.cards = [{id:'en-0',pairId:'pair-0',type:'en',text:'apple',matched:false},{id:'cn-0',pairId:'pair-0',type:'cn',text:'苹果',matched:false},{id:'en-1',pairId:'pair-1',type:'en',text:'book',matched:false},{id:'cn-1',pairId:'pair-1',type:'cn',text:'书',matched:false}]; window.simulateCorrectMatch(); window.simulateCorrectMatch();" },
+        { "action": "wait", "ms": 600 }
+      ],
+      "expect": {
+        "selector": "window.gameState.combo",
+        "op": "gte",
+        "value": 2
+      }
+    },
+    {
+      "id": "timer-rule",
+      "description": "倒计时正确：时间随游戏进行减少",
+      "kind": "interaction",
+      "setup": [
+        { "action": "eval", "js": "window.__timeBefore = window.gameState.timeLeft" },
+        { "action": "wait", "ms": 2500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.timeLeft < window.__timeBefore",
+        "op": "eq",
+        "value": true
+      }
+    },
+    {
+      "id": "level-progress",
+      "description": "关卡递进：完成一关后关卡数增加",
+      "kind": "interaction",
+      "setup": [
+        { "action": "eval", "js": "window.__levelBefore = window.gameState.currentLevel; window.simulateCompleteLevel();" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.currentLevel > window.__levelBefore",
+        "op": "eq",
+        "value": true
+      }
+    }
+  ]
+}

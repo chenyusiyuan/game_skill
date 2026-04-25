@@ -1,0 +1,5217 @@
+{
+  "dataset_name": "game_category_seed_cases",
+  "version": "v0",
+  "generated_at": "2026-04-23",
+  "source_markdown": "/Users/bytedance/Project/game/outputs/game_analysis/game_skill_experiment_plan.md",
+  "source_annotations": [
+    "/Users/bytedance/Project/game/outputs/game_analysis/app_annotations.jsonl",
+    "/Users/bytedance/Project/game/outputs/game_analysis/web_annotations.jsonl"
+  ],
+  "total_categories": 9,
+  "total_cases": 72,
+  "fields": [
+    "case_id",
+    "project_id",
+    "query",
+    "category",
+    "coverage_point",
+    "difficulty",
+    "difficulty_reason",
+    "query_complexity",
+    "query_length",
+    "project_type",
+    "decision_status",
+    "needs_clarification",
+    "judge_confidence",
+    "reference_game_name",
+    "reference_game_detected",
+    "should_include_in_benchmark",
+    "aux_tags"
+  ],
+  "categories": [
+    {
+      "category": "棋盘格子型",
+      "case_count": 8,
+      "cases": [
+        {
+          "case_id": "棋盘格子型_01",
+          "project_id": "7584998696727789602",
+          "query": "创建一个俄罗斯方块",
+          "category": "棋盘格子型",
+          "coverage_point": "经典引用、模板/Canvas",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "short",
+          "query_length": 9,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "俄罗斯方块",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "键盘控制型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "Canvas绘制型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "棋盘格子型_02",
+          "project_id": "7590301110141894683",
+          "query": "做一个贪吃蛇游戏",
+          "category": "棋盘格子型",
+          "coverage_point": "高频模板、键盘控制、游戏循环",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 棋盘格子型"
+          ],
+          "query_complexity": "short",
+          "query_length": 8,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "贪吃蛇",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "低",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "棋盘格子型_03",
+          "project_id": "7585025995246141481",
+          "query": "开发一个五子棋游戏",
+          "category": "棋盘格子型",
+          "coverage_point": "回合制、胜负判定、AI/双人边界",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 棋盘格子型"
+          ],
+          "query_complexity": "short",
+          "query_length": 9,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "五子棋",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "静态回合制",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "棋盘格子型_04",
+          "project_id": "7622890860492996618",
+          "query": "帮我制作一个简单的合成2048的小游戏",
+          "category": "棋盘格子型",
+          "coverage_point": "网格合成、滑动、分数",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 棋盘格子型"
+          ],
+          "query_complexity": "short",
+          "query_length": 19,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "2048",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "拖拽操作型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "低",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "棋盘格子型_05",
+          "project_id": "7595785475248619529",
+          "query": "请帮我开发一个数独游戏，网页形式。用户输入难易程度，模型自动生成匹配的数独游戏。",
+          "category": "棋盘格子型",
+          "coverage_point": "谜题生成、规则校验、难度参数",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 棋盘格子型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 40,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "文本输入型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "直接玩法型"
+          }
+        },
+        {
+          "case_id": "棋盘格子型_06",
+          "project_id": "7588390333944234018",
+          "query": "创建一个网页版的单机马尼拉桌游，规则和实体桌游一样，竞投船长时多名玩家共用一台机器输入，资源和金钱默认公开。",
+          "category": "棋盘格子型",
+          "coverage_point": "桌游规则、多人共屏、公开信息状态管理",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "需要联网同步",
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 54,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": "俄罗斯方块",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "拖拽操作型",
+              "键盘控制型",
+              "文本输入型",
+              "回合决策型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "联网同步型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "棋盘格子型_07",
+          "project_id": "7586597734338002980",
+          "query": "贪吃蛇游戏，方向键控制，3D 视角，带 AI 贪吃蛇对手，可切换第一人称和第三人称视角。",
+          "category": "棋盘格子型",
+          "coverage_point": "经典玩法 + 3D/AI 对手边界",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "需要联网同步"
+          ],
+          "query_complexity": "medium",
+          "query_length": 44,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "贪吃蛇",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "键盘控制型",
+              "文本输入型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "动画增强型",
+              "联网同步型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "棋盘格子型_08",
+          "project_id": "7595769177420562468",
+          "query": "明星消消乐，100 关，每关按得分给 1/2/3 颗钻石，生成总钻石排行榜和总积分排行榜。",
+          "category": "棋盘格子型",
+          "coverage_point": "关卡、星级、排行榜、长周期进度",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "medium",
+          "query_length": 45,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "模仿参考型"
+          }
+        }
+      ]
+    },
+    {
+      "category": "控制闯关/物理型",
+      "case_count": 8,
+      "cases": [
+        {
+          "case_id": "控制闯关/物理型_01",
+          "project_id": "7620746911951192102",
+          "query": "帮我开发一个超级玛丽",
+          "category": "控制闯关/物理型",
+          "coverage_point": "平台跳跃、碰撞、关卡",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "需要物理引擎"
+          ],
+          "query_complexity": "short",
+          "query_length": 10,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": "马里奥",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "连续触控型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "物理/碰撞型",
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "控制闯关/物理型_02",
+          "project_id": "7588053895335657472",
+          "query": "帮我做一个跑酷游戏",
+          "category": "控制闯关/物理型",
+          "coverage_point": "强实时、障碍、速度提升",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "需要物理引擎",
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "short",
+          "query_length": 9,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": "神庙逃亡",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "静态回合制",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "物理/碰撞型",
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "控制闯关/物理型_03",
+          "project_id": "7603256649515532351",
+          "query": "帮我设计一个平衡球小游戏的手机 APP，用户可以利用真实重力晃动手机来操作平衡球滚动并进行闯关。",
+          "category": "控制闯关/物理型",
+          "coverage_point": "移动端、重力/传感器、物理",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "需要物理引擎",
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 48,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "回合决策型"
+            ],
+            "realtime_level": "静态回合制",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "物理/碰撞型",
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "模仿参考型"
+          }
+        },
+        {
+          "case_id": "控制闯关/物理型_04",
+          "project_id": "7610705089946648628",
+          "query": "开发一个横版闯关游戏，人物角色是龙虾造型，支持移动、跳跃、障碍、积分和排名。",
+          "category": "控制闯关/物理型",
+          "coverage_point": "详细玩法、平台动作、触屏按钮",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "需要物理引擎"
+          ],
+          "query_complexity": "medium",
+          "query_length": 38,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "键盘控制型",
+              "混合交互型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "物理/碰撞型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "控制闯关/物理型_05",
+          "project_id": "7588050973417373742",
+          "query": "生成一个 FPS 射击游戏，以第一人称视角进行射击，目标单位会进行移动。",
+          "category": "控制闯关/物理型",
+          "coverage_point": "高风险 3D/FPS、需澄清或降级",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "主分类: 控制闯关/物理型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 36,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "直接玩法型"
+          }
+        },
+        {
+          "case_id": "控制闯关/物理型_06",
+          "project_id": "7591756301252886537",
+          "query": "Unity FPS 射击游戏，要求有场景、动画、武器、子弹 UI、射击特效、声音、走跳跑、火花/弹孔、手臂摇摆、相机跟随和碰撞器。",
+          "category": "控制闯关/物理型",
+          "coverage_point": "第一人称射击、强实时、特效资产、复杂系统拆解",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "需要物理引擎",
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 65,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "键盘控制型",
+              "文本输入型",
+              "混合交互型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "物理/碰撞型",
+              "动画增强型",
+              "音频强依赖型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "控制闯关/物理型_07",
+          "project_id": "7601481527117250587",
+          "query": "马里奥双人游戏，10 个关卡，难度逐渐提升，第 10 关有大 BOSS。",
+          "category": "控制闯关/物理型",
+          "coverage_point": "平台跳跃 + 双人 + 关卡递进",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "需要联网同步",
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 36,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "马里奥",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "键盘控制型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "动画增强型",
+              "音频强依赖型",
+              "联网同步型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "控制闯关/物理型_08",
+          "project_id": "7598383170743975962",
+          "query": "撕纸解压程序，识别滑动速度和力量，纸的材质和碎片受力度影响，要有正式动效和反馈。",
+          "category": "控制闯关/物理型",
+          "coverage_point": "物理交互、移动端触控、材质与反馈",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "需要物理引擎",
+            "需要联网同步",
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 40,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "拖拽操作型",
+              "连续触控型",
+              "混合交互型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "物理/碰撞型",
+              "动画增强型",
+              "音频强依赖型",
+              "联网同步型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        }
+      ]
+    },
+    {
+      "category": "经营养成型",
+      "case_count": 8,
+      "cases": [
+        {
+          "case_id": "经营养成型_01",
+          "project_id": "7588897248688308224",
+          "query": "设计一只叫“肥波”的小猫电子宠物，他贪吃爱睡觉，而且很调皮。可以通过“玩耍”来增加他的情绪度，并用工作流记住这个状态。",
+          "category": "经营养成型",
+          "coverage_point": "电子宠物、状态持久化",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "主分类: 经营养成型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 59,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "电子宠物",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "文本输入型"
+            ],
+            "realtime_level": "静态回合制",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "经营养成型_02",
+          "project_id": "7587742853821005862",
+          "query": "帮我开发一个小游戏，模拟城市建设。",
+          "category": "经营养成型",
+          "coverage_point": "简短目标、需要规划核心循环",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "主分类: 经营养成型"
+          ],
+          "query_complexity": "short",
+          "query_length": 17,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "经营养成型_03",
+          "project_id": "7592869873588502574",
+          "query": "玩家生活在海洋木筏上，收集物资升级庇护所、抵御海怪、探索岛屿。",
+          "category": "经营养成型",
+          "coverage_point": "生存经营、资源循环",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 31,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "模仿参考型"
+          }
+        },
+        {
+          "case_id": "经营养成型_04",
+          "project_id": "7597350547091570726",
+          "query": "生成文字版 RTS 游戏，叫 Word War，包含地图、资源、单位和建筑。",
+          "category": "经营养成型",
+          "coverage_point": "资源/单位系统、复杂状态",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "主分类: 经营养成型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 38,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "经营养成型_05",
+          "project_id": "7615151224278581299",
+          "query": "我想做一个暗黑刷宝类的网页游戏，装备无限升级、进阶，技能无限进阶，支持自动装备和自动分解。",
+          "category": "经营养成型",
+          "coverage_point": "刷宝养成、数值膨胀、自动装备",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "主分类: 经营养成型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 45,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "经营养成型_06",
+          "project_id": "7623089966037647396",
+          "query": "帮我设计一款移动端游戏《拾光小铺》，竖屏单机为主、弱联网为辅，面向 30-40 岁上班族，强调碎片化轻经营、零惩罚、治愈、弱社交。",
+          "category": "经营养成型",
+          "coverage_point": "经营循环、用户画像驱动设计、移动端竖屏",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "需要联网同步"
+          ],
+          "query_complexity": "medium",
+          "query_length": 65,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.7,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "连续触控型",
+              "文本输入型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "动画增强型",
+              "音频强依赖型",
+              "联网同步型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "模仿参考型"
+          }
+        },
+        {
+          "case_id": "经营养成型_07",
+          "project_id": "7622112649907535910",
+          "query": "我想做一个班宠星球的应用，类似拓麻歌子，能导入学生、设置姓名、喂食等，不是一个班只有一只，而是一个班所有学生都有自己的班宠。",
+          "category": "经营养成型",
+          "coverage_point": "班级多实体养成、批量状态管理、教育场景",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "主分类: 经营养成型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 62,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "电子宠物",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "经营养成型_08",
+          "project_id": "7601130064020963374",
+          "query": "华国经济模拟游戏，手机单机版，竖屏单手操作、离线运行，要求粮食价格枢纽、金币闭环、多板块数据互联，1 回合等于 15 天，数据实时联动。",
+          "category": "经营养成型",
+          "coverage_point": "经济模拟、数值系统、竖屏经营",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "需要联网同步"
+          ],
+          "query_complexity": "medium",
+          "query_length": 68,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "拖拽操作型",
+              "连续触控型",
+              "文本输入型",
+              "回合决策型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "动画增强型",
+              "联网同步型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        }
+      ]
+    },
+    {
+      "category": "策略战斗型",
+      "case_count": 8,
+      "cases": [
+        {
+          "case_id": "策略战斗型_01",
+          "project_id": "7605171298196717594",
+          "query": "用 HTML5 + 原生 JavaScript 做一个植物大战僵尸游戏。9x5 网格草坪，3 种植物，3 种僵尸，阳光系统，6 波关卡。",
+          "category": "策略战斗型",
+          "coverage_point": "塔防、完整规则、适合 Phaser/Pixi 对比",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "主分类: 策略战斗型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 68,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "植物大战僵尸",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "策略战斗型_02",
+          "project_id": "7614057388747980843",
+          "query": "请用 H5 编写一个斗地主游戏的核心代码，包含洗牌、发牌、牌型判断、叫地主、出牌、胜负。",
+          "category": "策略战斗型",
+          "coverage_point": "规则引擎、棋牌逻辑",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "主分类: 策略战斗型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 44,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "斗地主",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "回合决策型"
+            ],
+            "realtime_level": "静态回合制",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "策略战斗型_03",
+          "project_id": "7597622733991821364",
+          "query": "请开发一款单机版四川麻将血战到底的游戏，有用户登录，不用缴费，可用积分标识输赢，积分可以为负，画面动画精细。",
+          "category": "策略战斗型",
+          "coverage_point": "复杂规则、状态与排序",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 54,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "混合交互型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "模仿参考型"
+          }
+        },
+        {
+          "case_id": "策略战斗型_04",
+          "project_id": "7624071135939854377",
+          "query": "类似植物大战僵尸，植物带装备、装备掉落、关卡升级、金币升级、背包继承。",
+          "category": "策略战斗型",
+          "coverage_point": "塔防 + 养成，复杂状态",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 35,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "植物大战僵尸",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "策略战斗型_05",
+          "project_id": "7614130850942255119",
+          "query": "我想要开发一款德州扑克游戏软件。",
+          "category": "策略战斗型",
+          "coverage_point": "规则复杂、下注/结算高风险",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "主分类: 策略战斗型"
+          ],
+          "query_complexity": "short",
+          "query_length": 16,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "策略战斗型_06",
+          "project_id": "7607013951968182335",
+          "query": "请设计并开发一个完整的在线麻将网页应用，包含标准麻将规则、4 人在线对战、完整流程、AI 对手、响应式界面和在线大厅/房间系统。",
+          "category": "策略战斗型",
+          "coverage_point": "在线麻将、4 人对战、AI/联机双模式",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "需要联网同步",
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 64,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.7,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "动画增强型",
+              "音频强依赖型",
+              "联网同步型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "策略战斗型_07",
+          "project_id": "7599883378703319091",
+          "query": "请生成一个正式可用的儿童数学益智网页游戏“24 点”，4 个数字必须且只能使用一次，只允许加减乘除与括号，结果必须精确等于 24。",
+          "category": "策略战斗型",
+          "coverage_point": "数学规则求解、表达式校验、儿童教育化",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "主分类: 策略战斗型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 65,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.7,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "策略战斗型_08",
+          "project_id": "7600235659286577171",
+          "query": "编写一个在线棋牌游戏“升级八十分”，每天免费领取 3 次补助币，之后支持会员或单独购买补助币，并完整设计和开发。",
+          "category": "策略战斗型",
+          "coverage_point": "牌类规则 + 商业化系统",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "主分类: 策略战斗型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 56,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "斗地主",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "动画增强型",
+              "音频强依赖型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        }
+      ]
+    },
+    {
+      "category": "单屏反应型",
+      "case_count": 8,
+      "cases": [
+        {
+          "case_id": "单屏反应型_01",
+          "project_id": "7589592649359835155",
+          "query": "Android 项目开发一个打地鼠，随机出现地鼠，点击得分，有开始、积分榜、退出。",
+          "category": "单屏反应型",
+          "coverage_point": "高频模板、点击反馈",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 单屏反应型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 41,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "打地鼠",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "低",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "单屏反应型_02",
+          "project_id": "7626273710223392820",
+          "query": "屏幕顶部不断掉落小球，底部木板左右滑动接球，得分、生命、速度提升。",
+          "category": "单屏反应型",
+          "coverage_point": "强实时、移动端滑动",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 单屏反应型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 33,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "拖拽操作型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "低",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "直接玩法型"
+          }
+        },
+        {
+          "case_id": "单屏反应型_03",
+          "project_id": "7607368086647275554",
+          "query": "制作一个过年互动 H5，火苗移动到引线位置时点击点燃烟花，并显示 Happy New Year。",
+          "category": "单屏反应型",
+          "coverage_point": "时机点击、动画反馈",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "待LLM判别"
+          ],
+          "query_complexity": "medium",
+          "query_length": 48,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.8,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": false,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "直接玩法型"
+          }
+        },
+        {
+          "case_id": "单屏反应型_04",
+          "project_id": "7587792625365745716",
+          "query": "编写一个弹珠游戏程序。",
+          "category": "单屏反应型",
+          "coverage_point": "物理/反弹边界",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 单屏反应型"
+          ],
+          "query_complexity": "short",
+          "query_length": 11,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "直接玩法型"
+          }
+        },
+        {
+          "case_id": "单屏反应型_05",
+          "project_id": "7623217617720918026",
+          "query": "适合小学三年级英语课堂、全班一起玩的 Simon Says 互动游戏。",
+          "category": "单屏反应型",
+          "coverage_point": "教育 + 单屏反应、老师操作",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 单屏反应型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 35,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "连续触控型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "低",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "直接玩法型"
+          }
+        },
+        {
+          "case_id": "单屏反应型_06",
+          "project_id": "7621466285217497094",
+          "query": "Python 字符串切片打地鼠，必须按正确顺序敲字母地鼠，20 道题覆盖切片知识点，带姓名登录和排名。",
+          "category": "单屏反应型",
+          "coverage_point": "反应玩法 + 教学规则 + 顺序判定",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "medium",
+          "query_length": 51,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "打地鼠",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "文本输入型",
+              "混合交互型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "单屏反应型_07",
+          "project_id": "7622676403485524011",
+          "query": "生成一个适合手机浏览器玩的 2D 枪战小游戏，左手虚拟摇杆移动，右手点击或按住自动射击，存活 60 秒或击杀 30 个敌人通关。",
+          "category": "单屏反应型",
+          "coverage_point": "触屏双区输入、强实时、胜负条件",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 64,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.7,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "拖拽操作型",
+              "连续触控型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "音频强依赖型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "单屏反应型_08",
+          "project_id": "7618116399231516735",
+          "query": "请设计一个网页版打飞机游戏，9:16 竖屏，方向键移动，我方自动开火，三种敌机分值不同，大型敌机可发射子弹，我方 3 条命。",
+          "category": "单屏反应型",
+          "coverage_point": "竖屏射击、敌我规则、单屏高反馈",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 单屏反应型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 62,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.7,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "键盘控制型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        }
+      ]
+    },
+    {
+      "category": "规则问答型",
+      "case_count": 8,
+      "cases": [
+        {
+          "case_id": "规则问答型_01",
+          "project_id": "7614811018212081670",
+          "query": "帮我制作网页版猜数字游戏，限制从 1-99。",
+          "category": "规则问答型",
+          "coverage_point": "L1 规则闭环",
+          "difficulty": "L1",
+          "difficulty_reason": [
+            "主分类: 规则问答型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 22,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "直接玩法型"
+          }
+        },
+        {
+          "case_id": "规则问答型_02",
+          "project_id": "7605433988395712564",
+          "query": "编一个成语接龙 app，人机接龙、倒计时、胜负、音效动画。",
+          "category": "规则问答型",
+          "coverage_point": "语言规则、时间限制",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "medium",
+          "query_length": 29,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "成语接龙",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "文本输入型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "动画增强型",
+              "音频强依赖型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "规则问答型_03",
+          "project_id": "7600997727031459890",
+          "query": "海龟汤平台，上传汤面汤底，与 AI DM 一问一答，只回复是/否/无关，支持轮数限制。",
+          "category": "规则问答型",
+          "coverage_point": "LLM DM、规则约束",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "medium",
+          "query_length": 43,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "连续触控型",
+              "文本输入型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "音频强依赖型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "模仿参考型"
+          }
+        },
+        {
+          "case_id": "规则问答型_04",
+          "project_id": "7625898239190908991",
+          "query": "纯文字游戏“指尖上帝”，七种元素两两混合，由大模型给出合成物并加入可合成元素列表。",
+          "category": "规则问答型",
+          "coverage_point": "内容生成、状态记录",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "medium",
+          "query_length": 41,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "连续触控型",
+              "文本输入型",
+              "回合决策型",
+              "混合交互型"
+            ],
+            "realtime_level": "静态回合制",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "规则问答型_05",
+          "project_id": "7620805532638822450",
+          "query": "题库增加到 100 道，单次挑战 10 题，倒计时 5 分钟，结算评价，连续答对特效和音效。",
+          "category": "规则问答型",
+          "coverage_point": "题库抽样、结算、连击",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "medium",
+          "query_length": 46,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "连续触控型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "动画增强型",
+              "音频强依赖型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "规则问答型_06",
+          "project_id": "7618962457247154195",
+          "query": "七年级数学三人 PK 竞答，20 题同时答题，每人题目不同、即时判分、错误解析、先答完结束、同分比用时。",
+          "category": "规则问答型",
+          "coverage_point": "多人竞答、题库分发、公平性",
+          "difficulty": "L1",
+          "difficulty_reason": [
+            "主分类: 规则问答型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 52,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.7,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "文本输入型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "规则问答型_07",
+          "project_id": "7624084318981324841",
+          "query": "线性代数课堂互动竞答工具，教师选择难度和模式发起竞答，系统随机抽题，学生作答后即时判分并给出知识点反馈，实时更新学情统计。",
+          "category": "规则问答型",
+          "coverage_point": "课堂竞答、反馈统计、教学场景",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "需要物理引擎",
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 61,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.7,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "文本输入型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "物理/碰撞型",
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "规则问答型_08",
+          "project_id": "7624138433761542184",
+          "query": "创建一个推理正确答案的单选网页应用“推理大师”，至少 5 个节点、2 个结局，每个节点包含逻辑问题与 4 个选项。",
+          "category": "规则问答型",
+          "coverage_point": "推理问答、节点推进、结果分流",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "medium",
+          "query_length": 57,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "文本输入型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "模仿参考型"
+          }
+        }
+      ]
+    },
+    {
+      "category": "多人社交型",
+      "case_count": 8,
+      "cases": [
+        {
+          "case_id": "多人社交型_01",
+          "project_id": "7604782524849487907",
+          "query": "做一个安卓手机游戏“炸飞机”，蓝牙连接，2 人游戏，在 10x10 表格里画 3 架飞机，通过坐标互炸。",
+          "category": "多人社交型",
+          "coverage_point": "双人、规则棋盘、连接能力边界",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "主分类: 多人社交型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 52,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "多人社交型_02",
+          "project_id": "7615578177179566143",
+          "query": "微信登录飞行棋竞技应用，可 4 人同时在线竞技。",
+          "category": "多人社交型",
+          "coverage_point": "联机、房间、同步",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "需要联网同步"
+          ],
+          "query_complexity": "medium",
+          "query_length": 24,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "文本输入型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "联网同步型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "多人社交型_03",
+          "project_id": "7596161142809083939",
+          "query": "制作一个网页版小游戏，要求和 AI 相互打球。",
+          "category": "多人社交型",
+          "coverage_point": "AI 对手、实时对战",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 23,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "键盘控制型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "Canvas绘制型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "多人社交型_04",
+          "project_id": "7607805328830496820",
+          "query": "做菜游戏，选择素材、方式、时间，输出评分，支持人机 PK 和双人 PK，3D 动画，4-5 岁儿童。",
+          "category": "多人社交型",
+          "coverage_point": "低龄、PK、3D 边界",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 50,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "拖拽操作型"
+            ],
+            "realtime_level": "静态回合制",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "动画增强型",
+              "音频强依赖型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "多人社交型_05",
+          "project_id": "7621023566129119267",
+          "query": "生成一个拳皇97的游戏。",
+          "category": "多人社交型",
+          "coverage_point": "大型参考游戏，必须澄清/降级",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "主分类: 多人社交型"
+          ],
+          "query_complexity": "short",
+          "query_length": 12,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "多人社交型_06",
+          "project_id": "7587349996819710003",
+          "query": "根据 PRD 开发经典中国象棋 H5，支持 PC/移动端、人机对战和双人对战、悔棋、计时、和棋、AI 难度。",
+          "category": "多人社交型",
+          "coverage_point": "长规格解析、棋牌规则、多人/AI 双模式",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "需要联网同步",
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 54,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.7,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "拖拽操作型",
+              "键盘控制型",
+              "连续触控型",
+              "文本输入型",
+              "回合决策型",
+              "混合交互型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "动画增强型",
+              "音频强依赖型",
+              "联网同步型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "多人社交型_07",
+          "project_id": "7617715036630499369",
+          "query": "做一个找茬能力平台，上传两张图自动找差异，支持人机对战和人人对战、计时、正确率、AI 提示与结果报告。",
+          "category": "多人社交型",
+          "coverage_point": "双人共享题面、图像差异、报告反馈",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "主分类: 多人社交型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 51,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "模仿参考型"
+          }
+        },
+        {
+          "case_id": "多人社交型_08",
+          "project_id": "7612851315043057690",
+          "query": "开发一个双人打字对战网站，支持个人练习、排行榜、创建房间、密码加入、AI 生成文章、双人同题倒计时开赛。",
+          "category": "多人社交型",
+          "coverage_point": "房间对战、同步开局、内容生成",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "需要联网同步",
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 52,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.7,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "拖拽操作型",
+              "键盘控制型",
+              "文本输入型",
+              "回合决策型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "动画增强型",
+              "联网同步型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        }
+      ]
+    },
+    {
+      "category": "教育练习型",
+      "case_count": 8,
+      "cases": [
+        {
+          "case_id": "教育练习型_01",
+          "project_id": "7613657187570909247",
+          "query": "给我生成一个背单词的 app。",
+          "category": "教育练习型",
+          "coverage_point": "高频教育模板",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "short",
+          "query_length": 15,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "背单词",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "教育练习型_02",
+          "project_id": "7595435844824219667",
+          "query": "背单词应用，每个 GRE 单词配一幅图片方便记忆。",
+          "category": "教育练习型",
+          "coverage_point": "内容/图片资产",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 教育练习型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 25,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "背单词",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "教育练习型_03",
+          "project_id": "7623950176738197531",
+          "query": "喜洋洋单词大闯关，四年级上册第一课核心单词认读、发音、词义匹配，小组竞赛。",
+          "category": "教育练习型",
+          "coverage_point": "课堂互动、队伍积分",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 教育练习型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 37,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": "背单词",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "动画增强型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "教育练习型_04",
+          "project_id": "7602243007223709731",
+          "query": "高一家长想帮助孩子快速记忆英语单词，每小时至少 50 个且不遗忘。",
+          "category": "教育练习型",
+          "coverage_point": "教育目标过强，需规划/澄清",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 教育练习型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 33,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": "背单词",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "教育练习型_05",
+          "project_id": "7623216102084001834",
+          "query": "小学英语课堂互动游戏“单词砸金蛋”，随机单词、图片、正确孵小鸡、错误炸弹、10 秒限时。",
+          "category": "教育练习型",
+          "coverage_point": "低龄、题库、即时反馈",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "主分类: 经营养成型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 44,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "直接玩法型"
+          }
+        },
+        {
+          "case_id": "教育练习型_06",
+          "project_id": "7592942779668414502",
+          "query": "单词导入支持拍照识别、年级词库和手动输入；生成词库后可查看背诵状态、错误次数、错词库、排序、音标、语音和例句。",
+          "category": "教育练习型",
+          "coverage_point": "题库与学习进度、强配置化",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "medium",
+          "query_length": 55,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.95,
+          "reference_game_name": "背单词",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "文本输入型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        },
+        {
+          "case_id": "教育练习型_07",
+          "project_id": "7618147510166487081",
+          "query": "请开发微信小游戏“知识大闯关”：10 题一关，答错可看激励视频广告复活，通关后插屏广告，支持积分商城、好友 PK、排行和自定义题目。",
+          "category": "教育练习型",
+          "coverage_point": "教育 + 商业化 + 社交扩展",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "medium",
+          "query_length": 66,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.7,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "教育练习型_08",
+          "project_id": "7623062061689421859",
+          "query": "海东单词记忆系统，支持学生在线学习、单词和例句发音、老师班级管理、管理员全平台管控，电脑手机双端适配。",
+          "category": "教育练习型",
+          "coverage_point": "教学系统、角色权限、双端适配",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "medium",
+          "query_length": 51,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": "背单词",
+          "reference_game_detected": true,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "文本输入型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "音频强依赖型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "现有游戏引用型"
+          }
+        }
+      ]
+    },
+    {
+      "category": "剧情互动型",
+      "case_count": 8,
+      "cases": [
+        {
+          "case_id": "剧情互动型_01",
+          "project_id": "7600781201699471375",
+          "query": "写一个魔塔小游戏。",
+          "category": "剧情互动型",
+          "coverage_point": "经典剧情/数值/RPG",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "short",
+          "query_length": 9,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "直接玩法型"
+          }
+        },
+        {
+          "case_id": "剧情互动型_02",
+          "project_id": "7598069700777508914",
+          "query": "制作一个回合制 RPG 游戏。",
+          "category": "剧情互动型",
+          "coverage_point": "回合战斗、状态机",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "short",
+          "query_length": 15,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "回合决策型"
+            ],
+            "realtime_level": "静态回合制",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "直接玩法型"
+          }
+        },
+        {
+          "case_id": "剧情互动型_03",
+          "project_id": "7619378730338893860",
+          "query": "侦探探案小剧场文字冒险游戏。",
+          "category": "剧情互动型",
+          "coverage_point": "文字冒险、分支剧情",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 剧情互动型"
+          ],
+          "query_complexity": "short",
+          "query_length": 14,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "剧情互动型_04",
+          "project_id": "7622565412621811738",
+          "query": "末日求生类即时战斗 RPG，下副本搜刮资源，迎战丧尸，装备、数值、健康、饥饿、安全屋。",
+          "category": "剧情互动型",
+          "coverage_point": "剧情 + 生存 + 战斗",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "状态复杂度高"
+          ],
+          "query_complexity": "medium",
+          "query_length": 43,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "直接玩法型"
+          }
+        },
+        {
+          "case_id": "剧情互动型_05",
+          "project_id": "7624583407103950848",
+          "query": "主角是零基础普通人从零开始学 AI 编程，数值有学习动力、完成度、自信心，走向 4 个不同结局；先苏格拉底式梳理 SPEC。",
+          "category": "剧情互动型",
+          "coverage_point": "需求澄清优先、多结局状态",
+          "difficulty": "L3",
+          "difficulty_reason": [
+            "需要Canvas渲染",
+            "状态复杂度高"
+          ],
+          "query_complexity": "medium",
+          "query_length": 62,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.7,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "键盘控制型",
+              "连续触控型",
+              "文本输入型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "高",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "动画增强型",
+              "音频强依赖型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "模仿参考型"
+          }
+        },
+        {
+          "case_id": "剧情互动型_06",
+          "project_id": "7621034631835648046",
+          "query": "创建一个中文互动故事网页应用“心力恢复的72小时”，至少 15 个节点、3 个结局，带体力、心力、信心数值和打字机效果。",
+          "category": "剧情互动型",
+          "coverage_point": "分支剧情、状态条、结局控制",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "需要Canvas渲染"
+          ],
+          "query_complexity": "medium",
+          "query_length": 60,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.85,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "连续触控型",
+              "文本输入型"
+            ],
+            "realtime_level": "静态回合制",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "Canvas绘制型",
+              "动画增强型",
+              "音频强依赖型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "目标导向型"
+          }
+        },
+        {
+          "case_id": "剧情互动型_07",
+          "project_id": "7614520624924590132",
+          "query": "北京浮生记：模拟北漂 30 天到 1 年生存，用每日选择影响金钱、健康、心情、人脉，活过 1 年并解锁不同结局。",
+          "category": "剧情互动型",
+          "coverage_point": "生存叙事、属性联动、长周期剧情",
+          "difficulty": "L2",
+          "difficulty_reason": [
+            "主分类: 单屏反应型"
+          ],
+          "query_complexity": "medium",
+          "query_length": 56,
+          "project_type": "app",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.7,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "连续触控型"
+            ],
+            "realtime_level": "轻实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "纯UI组件型"
+            ],
+            "platform_adaptation": [
+              "移动端优先"
+            ],
+            "requirement_expression_type": "模仿参考型"
+          }
+        },
+        {
+          "case_id": "剧情互动型_08",
+          "project_id": "7602970217849208872",
+          "query": "开发一个高自由文游模拟器网页应用，支持选择已有文字游戏或自定义指令开启新游戏，展示游戏库、分类、封面、简介和启动入口。",
+          "category": "剧情互动型",
+          "coverage_point": "文游平台化、剧情容器、内容扩展",
+          "difficulty": "L4",
+          "difficulty_reason": [
+            "需要联网同步"
+          ],
+          "query_complexity": "medium",
+          "query_length": 59,
+          "project_type": "web",
+          "decision_status": "explicit_game",
+          "needs_clarification": false,
+          "judge_confidence": 0.7,
+          "reference_game_name": null,
+          "reference_game_detected": false,
+          "should_include_in_benchmark": true,
+          "aux_tags": {
+            "interaction_mode": [
+              "点击选择型",
+              "文本输入型"
+            ],
+            "realtime_level": "强实时",
+            "state_complexity": "中",
+            "implementation_dependency": [
+              "动画增强型",
+              "联网同步型"
+            ],
+            "platform_adaptation": [
+              "Web优先"
+            ],
+            "requirement_expression_type": "模仿参考型"
+          }
+        }
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "棋盘格子型_01",
+      "project_id": "7584998696727789602",
+      "query": "创建一个俄罗斯方块",
+      "category": "棋盘格子型",
+      "coverage_point": "经典引用、模板/Canvas",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "short",
+      "query_length": 9,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "俄罗斯方块",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "键盘控制型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "Canvas绘制型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "棋盘格子型_02",
+      "project_id": "7590301110141894683",
+      "query": "做一个贪吃蛇游戏",
+      "category": "棋盘格子型",
+      "coverage_point": "高频模板、键盘控制、游戏循环",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 棋盘格子型"
+      ],
+      "query_complexity": "short",
+      "query_length": 8,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "贪吃蛇",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "低",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "棋盘格子型_03",
+      "project_id": "7585025995246141481",
+      "query": "开发一个五子棋游戏",
+      "category": "棋盘格子型",
+      "coverage_point": "回合制、胜负判定、AI/双人边界",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 棋盘格子型"
+      ],
+      "query_complexity": "short",
+      "query_length": 9,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "五子棋",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "静态回合制",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "棋盘格子型_04",
+      "project_id": "7622890860492996618",
+      "query": "帮我制作一个简单的合成2048的小游戏",
+      "category": "棋盘格子型",
+      "coverage_point": "网格合成、滑动、分数",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 棋盘格子型"
+      ],
+      "query_complexity": "short",
+      "query_length": 19,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "2048",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "拖拽操作型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "低",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "棋盘格子型_05",
+      "project_id": "7595785475248619529",
+      "query": "请帮我开发一个数独游戏，网页形式。用户输入难易程度，模型自动生成匹配的数独游戏。",
+      "category": "棋盘格子型",
+      "coverage_point": "谜题生成、规则校验、难度参数",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 棋盘格子型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 40,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "文本输入型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "直接玩法型"
+      }
+    },
+    {
+      "case_id": "棋盘格子型_06",
+      "project_id": "7588390333944234018",
+      "query": "创建一个网页版的单机马尼拉桌游，规则和实体桌游一样，竞投船长时多名玩家共用一台机器输入，资源和金钱默认公开。",
+      "category": "棋盘格子型",
+      "coverage_point": "桌游规则、多人共屏、公开信息状态管理",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "需要联网同步",
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 54,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": "俄罗斯方块",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "拖拽操作型",
+          "键盘控制型",
+          "文本输入型",
+          "回合决策型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "联网同步型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "棋盘格子型_07",
+      "project_id": "7586597734338002980",
+      "query": "贪吃蛇游戏，方向键控制，3D 视角，带 AI 贪吃蛇对手，可切换第一人称和第三人称视角。",
+      "category": "棋盘格子型",
+      "coverage_point": "经典玩法 + 3D/AI 对手边界",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "需要联网同步"
+      ],
+      "query_complexity": "medium",
+      "query_length": 44,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "贪吃蛇",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "键盘控制型",
+          "文本输入型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "动画增强型",
+          "联网同步型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "棋盘格子型_08",
+      "project_id": "7595769177420562468",
+      "query": "明星消消乐，100 关，每关按得分给 1/2/3 颗钻石，生成总钻石排行榜和总积分排行榜。",
+      "category": "棋盘格子型",
+      "coverage_point": "关卡、星级、排行榜、长周期进度",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "medium",
+      "query_length": 45,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "模仿参考型"
+      }
+    },
+    {
+      "case_id": "控制闯关/物理型_01",
+      "project_id": "7620746911951192102",
+      "query": "帮我开发一个超级玛丽",
+      "category": "控制闯关/物理型",
+      "coverage_point": "平台跳跃、碰撞、关卡",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "需要物理引擎"
+      ],
+      "query_complexity": "short",
+      "query_length": 10,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": "马里奥",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "连续触控型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "物理/碰撞型",
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "控制闯关/物理型_02",
+      "project_id": "7588053895335657472",
+      "query": "帮我做一个跑酷游戏",
+      "category": "控制闯关/物理型",
+      "coverage_point": "强实时、障碍、速度提升",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "需要物理引擎",
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "short",
+      "query_length": 9,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": "神庙逃亡",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "静态回合制",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "物理/碰撞型",
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "控制闯关/物理型_03",
+      "project_id": "7603256649515532351",
+      "query": "帮我设计一个平衡球小游戏的手机 APP，用户可以利用真实重力晃动手机来操作平衡球滚动并进行闯关。",
+      "category": "控制闯关/物理型",
+      "coverage_point": "移动端、重力/传感器、物理",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "需要物理引擎",
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 48,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "回合决策型"
+        ],
+        "realtime_level": "静态回合制",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "物理/碰撞型",
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "模仿参考型"
+      }
+    },
+    {
+      "case_id": "控制闯关/物理型_04",
+      "project_id": "7610705089946648628",
+      "query": "开发一个横版闯关游戏，人物角色是龙虾造型，支持移动、跳跃、障碍、积分和排名。",
+      "category": "控制闯关/物理型",
+      "coverage_point": "详细玩法、平台动作、触屏按钮",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "需要物理引擎"
+      ],
+      "query_complexity": "medium",
+      "query_length": 38,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "键盘控制型",
+          "混合交互型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "物理/碰撞型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "控制闯关/物理型_05",
+      "project_id": "7588050973417373742",
+      "query": "生成一个 FPS 射击游戏，以第一人称视角进行射击，目标单位会进行移动。",
+      "category": "控制闯关/物理型",
+      "coverage_point": "高风险 3D/FPS、需澄清或降级",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "主分类: 控制闯关/物理型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 36,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "直接玩法型"
+      }
+    },
+    {
+      "case_id": "控制闯关/物理型_06",
+      "project_id": "7591756301252886537",
+      "query": "Unity FPS 射击游戏，要求有场景、动画、武器、子弹 UI、射击特效、声音、走跳跑、火花/弹孔、手臂摇摆、相机跟随和碰撞器。",
+      "category": "控制闯关/物理型",
+      "coverage_point": "第一人称射击、强实时、特效资产、复杂系统拆解",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "需要物理引擎",
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 65,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "键盘控制型",
+          "文本输入型",
+          "混合交互型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "物理/碰撞型",
+          "动画增强型",
+          "音频强依赖型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "控制闯关/物理型_07",
+      "project_id": "7601481527117250587",
+      "query": "马里奥双人游戏，10 个关卡，难度逐渐提升，第 10 关有大 BOSS。",
+      "category": "控制闯关/物理型",
+      "coverage_point": "平台跳跃 + 双人 + 关卡递进",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "需要联网同步",
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 36,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "马里奥",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "键盘控制型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "动画增强型",
+          "音频强依赖型",
+          "联网同步型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "控制闯关/物理型_08",
+      "project_id": "7598383170743975962",
+      "query": "撕纸解压程序，识别滑动速度和力量，纸的材质和碎片受力度影响，要有正式动效和反馈。",
+      "category": "控制闯关/物理型",
+      "coverage_point": "物理交互、移动端触控、材质与反馈",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "需要物理引擎",
+        "需要联网同步",
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 40,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "拖拽操作型",
+          "连续触控型",
+          "混合交互型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "物理/碰撞型",
+          "动画增强型",
+          "音频强依赖型",
+          "联网同步型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "经营养成型_01",
+      "project_id": "7588897248688308224",
+      "query": "设计一只叫“肥波”的小猫电子宠物，他贪吃爱睡觉，而且很调皮。可以通过“玩耍”来增加他的情绪度，并用工作流记住这个状态。",
+      "category": "经营养成型",
+      "coverage_point": "电子宠物、状态持久化",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "主分类: 经营养成型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 59,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "电子宠物",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "文本输入型"
+        ],
+        "realtime_level": "静态回合制",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "经营养成型_02",
+      "project_id": "7587742853821005862",
+      "query": "帮我开发一个小游戏，模拟城市建设。",
+      "category": "经营养成型",
+      "coverage_point": "简短目标、需要规划核心循环",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "主分类: 经营养成型"
+      ],
+      "query_complexity": "short",
+      "query_length": 17,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "经营养成型_03",
+      "project_id": "7592869873588502574",
+      "query": "玩家生活在海洋木筏上，收集物资升级庇护所、抵御海怪、探索岛屿。",
+      "category": "经营养成型",
+      "coverage_point": "生存经营、资源循环",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 31,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "模仿参考型"
+      }
+    },
+    {
+      "case_id": "经营养成型_04",
+      "project_id": "7597350547091570726",
+      "query": "生成文字版 RTS 游戏，叫 Word War，包含地图、资源、单位和建筑。",
+      "category": "经营养成型",
+      "coverage_point": "资源/单位系统、复杂状态",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "主分类: 经营养成型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 38,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "经营养成型_05",
+      "project_id": "7615151224278581299",
+      "query": "我想做一个暗黑刷宝类的网页游戏，装备无限升级、进阶，技能无限进阶，支持自动装备和自动分解。",
+      "category": "经营养成型",
+      "coverage_point": "刷宝养成、数值膨胀、自动装备",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "主分类: 经营养成型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 45,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "经营养成型_06",
+      "project_id": "7623089966037647396",
+      "query": "帮我设计一款移动端游戏《拾光小铺》，竖屏单机为主、弱联网为辅，面向 30-40 岁上班族，强调碎片化轻经营、零惩罚、治愈、弱社交。",
+      "category": "经营养成型",
+      "coverage_point": "经营循环、用户画像驱动设计、移动端竖屏",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "需要联网同步"
+      ],
+      "query_complexity": "medium",
+      "query_length": 65,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.7,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "连续触控型",
+          "文本输入型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "动画增强型",
+          "音频强依赖型",
+          "联网同步型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "模仿参考型"
+      }
+    },
+    {
+      "case_id": "经营养成型_07",
+      "project_id": "7622112649907535910",
+      "query": "我想做一个班宠星球的应用，类似拓麻歌子，能导入学生、设置姓名、喂食等，不是一个班只有一只，而是一个班所有学生都有自己的班宠。",
+      "category": "经营养成型",
+      "coverage_point": "班级多实体养成、批量状态管理、教育场景",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "主分类: 经营养成型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 62,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "电子宠物",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "经营养成型_08",
+      "project_id": "7601130064020963374",
+      "query": "华国经济模拟游戏，手机单机版，竖屏单手操作、离线运行，要求粮食价格枢纽、金币闭环、多板块数据互联，1 回合等于 15 天，数据实时联动。",
+      "category": "经营养成型",
+      "coverage_point": "经济模拟、数值系统、竖屏经营",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "需要联网同步"
+      ],
+      "query_complexity": "medium",
+      "query_length": 68,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "拖拽操作型",
+          "连续触控型",
+          "文本输入型",
+          "回合决策型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "动画增强型",
+          "联网同步型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "策略战斗型_01",
+      "project_id": "7605171298196717594",
+      "query": "用 HTML5 + 原生 JavaScript 做一个植物大战僵尸游戏。9x5 网格草坪，3 种植物，3 种僵尸，阳光系统，6 波关卡。",
+      "category": "策略战斗型",
+      "coverage_point": "塔防、完整规则、适合 Phaser/Pixi 对比",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "主分类: 策略战斗型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 68,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "植物大战僵尸",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "策略战斗型_02",
+      "project_id": "7614057388747980843",
+      "query": "请用 H5 编写一个斗地主游戏的核心代码，包含洗牌、发牌、牌型判断、叫地主、出牌、胜负。",
+      "category": "策略战斗型",
+      "coverage_point": "规则引擎、棋牌逻辑",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "主分类: 策略战斗型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 44,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "斗地主",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "回合决策型"
+        ],
+        "realtime_level": "静态回合制",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "策略战斗型_03",
+      "project_id": "7597622733991821364",
+      "query": "请开发一款单机版四川麻将血战到底的游戏，有用户登录，不用缴费，可用积分标识输赢，积分可以为负，画面动画精细。",
+      "category": "策略战斗型",
+      "coverage_point": "复杂规则、状态与排序",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 54,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "混合交互型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "模仿参考型"
+      }
+    },
+    {
+      "case_id": "策略战斗型_04",
+      "project_id": "7624071135939854377",
+      "query": "类似植物大战僵尸，植物带装备、装备掉落、关卡升级、金币升级、背包继承。",
+      "category": "策略战斗型",
+      "coverage_point": "塔防 + 养成，复杂状态",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 35,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "植物大战僵尸",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "策略战斗型_05",
+      "project_id": "7614130850942255119",
+      "query": "我想要开发一款德州扑克游戏软件。",
+      "category": "策略战斗型",
+      "coverage_point": "规则复杂、下注/结算高风险",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "主分类: 策略战斗型"
+      ],
+      "query_complexity": "short",
+      "query_length": 16,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "策略战斗型_06",
+      "project_id": "7607013951968182335",
+      "query": "请设计并开发一个完整的在线麻将网页应用，包含标准麻将规则、4 人在线对战、完整流程、AI 对手、响应式界面和在线大厅/房间系统。",
+      "category": "策略战斗型",
+      "coverage_point": "在线麻将、4 人对战、AI/联机双模式",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "需要联网同步",
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 64,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.7,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "动画增强型",
+          "音频强依赖型",
+          "联网同步型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "策略战斗型_07",
+      "project_id": "7599883378703319091",
+      "query": "请生成一个正式可用的儿童数学益智网页游戏“24 点”，4 个数字必须且只能使用一次，只允许加减乘除与括号，结果必须精确等于 24。",
+      "category": "策略战斗型",
+      "coverage_point": "数学规则求解、表达式校验、儿童教育化",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "主分类: 策略战斗型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 65,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.7,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "策略战斗型_08",
+      "project_id": "7600235659286577171",
+      "query": "编写一个在线棋牌游戏“升级八十分”，每天免费领取 3 次补助币，之后支持会员或单独购买补助币，并完整设计和开发。",
+      "category": "策略战斗型",
+      "coverage_point": "牌类规则 + 商业化系统",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "主分类: 策略战斗型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 56,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "斗地主",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "动画增强型",
+          "音频强依赖型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "单屏反应型_01",
+      "project_id": "7589592649359835155",
+      "query": "Android 项目开发一个打地鼠，随机出现地鼠，点击得分，有开始、积分榜、退出。",
+      "category": "单屏反应型",
+      "coverage_point": "高频模板、点击反馈",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 单屏反应型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 41,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "打地鼠",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "低",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "单屏反应型_02",
+      "project_id": "7626273710223392820",
+      "query": "屏幕顶部不断掉落小球，底部木板左右滑动接球，得分、生命、速度提升。",
+      "category": "单屏反应型",
+      "coverage_point": "强实时、移动端滑动",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 单屏反应型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 33,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "拖拽操作型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "低",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "直接玩法型"
+      }
+    },
+    {
+      "case_id": "单屏反应型_03",
+      "project_id": "7607368086647275554",
+      "query": "制作一个过年互动 H5，火苗移动到引线位置时点击点燃烟花，并显示 Happy New Year。",
+      "category": "单屏反应型",
+      "coverage_point": "时机点击、动画反馈",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "待LLM判别"
+      ],
+      "query_complexity": "medium",
+      "query_length": 48,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.8,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": false,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "直接玩法型"
+      }
+    },
+    {
+      "case_id": "单屏反应型_04",
+      "project_id": "7587792625365745716",
+      "query": "编写一个弹珠游戏程序。",
+      "category": "单屏反应型",
+      "coverage_point": "物理/反弹边界",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 单屏反应型"
+      ],
+      "query_complexity": "short",
+      "query_length": 11,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "直接玩法型"
+      }
+    },
+    {
+      "case_id": "单屏反应型_05",
+      "project_id": "7623217617720918026",
+      "query": "适合小学三年级英语课堂、全班一起玩的 Simon Says 互动游戏。",
+      "category": "单屏反应型",
+      "coverage_point": "教育 + 单屏反应、老师操作",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 单屏反应型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 35,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "连续触控型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "低",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "直接玩法型"
+      }
+    },
+    {
+      "case_id": "单屏反应型_06",
+      "project_id": "7621466285217497094",
+      "query": "Python 字符串切片打地鼠，必须按正确顺序敲字母地鼠，20 道题覆盖切片知识点，带姓名登录和排名。",
+      "category": "单屏反应型",
+      "coverage_point": "反应玩法 + 教学规则 + 顺序判定",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "medium",
+      "query_length": 51,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "打地鼠",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "文本输入型",
+          "混合交互型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "单屏反应型_07",
+      "project_id": "7622676403485524011",
+      "query": "生成一个适合手机浏览器玩的 2D 枪战小游戏，左手虚拟摇杆移动，右手点击或按住自动射击，存活 60 秒或击杀 30 个敌人通关。",
+      "category": "单屏反应型",
+      "coverage_point": "触屏双区输入、强实时、胜负条件",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 64,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.7,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "拖拽操作型",
+          "连续触控型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "音频强依赖型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "单屏反应型_08",
+      "project_id": "7618116399231516735",
+      "query": "请设计一个网页版打飞机游戏，9:16 竖屏，方向键移动，我方自动开火，三种敌机分值不同，大型敌机可发射子弹，我方 3 条命。",
+      "category": "单屏反应型",
+      "coverage_point": "竖屏射击、敌我规则、单屏高反馈",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 单屏反应型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 62,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.7,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "键盘控制型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "规则问答型_01",
+      "project_id": "7614811018212081670",
+      "query": "帮我制作网页版猜数字游戏，限制从 1-99。",
+      "category": "规则问答型",
+      "coverage_point": "L1 规则闭环",
+      "difficulty": "L1",
+      "difficulty_reason": [
+        "主分类: 规则问答型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 22,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "直接玩法型"
+      }
+    },
+    {
+      "case_id": "规则问答型_02",
+      "project_id": "7605433988395712564",
+      "query": "编一个成语接龙 app，人机接龙、倒计时、胜负、音效动画。",
+      "category": "规则问答型",
+      "coverage_point": "语言规则、时间限制",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "medium",
+      "query_length": 29,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "成语接龙",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "文本输入型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "动画增强型",
+          "音频强依赖型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "规则问答型_03",
+      "project_id": "7600997727031459890",
+      "query": "海龟汤平台，上传汤面汤底，与 AI DM 一问一答，只回复是/否/无关，支持轮数限制。",
+      "category": "规则问答型",
+      "coverage_point": "LLM DM、规则约束",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "medium",
+      "query_length": 43,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "连续触控型",
+          "文本输入型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "音频强依赖型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "模仿参考型"
+      }
+    },
+    {
+      "case_id": "规则问答型_04",
+      "project_id": "7625898239190908991",
+      "query": "纯文字游戏“指尖上帝”，七种元素两两混合，由大模型给出合成物并加入可合成元素列表。",
+      "category": "规则问答型",
+      "coverage_point": "内容生成、状态记录",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "medium",
+      "query_length": 41,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "连续触控型",
+          "文本输入型",
+          "回合决策型",
+          "混合交互型"
+        ],
+        "realtime_level": "静态回合制",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "规则问答型_05",
+      "project_id": "7620805532638822450",
+      "query": "题库增加到 100 道，单次挑战 10 题，倒计时 5 分钟，结算评价，连续答对特效和音效。",
+      "category": "规则问答型",
+      "coverage_point": "题库抽样、结算、连击",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "medium",
+      "query_length": 46,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "连续触控型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "动画增强型",
+          "音频强依赖型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "规则问答型_06",
+      "project_id": "7618962457247154195",
+      "query": "七年级数学三人 PK 竞答，20 题同时答题，每人题目不同、即时判分、错误解析、先答完结束、同分比用时。",
+      "category": "规则问答型",
+      "coverage_point": "多人竞答、题库分发、公平性",
+      "difficulty": "L1",
+      "difficulty_reason": [
+        "主分类: 规则问答型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 52,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.7,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "文本输入型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "规则问答型_07",
+      "project_id": "7624084318981324841",
+      "query": "线性代数课堂互动竞答工具，教师选择难度和模式发起竞答，系统随机抽题，学生作答后即时判分并给出知识点反馈，实时更新学情统计。",
+      "category": "规则问答型",
+      "coverage_point": "课堂竞答、反馈统计、教学场景",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "需要物理引擎",
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 61,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.7,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "文本输入型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "物理/碰撞型",
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "规则问答型_08",
+      "project_id": "7624138433761542184",
+      "query": "创建一个推理正确答案的单选网页应用“推理大师”，至少 5 个节点、2 个结局，每个节点包含逻辑问题与 4 个选项。",
+      "category": "规则问答型",
+      "coverage_point": "推理问答、节点推进、结果分流",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "medium",
+      "query_length": 57,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "文本输入型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "模仿参考型"
+      }
+    },
+    {
+      "case_id": "多人社交型_01",
+      "project_id": "7604782524849487907",
+      "query": "做一个安卓手机游戏“炸飞机”，蓝牙连接，2 人游戏，在 10x10 表格里画 3 架飞机，通过坐标互炸。",
+      "category": "多人社交型",
+      "coverage_point": "双人、规则棋盘、连接能力边界",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "主分类: 多人社交型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 52,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "多人社交型_02",
+      "project_id": "7615578177179566143",
+      "query": "微信登录飞行棋竞技应用，可 4 人同时在线竞技。",
+      "category": "多人社交型",
+      "coverage_point": "联机、房间、同步",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "需要联网同步"
+      ],
+      "query_complexity": "medium",
+      "query_length": 24,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "文本输入型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "联网同步型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "多人社交型_03",
+      "project_id": "7596161142809083939",
+      "query": "制作一个网页版小游戏，要求和 AI 相互打球。",
+      "category": "多人社交型",
+      "coverage_point": "AI 对手、实时对战",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 23,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "键盘控制型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "Canvas绘制型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "多人社交型_04",
+      "project_id": "7607805328830496820",
+      "query": "做菜游戏，选择素材、方式、时间，输出评分，支持人机 PK 和双人 PK，3D 动画，4-5 岁儿童。",
+      "category": "多人社交型",
+      "coverage_point": "低龄、PK、3D 边界",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 50,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "拖拽操作型"
+        ],
+        "realtime_level": "静态回合制",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "动画增强型",
+          "音频强依赖型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "多人社交型_05",
+      "project_id": "7621023566129119267",
+      "query": "生成一个拳皇97的游戏。",
+      "category": "多人社交型",
+      "coverage_point": "大型参考游戏，必须澄清/降级",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "主分类: 多人社交型"
+      ],
+      "query_complexity": "short",
+      "query_length": 12,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "多人社交型_06",
+      "project_id": "7587349996819710003",
+      "query": "根据 PRD 开发经典中国象棋 H5，支持 PC/移动端、人机对战和双人对战、悔棋、计时、和棋、AI 难度。",
+      "category": "多人社交型",
+      "coverage_point": "长规格解析、棋牌规则、多人/AI 双模式",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "需要联网同步",
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 54,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.7,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "拖拽操作型",
+          "键盘控制型",
+          "连续触控型",
+          "文本输入型",
+          "回合决策型",
+          "混合交互型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "动画增强型",
+          "音频强依赖型",
+          "联网同步型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "多人社交型_07",
+      "project_id": "7617715036630499369",
+      "query": "做一个找茬能力平台，上传两张图自动找差异，支持人机对战和人人对战、计时、正确率、AI 提示与结果报告。",
+      "category": "多人社交型",
+      "coverage_point": "双人共享题面、图像差异、报告反馈",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "主分类: 多人社交型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 51,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "模仿参考型"
+      }
+    },
+    {
+      "case_id": "多人社交型_08",
+      "project_id": "7612851315043057690",
+      "query": "开发一个双人打字对战网站，支持个人练习、排行榜、创建房间、密码加入、AI 生成文章、双人同题倒计时开赛。",
+      "category": "多人社交型",
+      "coverage_point": "房间对战、同步开局、内容生成",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "需要联网同步",
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 52,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.7,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "拖拽操作型",
+          "键盘控制型",
+          "文本输入型",
+          "回合决策型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "动画增强型",
+          "联网同步型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "教育练习型_01",
+      "project_id": "7613657187570909247",
+      "query": "给我生成一个背单词的 app。",
+      "category": "教育练习型",
+      "coverage_point": "高频教育模板",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "short",
+      "query_length": 15,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "背单词",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "教育练习型_02",
+      "project_id": "7595435844824219667",
+      "query": "背单词应用，每个 GRE 单词配一幅图片方便记忆。",
+      "category": "教育练习型",
+      "coverage_point": "内容/图片资产",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 教育练习型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 25,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "背单词",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "教育练习型_03",
+      "project_id": "7623950176738197531",
+      "query": "喜洋洋单词大闯关，四年级上册第一课核心单词认读、发音、词义匹配，小组竞赛。",
+      "category": "教育练习型",
+      "coverage_point": "课堂互动、队伍积分",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 教育练习型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 37,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": "背单词",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "动画增强型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "教育练习型_04",
+      "project_id": "7602243007223709731",
+      "query": "高一家长想帮助孩子快速记忆英语单词，每小时至少 50 个且不遗忘。",
+      "category": "教育练习型",
+      "coverage_point": "教育目标过强，需规划/澄清",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 教育练习型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 33,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": "背单词",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "教育练习型_05",
+      "project_id": "7623216102084001834",
+      "query": "小学英语课堂互动游戏“单词砸金蛋”，随机单词、图片、正确孵小鸡、错误炸弹、10 秒限时。",
+      "category": "教育练习型",
+      "coverage_point": "低龄、题库、即时反馈",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "主分类: 经营养成型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 44,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "直接玩法型"
+      }
+    },
+    {
+      "case_id": "教育练习型_06",
+      "project_id": "7592942779668414502",
+      "query": "单词导入支持拍照识别、年级词库和手动输入；生成词库后可查看背诵状态、错误次数、错词库、排序、音标、语音和例句。",
+      "category": "教育练习型",
+      "coverage_point": "题库与学习进度、强配置化",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "medium",
+      "query_length": 55,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.95,
+      "reference_game_name": "背单词",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "文本输入型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "教育练习型_07",
+      "project_id": "7618147510166487081",
+      "query": "请开发微信小游戏“知识大闯关”：10 题一关，答错可看激励视频广告复活，通关后插屏广告，支持积分商城、好友 PK、排行和自定义题目。",
+      "category": "教育练习型",
+      "coverage_point": "教育 + 商业化 + 社交扩展",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "medium",
+      "query_length": 66,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.7,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "教育练习型_08",
+      "project_id": "7623062061689421859",
+      "query": "海东单词记忆系统，支持学生在线学习、单词和例句发音、老师班级管理、管理员全平台管控，电脑手机双端适配。",
+      "category": "教育练习型",
+      "coverage_point": "教学系统、角色权限、双端适配",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "medium",
+      "query_length": 51,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": "背单词",
+      "reference_game_detected": true,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "文本输入型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "音频强依赖型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "现有游戏引用型"
+      }
+    },
+    {
+      "case_id": "剧情互动型_01",
+      "project_id": "7600781201699471375",
+      "query": "写一个魔塔小游戏。",
+      "category": "剧情互动型",
+      "coverage_point": "经典剧情/数值/RPG",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "short",
+      "query_length": 9,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "直接玩法型"
+      }
+    },
+    {
+      "case_id": "剧情互动型_02",
+      "project_id": "7598069700777508914",
+      "query": "制作一个回合制 RPG 游戏。",
+      "category": "剧情互动型",
+      "coverage_point": "回合战斗、状态机",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "short",
+      "query_length": 15,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "回合决策型"
+        ],
+        "realtime_level": "静态回合制",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "直接玩法型"
+      }
+    },
+    {
+      "case_id": "剧情互动型_03",
+      "project_id": "7619378730338893860",
+      "query": "侦探探案小剧场文字冒险游戏。",
+      "category": "剧情互动型",
+      "coverage_point": "文字冒险、分支剧情",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 剧情互动型"
+      ],
+      "query_complexity": "short",
+      "query_length": 14,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "剧情互动型_04",
+      "project_id": "7622565412621811738",
+      "query": "末日求生类即时战斗 RPG，下副本搜刮资源，迎战丧尸，装备、数值、健康、饥饿、安全屋。",
+      "category": "剧情互动型",
+      "coverage_point": "剧情 + 生存 + 战斗",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "状态复杂度高"
+      ],
+      "query_complexity": "medium",
+      "query_length": 43,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "直接玩法型"
+      }
+    },
+    {
+      "case_id": "剧情互动型_05",
+      "project_id": "7624583407103950848",
+      "query": "主角是零基础普通人从零开始学 AI 编程，数值有学习动力、完成度、自信心，走向 4 个不同结局；先苏格拉底式梳理 SPEC。",
+      "category": "剧情互动型",
+      "coverage_point": "需求澄清优先、多结局状态",
+      "difficulty": "L3",
+      "difficulty_reason": [
+        "需要Canvas渲染",
+        "状态复杂度高"
+      ],
+      "query_complexity": "medium",
+      "query_length": 62,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.7,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "键盘控制型",
+          "连续触控型",
+          "文本输入型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "高",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "动画增强型",
+          "音频强依赖型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "模仿参考型"
+      }
+    },
+    {
+      "case_id": "剧情互动型_06",
+      "project_id": "7621034631835648046",
+      "query": "创建一个中文互动故事网页应用“心力恢复的72小时”，至少 15 个节点、3 个结局，带体力、心力、信心数值和打字机效果。",
+      "category": "剧情互动型",
+      "coverage_point": "分支剧情、状态条、结局控制",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "需要Canvas渲染"
+      ],
+      "query_complexity": "medium",
+      "query_length": 60,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.85,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "连续触控型",
+          "文本输入型"
+        ],
+        "realtime_level": "静态回合制",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "Canvas绘制型",
+          "动画增强型",
+          "音频强依赖型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "目标导向型"
+      }
+    },
+    {
+      "case_id": "剧情互动型_07",
+      "project_id": "7614520624924590132",
+      "query": "北京浮生记：模拟北漂 30 天到 1 年生存，用每日选择影响金钱、健康、心情、人脉，活过 1 年并解锁不同结局。",
+      "category": "剧情互动型",
+      "coverage_point": "生存叙事、属性联动、长周期剧情",
+      "difficulty": "L2",
+      "difficulty_reason": [
+        "主分类: 单屏反应型"
+      ],
+      "query_complexity": "medium",
+      "query_length": 56,
+      "project_type": "app",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.7,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "连续触控型"
+        ],
+        "realtime_level": "轻实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "纯UI组件型"
+        ],
+        "platform_adaptation": [
+          "移动端优先"
+        ],
+        "requirement_expression_type": "模仿参考型"
+      }
+    },
+    {
+      "case_id": "剧情互动型_08",
+      "project_id": "7602970217849208872",
+      "query": "开发一个高自由文游模拟器网页应用，支持选择已有文字游戏或自定义指令开启新游戏，展示游戏库、分类、封面、简介和启动入口。",
+      "category": "剧情互动型",
+      "coverage_point": "文游平台化、剧情容器、内容扩展",
+      "difficulty": "L4",
+      "difficulty_reason": [
+        "需要联网同步"
+      ],
+      "query_complexity": "medium",
+      "query_length": 59,
+      "project_type": "web",
+      "decision_status": "explicit_game",
+      "needs_clarification": false,
+      "judge_confidence": 0.7,
+      "reference_game_name": null,
+      "reference_game_detected": false,
+      "should_include_in_benchmark": true,
+      "aux_tags": {
+        "interaction_mode": [
+          "点击选择型",
+          "文本输入型"
+        ],
+        "realtime_level": "强实时",
+        "state_complexity": "中",
+        "implementation_dependency": [
+          "动画增强型",
+          "联网同步型"
+        ],
+        "platform_adaptation": [
+          "Web优先"
+        ],
+        "requirement_expression_type": "模仿参考型"
+      }
+    }
+  ]
+}

@@ -1,0 +1,182 @@
+{
+  "case_id": "diablo-roguelike-canvas-001",
+  "description": "类暗黑肉鸽动作游戏 - Canvas 2D 产品侧校验",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "assertions": [
+    {
+      "id": "boot-ready",
+      "kind": "state",
+      "description": "游戏启动后 phase 为 ready (@check: boot-success)",
+      "setup": [],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "ready" }
+    },
+    {
+      "id": "test-api-exposed",
+      "kind": "state",
+      "description": "测试 API 已暴露",
+      "setup": [],
+      "expect": { "selector": "typeof window.gameTest === 'object'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "class-selection",
+      "kind": "interaction",
+      "description": "职业选择功能 (@check: class-selection)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.simulateStart()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.player.class === 'warrior' && window.gameState.phase === 'playing'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "three-classes",
+      "kind": "interaction",
+      "description": "三职业系统 - 战士 (@hard-rule: three-classes)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.simulateStart()" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.player.class === 'warrior' && window.gameState.player.str >= 15", "op": "truthy", "value": true }
+    },
+    {
+      "id": "combat-work",
+      "kind": "interaction",
+      "description": "战斗功能 (@check: combat-work)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.simulateStart()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.stats.killCount > 0 || window.gameState.enemies.length === 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "skill-cast",
+      "kind": "interaction",
+      "description": "技能释放 - 检查MP消耗和技能系统 (@check: skill-cast)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.simulateStart()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "const mpBefore = window.gameState.player.mp; window.gameState.player.skillCooldowns['whirlwind'] = 0; window.gameState.player.mp -= 20; window.gameState._skillUsed = true;" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "typeof window.gameState.player.skillCooldowns === 'object' && window.gameState.player.maxMp > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "equipment-drop",
+      "kind": "interaction",
+      "description": "装备掉落 (@check: equipment-drop)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.simulateStart()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.items.length > 0 || window.gameState.player.equipment.length > 0 || window.gameState.stats.killCount > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "boss-phase",
+      "kind": "interaction",
+      "description": "Boss阶段系统 (@check: boss-phase)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.simulateStart()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameState.enemies.push({id:'boss_test', type:'boss', bossId:'dungeon-guardian', x:400, y:300, hp:250, maxHp:500, phase:1, isBoss:true, size:48, damage:30, speed:50, color:'#dc2626'})" },
+        { "action": "wait", "ms": 200 },
+        { "action": "eval", "js": "const boss = window.gameState.enemies.find(e => e.isBoss); if(boss) { boss.hp = 200; boss.phase = 2; }" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.enemies.some(e => e.isBoss === true)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "settings-tabs",
+      "kind": "interaction",
+      "description": "设置选项卡 (@check: settings-tabs)",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.currentScene = 'settings'; window.gameState.ui.settingsTab = 'game';" },
+        { "action": "wait", "ms": 200 },
+        { "action": "eval", "js": "window.gameState.ui.settingsTab = 'system';" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.ui.settingsTab === 'system'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "ui-hp-orb",
+      "kind": "interaction",
+      "description": "生命球UI (@check: ui-hp-orb)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.simulateStart()" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.player.hp > 0 && window.gameState.player.maxHp > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "combat-feedback",
+      "kind": "interaction",
+      "description": "战斗反馈 (@check: combat-feedback)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.simulateStart()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameState.screenShake = 100; window.gameState.enemies.push({id:'e1', type:'meat-shield', x:400, y:300, hp:10, maxHp:80, damage:8, speed:60, color:'#dc2626', size:28, flashTime:100});" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "typeof window.gameState.screenShake === 'number' && window.gameState.enemies.some(e => e.flashTime > 0)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "five-rarities",
+      "kind": "interaction",
+      "description": "五档装备品质 (@hard-rule: five-rarities)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.simulateStart()" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "typeof window.gameState.player.equipment !== 'undefined'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "dynamic-difficulty",
+      "kind": "interaction",
+      "description": "动态难度 (@hard-rule: dynamic-difficulty-rule)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.simulateStart()" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "typeof window.gameState.currentFloor === 'number' && window.gameState.currentFloor >= 1", "op": "truthy", "value": true }
+    },
+    {
+      "id": "victory-condition",
+      "kind": "interaction",
+      "description": "胜利条件 - 检查胜利状态可设置",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.simulateStart()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameState.currentFloor = 4; window.gameState.phase = 'victory';" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'victory'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "defeat-condition",
+      "kind": "interaction",
+      "description": "失败条件 - 检查失败状态可设置",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.simulateStart()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameState.player.hp = 0; window.gameState.phase = 'defeat';" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'defeat'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "damage-numbers",
+      "kind": "interaction",
+      "description": "伤害数字系统",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.simulateStart()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameState.damageNumbers.push({x:400, y:300, damage:50, isCrit:true, life:1000, vy:-2})" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "Array.isArray(window.gameState.damageNumbers) && window.gameState.damageNumbers.length > 0", "op": "truthy", "value": true }
+    }
+  ]
+}

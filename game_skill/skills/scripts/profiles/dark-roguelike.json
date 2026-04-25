@@ -1,0 +1,66 @@
+{
+  "case_id": "dark-roguelike",
+  "description": "类暗黑 Roguelike MVP（Phaser 3） - Scene 切换 + 战斗断言",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 8000,
+  "assertions": [
+    {
+      "id": "phaser-ready",
+      "kind": "state",
+      "description": "Phaser Game 已创建（window.game 存在）",
+      "setup": [{ "action": "wait", "ms": 500 }],
+      "expect": { "selector": "window.game && window.game.scene", "op": "truthy", "value": true }
+    },
+    {
+      "id": "boot-scene",
+      "kind": "state",
+      "description": "初始 Scene 是 MainScene 或 MenuScene",
+      "setup": [{ "action": "wait", "ms": 300 }],
+      "expect": { "selector": "(['MainScene','MenuScene','StartScene'].includes(window.gameState.scene))", "op": "truthy", "value": true }
+    },
+    {
+      "id": "player-entity",
+      "kind": "state",
+      "description": "state.player 存在且有 hp 和 class 字段",
+      "setup": [
+        { "action": "eval", "js": "if (window.gameState && window.gameState.phase === 'ready') { window.gameState.phase = 'playing'; }" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.gameState.player && typeof window.gameState.player.hp === 'number' && typeof window.gameState.player.class === 'string'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "class-warrior-or-default",
+      "kind": "state",
+      "description": "MVP 降级到 1 职业时，player.class 是 3 职业之一（战士/法师/射手）",
+      "setup": [{ "action": "wait", "ms": 50 }],
+      "expect": { "selector": "['warrior','mage','archer','战士','魔法师','射手'].includes(window.gameState.player.class)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "enemy-exists",
+      "kind": "state",
+      "description": "有敌人实体（state.enemies 数组 ≥ 1 或 state.enemy 存在）",
+      "setup": [
+        { "action": "eval", "js": "if (window.gameState.phase !== 'playing') { window.gameState.phase = 'playing'; }" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "(Array.isArray(window.gameState.enemies) && window.gameState.enemies.length >= 1) || !!window.gameState.enemy", "op": "truthy", "value": true }
+    },
+    {
+      "id": "hp-changes-on-damage",
+      "kind": "state",
+      "description": "攻击敌人后 enemy.hp 减少",
+      "setup": [
+        { "action": "eval", "js": "const es = window.gameState.enemies || [window.gameState.enemy]; if (es && es[0]) { window.__beforeHp = es[0].hp; if (typeof window.damageEnemy === 'function') window.damageEnemy(es[0], 10); else es[0].hp = Math.max(0, es[0].hp - 10); }" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "((window.gameState.enemies && window.gameState.enemies[0] && window.gameState.enemies[0].hp) || (window.gameState.enemy && window.gameState.enemy.hp)) < window.__beforeHp", "op": "truthy", "value": true }
+    },
+    {
+      "id": "mvp-boundary-single-floor",
+      "kind": "hard-rule",
+      "description": "MVP 降级：只有 1 层地图（state.floor == 1 或 state.level <= 1）",
+      "setup": [{ "action": "wait", "ms": 50 }],
+      "expect": { "selector": "(window.gameState.floor == null || window.gameState.floor <= 1) && (window.gameState.level == null || window.gameState.level <= 1)", "op": "truthy", "value": true }
+    }
+  ]
+}

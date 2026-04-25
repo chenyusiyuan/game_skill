@@ -1,0 +1,67 @@
+{
+  "case_id": "pixel-flow",
+  "description": "Pixel Flow 像素传送带 - Canvas 2D 核心规则断言",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "assertions": [
+    {
+      "id": "boot-ready",
+      "kind": "state",
+      "description": "boot 后 state.phase 为 ready",
+      "setup": [],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "ready" }
+    },
+    {
+      "id": "has-board",
+      "kind": "state",
+      "description": "存在中央棋盘（state.board 是二维数组且维度 ≥ 6×6）",
+      "setup": [{ "action": "wait", "ms": 200 }],
+      "expect": { "selector": "Array.isArray(window.gameState.board) && window.gameState.board.length >= 6 && Array.isArray(window.gameState.board[0]) && window.gameState.board[0].length >= 6", "op": "truthy", "value": true }
+    },
+    {
+      "id": "has-waitslot",
+      "kind": "state",
+      "description": "底部等待槽存在（state.waitSlots 是数组，或同名字段）",
+      "setup": [{ "action": "wait", "ms": 50 }],
+      "expect": { "selector": "Array.isArray(window.gameState.waitSlots) || Array.isArray(window.gameState.waitingPigs) || Array.isArray(window.gameState.queue)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "has-conveyor",
+      "kind": "state",
+      "description": "四周传送带上的小猪位置可枚举（state.pigs 或 state.conveyor 数组）",
+      "setup": [{ "action": "wait", "ms": 50 }],
+      "expect": { "selector": "Array.isArray(window.gameState.pigs) || Array.isArray(window.gameState.conveyor)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "hr-no-global-autoaim",
+      "kind": "hard-rule",
+      "description": "强约束：不得全屏自动索敌 — 模拟场景：顶部放一个红色小猪，下方 3 行有紫色块（异色，阻挡），最底行有红色块；攻击一步后顶行紫色应仍存在（没被穿透）",
+      "setup": [
+        {
+          "action": "eval",
+          "js": "if (window.gameState.board && window.gameState.pigs) { const b = window.gameState.board; const rows = b.length, cols = b[0].length; const col = Math.floor(cols/2); for (let r = 0; r < rows; r++) b[r][col] = null; b[0][col] = { color: 'purple', hp: 1 }; b[Math.min(3, rows-1)][col] = { color: 'red', hp: 1 }; window.__before_purple = !!b[0][col]; window.gameState.pigs.length = 0; window.gameState.pigs.push({ color: 'red', ammo: 5, side: 'top', idx: col, dir: 'down' }); }"
+        },
+        { "action": "wait", "ms": 600 }
+      ],
+      "expect": {
+        "selector": "window.gameState.board && window.gameState.board[0] && window.gameState.board[0][Math.floor(window.gameState.board[0].length/2)] !== null",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "hr-one-hit-consumes-one-ammo",
+      "kind": "hard-rule",
+      "description": "每次有效攻击只消耗 1 ammo（不得一次清整行）",
+      "setup": [
+        { "action": "eval", "js": "if (window.gameState.board && window.gameState.pigs) { const b = window.gameState.board; const cols = b[0].length; const col = Math.floor(cols/2); b[0][col] = { color: 'red', hp: 1 }; b[1][col] = { color: 'red', hp: 1 }; b[2][col] = { color: 'red', hp: 1 }; window.gameState.pigs.length = 0; window.gameState.pigs.push({ color: 'red', ammo: 3, side: 'top', idx: col, dir: 'down' }); window.__initAmmo = 3; }" },
+        { "action": "wait", "ms": 400 }
+      ],
+      "expect": {
+        "selector": "window.gameState.pigs && window.gameState.pigs[0] && (window.__initAmmo - window.gameState.pigs[0].ammo) <= 1",
+        "op": "truthy",
+        "value": true
+      }
+    }
+  ]
+}

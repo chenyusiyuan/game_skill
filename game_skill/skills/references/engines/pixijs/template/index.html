@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<!-- ENGINE: pixijs | VERSION: pixi.js@8 | RUN: local-http -->
+<meta charset="UTF-8">
+<title>PixiJS v8 Template Game</title>
+<style>
+  body { margin: 0; background: #0f172a; color: #e2e8f0;
+         font-family: system-ui, sans-serif;
+         display: flex; justify-content: center; align-items: center;
+         min-height: 100vh; }
+  #root canvas { border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+</style>
+
+<!-- importmap must be in head before the module script that uses it -->
+<script type="importmap">
+{
+  "imports": {
+    "pixi.js": "https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.mjs"
+  }
+}
+</script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

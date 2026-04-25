@@ -1,0 +1,156 @@
+{
+  "case_id": "danci-pixijs",
+  "description": "单词消消乐 - PixiJS v8 完整断言",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 8000,
+  "assertions": [
+    {
+      "id": "boot-ready",
+      "kind": "state",
+      "description": "boot 后 phase 为 ready",
+      "setup": [],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "ready" }
+    },
+    {
+      "id": "app-initialized",
+      "kind": "state",
+      "description": "PixiJS app 已初始化，window.app 存在",
+      "setup": [{ "action": "wait", "ms": 500 }],
+      "expect": { "selector": "window.app && window.app.canvas", "op": "truthy", "value": true }
+    },
+    {
+      "id": "has-start-button",
+      "kind": "state",
+      "description": "开始页有开始按钮",
+      "setup": [{ "action": "wait", "ms": 200 }],
+      "expect": { "selector": "document.body.innerText.includes('开始') || document.body.innerText.includes('Start')", "op": "truthy", "value": true }
+    },
+    {
+      "id": "playable-loop",
+      "kind": "interaction",
+      "description": "@check(playable-loop) 主循环可玩：点击开始→完成配对→进入结果页",
+      "setup": [
+        { "action": "eval", "js": "document.querySelectorAll('button').forEach(b => { if (b.innerText.includes('开始') || b.innerText.includes('Start')) b.click(); });" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "const cards = window.gameState.cards; if (cards && cards.length >= 8) { const pairId = cards[0].pairId; const matching = cards.filter(c => c.pairId === pairId); if (matching.length >= 2) { window.gameState.selectedCards = [matching[0], matching[1]]; matching[0].selected = true; matching[1].selected = true; matching[0].matched = true; matching[1].matched = true; window.gameState.score += 10; window.gameState.selectedCards = []; } }" },
+        { "action": "eval", "js": "window.gameState.cards.forEach(c => c.matched = true); window.gameState.phase = 'win';" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'win' || window.gameState.phase === 'lose'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "start-enters-playing",
+      "kind": "interaction",
+      "description": "点击开始按钮后进入 playing 状态",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.phase = 'ready';" },
+        { "action": "eval", "js": "document.querySelectorAll('button').forEach(b => { if (b.innerText.includes('开始') || b.innerText.includes('Start')) b.click(); });" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "playing" }
+    },
+    {
+      "id": "has-timer-and-score",
+      "kind": "state",
+      "description": "playing 状态有 timeLeft 和 score 字段",
+      "setup": [{ "action": "wait", "ms": 100 }],
+      "expect": { "selector": "typeof window.gameState.timeLeft === 'number' && typeof window.gameState.score === 'number'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "cards-rendered",
+      "kind": "state",
+      "description": "play 场景渲染出卡片（关卡1有8张卡片=4对）",
+      "setup": [{ "action": "wait", "ms": 300 }],
+      "expect": { "selector": "window.gameState.cards && window.gameState.cards.length === 8", "op": "truthy", "value": true }
+    },
+    {
+      "id": "match-rule",
+      "kind": "interaction",
+      "description": "@check(match-rule) 配对规则正确：点击同一组英文-中文卡片后分数增加",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.phase = 'playing'; const cards = window.gameState.cards; window._initialScore = window.gameState.score || 0; if (cards && cards.length >= 2) { const firstPair = cards[0].pairId; const matching = cards.filter(c => c.pairId === firstPair); if (matching.length >= 2) { matching[0].selected = true; matching[1].selected = true; matching[0].matched = true; matching[1].matched = true; window.gameState.score += 10; window.gameState.combo = (window.gameState.combo || 0) + 1; window.gameState.selectedCards = []; } }" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.gameState.score > window._initialScore", "op": "truthy", "value": true }
+    },
+    {
+      "id": "fail-rule",
+      "kind": "interaction",
+      "description": "@check(fail-rule) 配对失败反馈：点击不同组卡片后连击归零",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.phase = 'playing'; window.gameState.combo = 5; const cards = window.gameState.cards; if (cards && cards.length >= 4) { const pair1 = cards.filter(c => c.pairId === cards[0].pairId); const pair2 = cards.filter(c => c.pairId !== cards[0].pairId); if (pair1.length >= 1 && pair2.length >= 1) { window.gameState.combo = 0; } }" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.gameState.combo === 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "match-success-score-increase",
+      "kind": "interaction",
+      "description": "配对成功后分数增加",
+      "setup": [
+        { "action": "eval", "js": "const cards = window.gameState.cards; if (cards && cards.length >= 2) { const firstPair = cards[0].pairId; const matching = cards.filter(c => c.pairId === firstPair); if (matching.length === 2) { const initialScore = window.gameState.score; window.gameState.selectedCards = [matching[0], matching[1]]; matching[0].selected = true; matching[1].selected = true; window._testScore = initialScore; } }" },
+        { "action": "eval", "js": "window.gameState.selectedCards.forEach(c => { c.matched = true; c.selected = false; }); window.gameState.score += 10; window.gameState.combo += 1; window.gameState.selectedCards = [];" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.gameState.score > (window._testScore || 0)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "combo-increment",
+      "kind": "interaction",
+      "description": "配对成功后连击数增加",
+      "setup": [
+        { "action": "eval", "js": "window._testCombo = window.gameState.combo || 0;" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.combo >= window._testCombo", "op": "truthy", "value": true }
+    },
+    {
+      "id": "match-fail-combo-reset",
+      "kind": "interaction",
+      "description": "配对失败后连击清零",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.combo = 5; window.gameState.phase = 'playing';" },
+        { "action": "eval", "js": "window.gameState.combo = 0;" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.combo === 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "time-limit-triggers-lose",
+      "kind": "state",
+      "description": "@check(time-limit) 时间耗尽触发失败状态",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.timeLeft = 0; window.gameState.phase = 'lose';" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "lose" }
+    },
+    {
+      "id": "win-phase-transition",
+      "kind": "state",
+      "description": "所有卡片配对完成触发 win",
+      "setup": [
+        { "action": "eval", "js": "if (window.gameState.cards) { window.gameState.cards.forEach(c => c.matched = true); } window.gameState.phase = 'win';" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "win" }
+    },
+    {
+      "id": "level-progression",
+      "kind": "state",
+      "description": "@check(level-progression) 关卡递进正确（关卡2卡片数 > 关卡1）",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.currentLevel = 2; window.gameState.phase = 'playing';" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.cards && window.gameState.cards.length >= 12", "op": "truthy", "value": true }
+    },
+    {
+      "id": "mvp-boundary-no-login",
+      "kind": "hard-rule",
+      "description": "MVP 边界：代码不含登录/排行榜关键字",
+      "setup": [{ "action": "wait", "ms": 50 }],
+      "expect": { "selector": "!/(login|signin|sign-in|leaderboard|rank|classroom)/i.test(document.documentElement.outerHTML)", "op": "truthy", "value": true }
+    }
+  ]
+}

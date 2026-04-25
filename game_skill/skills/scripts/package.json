@@ -1,0 +1,5 @@
+{
+  "type": "module",
+  "private": true,
+  "description": "ESM marker for game_skill check scripts. Do not add dependencies here."
+}

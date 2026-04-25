@@ -1,0 +1,116 @@
+{
+  "case_id": "pixijs-001",
+  "description": "pixijs-001 - 从 PRD @check 自动生成的骨架，需人工补 setup/expect",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "prd_hash": "9d68ca7485bc5e99e3b47be2b8a2a6acc7574453",
+  "prd_path": "cases/pixijs-001/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "playable-loop",
+      "check_id": "playable-loop",
+      "kind": "state",
+      "description": "主循环可玩",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 点击开始 → 配对至少2对卡片 → 检查分数增加\"",
+      "_prd_expect": "\"window.gameState.score > 0, window.gameState.matchedPairs >= 2\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(playable-loop) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "match-feedback",
+      "check_id": "match-feedback",
+      "kind": "state",
+      "description": "配对反馈",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 触发配对成功和失败各一次\"",
+      "_prd_expect": "\"成功时卡片消失且有粒子效果；失败时卡片翻回且有屏幕震动\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(match-feedback) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "combo-system",
+      "check_id": "combo-system",
+      "kind": "state",
+      "description": "连击系统",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 连续配对成功3次\"",
+      "_prd_expect": "\"window.gameState.combo === 3, 分数增加包含连击加成\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(combo-system) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "level-progression",
+      "check_id": "level-progression",
+      "kind": "state",
+      "description": "关卡递进",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 完成第一关 → 点击下一关 → 进入第二关\"",
+      "_prd_expect": "\"关卡参数正确加载，词库更换，时限调整\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(level-progression) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "time-limit",
+      "check_id": "time-limit",
+      "kind": "state",
+      "description": "时间限制",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 进入游戏后等待超时\"",
+      "_prd_expect": "\"时间耗尽后进入失败结算页，window.gameState.phase === 'lose'\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(time-limit) 的 expect 改成真实判定"
+      }
+    }
+  ],
+  "hard_rule_assertions": []
+}

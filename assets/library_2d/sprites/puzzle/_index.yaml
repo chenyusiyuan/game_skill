@@ -1,0 +1,92 @@
+# Puzzle Pack - 素材语义索引
+# 来源: kenney_puzzle-pack-1
+# 分辨率: Double (2x)
+# 文件名: 语义文件名
+#
+# ── 风格与适用范围 ──
+# 视觉风格: cartoon-bright / minimal-modern（卡通明亮 / 简约现代）
+# 适用游戏类型: 三消/匹配、弹珠/弹球、益智解谜、休闲消除
+# 不适用: RPG、策略战斗、平台跳跃（请用其他包代替）
+#
+# ── 分组概要（用途与组合关系）──
+#
+# 彩色形状元素 element_* (~48 files):
+#   用途: 三消/匹配游戏的核心棋子
+#   颜色: 6种 — blue/green/grey/purple/red/yellow
+#   形状: 每种颜色 4 种形状(diamond/polygon/rectangle/square) × 2 版本(普通/glossy)
+#   组合: 同色消除或同形消除的玩法核心
+#   搭配: 配合 selector/pointer 做选中效果
+#   提示: glossy 版本带高光更立体，普通版本更扁平
+#
+# 球 ball* (2 files):
+#   用途: 弹球/弹珠游戏的球体
+#   内容: ballBlue.png(蓝球), ballGrey.png(灰球)
+#   搭配: 配合 paddle 做弹球游戏
+#
+# 按钮九宫格 button* (20 files):
+#   用途: 棋盘格子或UI按钮背景
+#   变体: Default(默认态) 和 Selected(选中态) 各 10 块
+#   九宫格: topleft/top/topright/left/mid/right/bottomleft/bottom/bottomright + 整块
+#   组合: 9 块拼成任意大小的按钮/面板
+#   搭配: Default+Selected 做选中/未选中的棋盘格子
+#
+# 挡板 paddle* (2 files):
+#   用途: 弹球游戏的挡板
+#   内容: paddleBlu.png(蓝), paddleRed.png(红)
+#   搭配: 配合 ball 和 element 做弹球打砖块
+#
+# 粒子效果 particle* (3 files):
+#   用途: 消除/碰撞时的特效
+#   内容: particleCartoonStar(卡通星), particleSmallStar(小星), particleStar(标准星)
+#
+# 指针/光标 pointer* + hand* (8 files):
+#   用途: 鼠标光标替换或选中指示
+#   内容: pointer(标准)/pointer_glossy(高光)/pointer_yellow(黄色) + 对应阴影版
+#         hand.png(手型光标) + handShadow.png(手型阴影)
+#
+# 选择器 selector* (3 files):
+#   用途: 棋盘上当前选中位置的高亮框
+#   内容: selectorA/selectorB/selectorC — 三种样式可选
+
+groups:
+  - name: elements
+    pattern: "element_*.png"
+    count: 48
+    cn: "彩色形状元素"
+    tags: [element, shape, match3, puzzle, gem, diamond, square, polygon, rectangle, glossy]
+
+  - name: balls
+    files: [ballBlue.png, ballGrey.png]
+    count: 2
+    cn: "球"
+    tags: [ball, sphere, pinball, bounce]
+
+  - name: buttons
+    pattern: "button{Default,Selected}*.png"
+    count: 20
+    cn: "按钮/格子九宫格"
+    tags: [button, panel, 9slice, grid, selected, default]
+
+  - name: paddles
+    files: [paddleBlu.png, paddleRed.png]
+    count: 2
+    cn: "挡板"
+    tags: [paddle, breakout, pong, bat]
+
+  - name: particles
+    files: [particleCartoonStar.png, particleSmallStar.png, particleStar.png]
+    count: 3
+    cn: "粒子特效"
+    tags: [particle, effect, star, vfx, sparkle]
+
+  - name: pointers
+    pattern: "pointer*.png + hand*.png"
+    count: 8
+    cn: "指针/光标"
+    tags: [pointer, cursor, hand, mouse, selection]
+
+  - name: selectors
+    files: [selectorA.png, selectorB.png, selectorC.png]
+    count: 3
+    cn: "选择器/高亮框"
+    tags: [selector, highlight, selection, cursor, grid]

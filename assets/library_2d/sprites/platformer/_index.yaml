@@ -1,0 +1,442 @@
+# Platformer Sprites - 精灵语义索引
+# 来源: kenney_new-platformer-pack-1.1
+# 格式: 独立 PNG 精灵图（语义文件名），共 433 张
+# 文件名: {类别}_{描述}.png（非编号瓦片，文件名即语义）
+#
+# ── 风格与适用范围 ──
+# 视觉风格: cartoon-bright（卡通明亮，矢量感描边）
+# 适用游戏类型: platform-physics（横版物理平台跳跃）、single-reflex（单人反应类）
+# 不适用: 俯视角RPG（请用 tiny-dungeon/tiny-town）、像素复古风格（请用 sprites/platformer-pixel）
+#
+# ── 分组概要（用途与组合关系）──
+#
+# 背景 backgrounds (14张):
+#   文件模式: background_*.png
+#   用途: 关卡背景层，铺满屏幕或做视差滚动
+#   子类: clouds(云层装饰) / color_{theme}(彩色渐变,4主题) / fade_{theme}(淡入渐变,4主题) / solid_{surface}(纯色填充,5种)
+#   主题: desert(沙漠)/hills(丘陵)/mushrooms(蘑菇)/trees(森林)
+#   提示: color_* 适合前景背景层，fade_* 适合远景层做视差；solid_* 可做地下/洞穴区域纯色背景
+#
+# 角色 characters (45张):
+#   文件模式: character_{color}_{action}.png
+#   用途: 玩家可操控主角，5色可做多人/皮肤切换
+#   颜色(5): beige(米色)/green(绿色)/pink(粉色)/purple(紫色)/yellow(黄色)
+#   动作(9): climb_a + climb_b(攀爬动画) / duck(蹲下) / front(正面) / hit(受击) / idle(站立) / jump(跳跃) / walk_a + walk_b(行走动画)
+#   动画: walk_a+walk_b 交替做行走；climb_a+climb_b 交替做攀爬；idle 单帧静止
+#   搭配: 与 terrain_* 地形拼关卡，与 hud_player_* 做UI头像，与 coin/gem/key 做收集交互
+#
+# 敌人 enemies (~54张):
+#   文件模式: {敌人名}_{动作}.png
+#   用途: 关卡中的敌方NPC，各有静止/移动/攻击帧
+#   种类:
+#     水生: barnacle(藤壶,3张attack_a/b+rest) / fish_blue(蓝鱼,3张) / fish_purple(紫鱼,3张) / fish_yellow(黄鱼,3张)
+#     飞行: bee(蜜蜂,3张a/b+rest) / fly(苍蝇,3张) / ladybug(瓢虫,4张fly+rest+walk×2)
+#     地面: frog(青蛙,3张idle+jump+rest) / mouse(老鼠,3张) / snail(蜗牛,4张rest+shell+walk×2)
+#     史莱姆: slime_block(方块,4张jump+rest+walk×2) / slime_fire(火焰,4张flat+rest+walk×2) / slime_normal(普通,4张) / slime_spike(尖刺,4张)
+#     蠕虫: worm_normal(普通蠕虫,3张move_a/b+rest) / worm_ring(环纹蠕虫,3张move_a/b+rest)
+#   提示: 每种敌人2-4帧，rest/idle为静止态，其余交替播放做动画；slime有4种变体可做难度递增
+#
+# 方块 blocks (24张):
+#   文件模式: block_*.png
+#   用途: 可交互功能方块（问号块/金币块/陷阱块等）
+#   普通块(16): blue/green/red/yellow(颜色块) / coin+coin_active(金币块) / empty+empty_warning(空块) /
+#              exclamation+exclamation_active(感叹号块) / fall(掉落块) / idle(普通块) / plank+planks(木板) / rest(静止块) / spikes(尖刺块)
+#   加固块(8): block_strong_coin/danger/empty/exclamation 各有普通+active两态
+#   提示: _active 表示被击打后的激活状态；block_strong_* 是更坚固的变体，需多次击打
+#
+# 砖块 bricks (6张):
+#   文件模式: brick_*.png / bricks_*.png
+#   用途: 墙面/地形装饰砖块
+#   变体: brown(棕色) / grey(灰色)，各有普通+diagonal(对角线纹理) + 复数bricks(多砖)
+#
+# 地形 terrain (168张):
+#   文件模式: terrain_{material}_{shape}.png
+#   用途: 构建关卡地面、平台、悬崖、斜坡等固体地形，是关卡的核心骨架
+#   材质(6): dirt(泥土) / grass(草地) / purple(紫色) / sand(沙地) / snow(雪地) / stone(石头)
+#   每种材质(28块):
+#     大块九宫格(10): block + block_bottom/left/right/top + block_bottom_left/bottom_right/top_left/top_right + block_center
+#     云朵平台(5): cloud + cloud_background + cloud_left/middle/right
+#     水平平台(5): horizontal_left/middle/right + horizontal_overhang_left/overhang_right
+#     坡道(5): ramp_long_a/b/c + ramp_short_a/b
+#     垂直柱(3): vertical_bottom/middle/top
+#   提示: 同关卡统一用一种材质；grass做地上、dirt做地下、snow做雪关、sand做沙漠关、stone做城堡关、purple做奇幻关
+#   搭配: 与 background_color_* / background_fade_* 搭配对应主题；cloud_* 做浮空装饰平台
+#
+# 收集物 collectibles (16张):
+#   文件模式: coin_*.png / gem_*.png / key_*.png / heart.png / star.png
+#   用途: 玩家拾取的奖励物品
+#   硬币(6): bronze/gold/silver 各有正面+side(侧面)，交替播放做旋转动画
+#   宝石(4): blue/green/red/yellow — 高价值收集物或解锁条件
+#   钥匙(4): blue/green/red/yellow — 与 lock_* 颜色配对使用
+#   特殊(2): heart(生命) / star(星星/无敌)
+#
+# 道具/机关 props (31张):
+#   用途: 关卡中的交互机关与危险物
+#   炸弹(2): bomb + bomb_active — 定时炸弹
+#   门(4): door_closed/open + door_closed_top/open_top — 上下两部分拼接成完整门
+#   锁(4): lock_blue/green/red/yellow — 与 key_* 颜色配对
+#   拉杆(3): lever + lever_left/right — 三态开关
+#   按钮(8): switch_{blue/green/red/yellow} + _pressed — 4色地面按钮
+#   弹簧(2): spring + spring_out — 弹跳增强
+#   锯片(4): saw + saw_a/b + saw_rest — 旋转危险物，a/b交替做旋转动画
+#   其他(4): spikes(地刺) / fireball(火球) / weight(重物) / conveyor(传送带)
+#
+# 环境装饰 environment (~36张):
+#   用途: 丰富场景视觉，不影响核心玩法
+#   桥梁(2): bridge + bridge_logs — 木桥/圆木桥
+#   植被(6): bush(灌木) / cactus(仙人掌) / grass+grass_purple(草丛) / mushroom_brown+mushroom_red(蘑菇)
+#   结构(7): chain(锁链) / fence+fence_broken(围栏) / ladder_bottom/middle/top(梯子三段) / window(窗户)
+#   地形装饰(6): hill+hill_top+hill_top_smile(小丘) / ramp(斜坡) / rock(岩石) / snow(积雪)
+#   绳索(2): rop_attached(固定绳索) / rope(悬挂绳索)
+#   告示牌(4): sign + sign_exit/left/right — 方向/出口指示
+#   照明(3): torch_off + torch_on_a/torch_on_b — 火把灭/亮(a/b交替做火焰动画)
+#   液体(6): lava+lava_top+lava_top_low(岩浆) / water+water_top+water_top_low(水) — top做表面，base做填充，top_low做浅层
+#
+# 旗帜 flags (9张):
+#   文件模式: flag_*.png
+#   用途: 关卡检查点/终点标记
+#   颜色(4): blue/green/red/yellow 各有 a/b 两帧做飘动动画
+#   特殊(1): flag_off — 未激活状态
+#   提示: 玩家到达后从 flag_off 切换为对应颜色的 a/b 动画
+#
+# HUD界面 (30张):
+#   文件模式: hud_*.png
+#   用途: 游戏内抬头显示（分数/生命/道具栏）
+#   数字(10): hud_character_0 ~ hud_character_9 — 计分/倒计时
+#   符号(2): hud_character_multiply(乘号) / hud_character_percent(百分号)
+#   状态(3): hud_coin(金币图标) / hud_heart+hud_heart_empty+hud_heart_half(生命三态)
+#   钥匙(4): hud_key_blue/green/red/yellow — 已收集钥匙指示
+#   头像(5): hud_player_beige/green/pink/purple/yellow — 玩家头像
+#   头盔头像(5): hud_player_helmet_beige/green/pink/purple/yellow — 带头盔的玩家头像变体
+#   提示: 数字+multiply组合做 "×99" 格式显示；heart三态做血量条；与 character_* 颜色对应选头像
+
+groups:
+  # ── 背景 Backgrounds ──
+  - name: backgrounds
+    pattern: "background_*.png"
+    count: 14
+    cn: "背景图"
+    description: "关卡背景层，含云层、彩色渐变、淡入渐变和纯色填充四类"
+    tags: [background, sky, parallax, scenery]
+    variants:
+      - prefix: background_clouds
+        cn: "云朵背景"
+      - prefix: background_color_{desert,hills,mushrooms,trees}
+        cn: "彩色渐变背景(4主题)"
+      - prefix: background_fade_{desert,hills,mushrooms,trees}
+        cn: "淡入渐变背景(4主题)"
+      - prefix: background_solid_{cloud,dirt,grass,sand,sky}
+        cn: "纯色填充背景(5种)"
+
+  # ── 角色 Characters ──
+  - name: characters
+    pattern: "character_{color}_{action}.png"
+    count: 45
+    cn: "玩家角色"
+    description: "5色×9动作的可操控主角精灵"
+    tags: [player, character, hero, platformer]
+    colors: [beige, green, pink, purple, yellow]
+    actions: [climb_a, climb_b, duck, front, hit, idle, jump, walk_a, walk_b]
+
+  # ── 敌人 Enemies ──
+  - name: enemies
+    pattern: "{enemy_type}_{action}.png"
+    count: 54
+    cn: "敌人角色"
+    description: "16种敌人，含水生/飞行/地面/史莱姆/蠕虫五大类"
+    tags: [enemy, npc, hazard, hostile]
+    subtypes:
+      - name: barnacle
+        cn: "藤壶"
+        files: [barnacle_attack_a.png, barnacle_attack_b.png, barnacle_attack_rest.png]
+        tags: [enemy, barnacle, aquatic, stationary]
+      - name: bee
+        cn: "蜜蜂"
+        files: [bee_a.png, bee_b.png, bee_rest.png]
+        tags: [enemy, bee, flying, insect]
+      - name: fish_blue
+        cn: "蓝鱼"
+        files: [fish_blue_rest.png, fish_blue_swim_a.png, fish_blue_swim_b.png]
+        tags: [enemy, fish, blue, aquatic]
+      - name: fish_purple
+        cn: "紫鱼"
+        files: [fish_purple_down.png, fish_purple_rest.png, fish_purple_up.png]
+        tags: [enemy, fish, purple, aquatic]
+      - name: fish_yellow
+        cn: "黄鱼"
+        files: [fish_yellow_rest.png, fish_yellow_swim_a.png, fish_yellow_swim_b.png]
+        tags: [enemy, fish, yellow, aquatic]
+      - name: fly
+        cn: "苍蝇"
+        files: [fly_a.png, fly_b.png, fly_rest.png]
+        tags: [enemy, fly, flying, insect]
+      - name: frog
+        cn: "青蛙"
+        files: [frog_idle.png, frog_jump.png, frog_rest.png]
+        tags: [enemy, frog, ground, jumping]
+      - name: ladybug
+        cn: "瓢虫"
+        files: [ladybug_fly.png, ladybug_rest.png, ladybug_walk_a.png, ladybug_walk_b.png]
+        tags: [enemy, ladybug, insect, ground, flying]
+      - name: mouse
+        cn: "老鼠"
+        files: [mouse_rest.png, mouse_walk_a.png, mouse_walk_b.png]
+        tags: [enemy, mouse, ground, small]
+      - name: slime_block
+        cn: "方块史莱姆"
+        files: [slime_block_jump.png, slime_block_rest.png, slime_block_walk_a.png, slime_block_walk_b.png]
+        tags: [enemy, slime, block, ground]
+      - name: slime_fire
+        cn: "火焰史莱姆"
+        files: [slime_fire_flat.png, slime_fire_rest.png, slime_fire_walk_a.png, slime_fire_walk_b.png]
+        tags: [enemy, slime, fire, ground, hazard]
+      - name: slime_normal
+        cn: "普通史莱姆"
+        files: [slime_normal_flat.png, slime_normal_rest.png, slime_normal_walk_a.png, slime_normal_walk_b.png]
+        tags: [enemy, slime, normal, ground]
+      - name: slime_spike
+        cn: "尖刺史莱姆"
+        files: [slime_spike_flat.png, slime_spike_rest.png, slime_spike_walk_a.png, slime_spike_walk_b.png]
+        tags: [enemy, slime, spike, ground, hazard]
+      - name: snail
+        cn: "蜗牛"
+        files: [snail_rest.png, snail_shell.png, snail_walk_a.png, snail_walk_b.png]
+        tags: [enemy, snail, ground, shelled]
+      - name: worm_normal
+        cn: "普通蠕虫"
+        files: [worm_normal_move_a.png, worm_normal_move_b.png, worm_normal_rest.png]
+        tags: [enemy, worm, ground]
+      - name: worm_ring
+        cn: "环纹蠕虫"
+        files: [worm_ring_move_a.png, worm_ring_move_b.png, worm_ring_rest.png]
+        tags: [enemy, worm, ring, ground]
+
+  # ── 方块 Blocks ──
+  - name: blocks
+    pattern: "block_*.png"
+    count: 24
+    cn: "功能方块"
+    description: "可交互的问号块、金币块、陷阱块等，含普通和加固两系列"
+    tags: [block, interactive, mechanism, breakable]
+    files:
+      - { file: block_blue.png, cn: "蓝色方块" }
+      - { file: block_coin.png, cn: "金币方块" }
+      - { file: block_coin_active.png, cn: "金币方块-激活" }
+      - { file: block_empty.png, cn: "空方块" }
+      - { file: block_empty_warning.png, cn: "空方块-警告" }
+      - { file: block_exclamation.png, cn: "感叹号方块" }
+      - { file: block_exclamation_active.png, cn: "感叹号方块-激活" }
+      - { file: block_fall.png, cn: "掉落方块" }
+      - { file: block_green.png, cn: "绿色方块" }
+      - { file: block_idle.png, cn: "普通方块" }
+      - { file: block_plank.png, cn: "木板方块" }
+      - { file: block_planks.png, cn: "多木板方块" }
+      - { file: block_red.png, cn: "红色方块" }
+      - { file: block_rest.png, cn: "静止方块" }
+      - { file: block_spikes.png, cn: "尖刺方块" }
+      - { file: block_yellow.png, cn: "黄色方块" }
+      - { file: block_strong_coin.png, cn: "加固金币方块" }
+      - { file: block_strong_coin_active.png, cn: "加固金币方块-激活" }
+      - { file: block_strong_danger.png, cn: "加固危险方块" }
+      - { file: block_strong_danger_active.png, cn: "加固危险方块-激活" }
+      - { file: block_strong_empty.png, cn: "加固空方块" }
+      - { file: block_strong_empty_active.png, cn: "加固空方块-激活" }
+      - { file: block_strong_exclamation.png, cn: "加固感叹号方块" }
+      - { file: block_strong_exclamation_active.png, cn: "加固感叹号方块-激活" }
+
+  # ── 砖块 Bricks ──
+  - name: bricks
+    pattern: "brick*.png"
+    count: 6
+    cn: "砖块"
+    description: "墙面/地形装饰砖块，棕色和灰色各含普通、对角线和多砖变体"
+    tags: [brick, wall, decoration, structure]
+    files:
+      - { file: brick_brown.png, cn: "棕色砖块" }
+      - { file: brick_brown_diagonal.png, cn: "棕色砖块-对角线" }
+      - { file: brick_grey.png, cn: "灰色砖块" }
+      - { file: brick_grey_diagonal.png, cn: "灰色砖块-对角线" }
+      - { file: bricks_brown.png, cn: "棕色多砖" }
+      - { file: bricks_grey.png, cn: "灰色多砖" }
+
+  # ── 地形 Terrain ──
+  - name: terrain
+    pattern: "terrain_{material}_{shape}.png"
+    count: 168
+    cn: "地形块"
+    description: "6种材质×28种形状，构建关卡地面/平台/悬崖/斜坡的核心骨架"
+    tags: [terrain, ground, platform, level_design]
+    materials: [dirt, grass, purple, sand, snow, stone]
+    shapes_per_material:
+      block_set: [block, block_bottom, block_bottom_left, block_bottom_right, block_center, block_left, block_right, block_top, block_top_left, block_top_right]
+      cloud_set: [cloud, cloud_background, cloud_left, cloud_middle, cloud_right]
+      horizontal_set: [horizontal_left, horizontal_middle, horizontal_right, horizontal_overhang_left, horizontal_overhang_right]
+      ramp_set: [ramp_long_a, ramp_long_b, ramp_long_c, ramp_short_a, ramp_short_b]
+      vertical_set: [vertical_bottom, vertical_middle, vertical_top]
+
+  # ── 收集物 Collectibles ──
+  - name: collectibles
+    pattern: "coin_*.png / gem_*.png / key_*.png / heart.png / star.png"
+    count: 16
+    cn: "收集物"
+    description: "玩家拾取的硬币、宝石、钥匙、爱心和星星"
+    tags: [collectible, pickup, item, reward]
+    files:
+      - { file: coin_bronze.png, cn: "铜币" }
+      - { file: coin_bronze_side.png, cn: "铜币-侧面" }
+      - { file: coin_gold.png, cn: "金币" }
+      - { file: coin_gold_side.png, cn: "金币-侧面" }
+      - { file: coin_silver.png, cn: "银币" }
+      - { file: coin_silver_side.png, cn: "银币-侧面" }
+      - { file: gem_blue.png, cn: "蓝宝石" }
+      - { file: gem_green.png, cn: "绿宝石" }
+      - { file: gem_red.png, cn: "红宝石" }
+      - { file: gem_yellow.png, cn: "黄宝石" }
+      - { file: key_blue.png, cn: "蓝钥匙" }
+      - { file: key_green.png, cn: "绿钥匙" }
+      - { file: key_red.png, cn: "红钥匙" }
+      - { file: key_yellow.png, cn: "黄钥匙" }
+      - { file: heart.png, cn: "爱心/生命" }
+      - { file: star.png, cn: "星星" }
+
+  # ── 道具/机关 Props ──
+  - name: props
+    pattern: "bomb*.png / door_*.png / lock_*.png / lever*.png / switch_*.png / spring*.png / saw*.png / spikes.png / fireball.png / weight.png / conveyor.png"
+    count: 31
+    cn: "道具与机关"
+    description: "关卡中的交互机关，含炸弹/门/锁/拉杆/按钮/弹簧/锯片等"
+    tags: [prop, mechanism, interactive, hazard]
+    files:
+      - { file: bomb.png, cn: "炸弹" }
+      - { file: bomb_active.png, cn: "炸弹-激活" }
+      - { file: door_closed.png, cn: "门-关闭" }
+      - { file: door_closed_top.png, cn: "门-关闭(顶部)" }
+      - { file: door_open.png, cn: "门-打开" }
+      - { file: door_open_top.png, cn: "门-打开(顶部)" }
+      - { file: lock_blue.png, cn: "蓝锁" }
+      - { file: lock_green.png, cn: "绿锁" }
+      - { file: lock_red.png, cn: "红锁" }
+      - { file: lock_yellow.png, cn: "黄锁" }
+      - { file: lever.png, cn: "拉杆-中间" }
+      - { file: lever_left.png, cn: "拉杆-左" }
+      - { file: lever_right.png, cn: "拉杆-右" }
+      - { file: switch_blue.png, cn: "蓝色按钮" }
+      - { file: switch_blue_pressed.png, cn: "蓝色按钮-按下" }
+      - { file: switch_green.png, cn: "绿色按钮" }
+      - { file: switch_green_pressed.png, cn: "绿色按钮-按下" }
+      - { file: switch_red.png, cn: "红色按钮" }
+      - { file: switch_red_pressed.png, cn: "红色按钮-按下" }
+      - { file: switch_yellow.png, cn: "黄色按钮" }
+      - { file: switch_yellow_pressed.png, cn: "黄色按钮-按下" }
+      - { file: spring.png, cn: "弹簧-收起" }
+      - { file: spring_out.png, cn: "弹簧-弹出" }
+      - { file: saw.png, cn: "锯片" }
+      - { file: saw_a.png, cn: "锯片-旋转帧A" }
+      - { file: saw_b.png, cn: "锯片-旋转帧B" }
+      - { file: saw_rest.png, cn: "锯片-静止" }
+      - { file: spikes.png, cn: "地刺" }
+      - { file: fireball.png, cn: "火球" }
+      - { file: weight.png, cn: "重物" }
+      - { file: conveyor.png, cn: "传送带" }
+
+  # ── 环境装饰 Environment ──
+  - name: environment
+    pattern: "bridge*.png / bush.png / cactus.png / chain.png / fence*.png / grass*.png / hill*.png / ladder_*.png / mushroom_*.png / ramp.png / rock.png / rop*.png / rope.png / sign*.png / snow.png / torch_*.png / water*.png / lava*.png / window.png"
+    count: 36
+    cn: "环境装饰"
+    description: "丰富场景视觉的非核心装饰元素，含桥梁/植被/结构/液体/照明等"
+    tags: [decoration, environment, scenery, prop]
+    files:
+      - { file: bridge.png, cn: "木桥" }
+      - { file: bridge_logs.png, cn: "圆木桥" }
+      - { file: bush.png, cn: "灌木" }
+      - { file: cactus.png, cn: "仙人掌" }
+      - { file: chain.png, cn: "锁链" }
+      - { file: fence.png, cn: "围栏" }
+      - { file: fence_broken.png, cn: "破损围栏" }
+      - { file: grass.png, cn: "草丛" }
+      - { file: grass_purple.png, cn: "紫色草丛" }
+      - { file: hill.png, cn: "小丘" }
+      - { file: hill_top.png, cn: "小丘顶部" }
+      - { file: hill_top_smile.png, cn: "笑脸小丘顶部" }
+      - { file: ladder_bottom.png, cn: "梯子底段" }
+      - { file: ladder_middle.png, cn: "梯子中段" }
+      - { file: ladder_top.png, cn: "梯子顶段" }
+      - { file: mushroom_brown.png, cn: "棕色蘑菇" }
+      - { file: mushroom_red.png, cn: "红色蘑菇" }
+      - { file: ramp.png, cn: "斜坡" }
+      - { file: rock.png, cn: "岩石" }
+      - { file: rop_attached.png, cn: "固定绳索" }
+      - { file: rope.png, cn: "悬挂绳索" }
+      - { file: sign.png, cn: "告示牌" }
+      - { file: sign_exit.png, cn: "出口告示牌" }
+      - { file: sign_left.png, cn: "左方向告示牌" }
+      - { file: sign_right.png, cn: "右方向告示牌" }
+      - { file: snow.png, cn: "积雪" }
+      - { file: torch_off.png, cn: "火把-灭" }
+      - { file: torch_on_a.png, cn: "火把-亮帧A" }
+      - { file: torch_on_b.png, cn: "火把-亮帧B" }
+      - { file: lava.png, cn: "岩浆" }
+      - { file: lava_top.png, cn: "岩浆表面" }
+      - { file: lava_top_low.png, cn: "岩浆浅表面" }
+      - { file: water.png, cn: "水体" }
+      - { file: water_top.png, cn: "水面" }
+      - { file: water_top_low.png, cn: "浅水面" }
+      - { file: window.png, cn: "窗户" }
+
+  # ── 旗帜 Flags ──
+  - name: flags
+    pattern: "flag_*.png"
+    count: 9
+    cn: "旗帜"
+    description: "关卡检查点/终点标记，4色各2帧飘动动画+1个未激活态"
+    tags: [flag, checkpoint, goal, animation]
+    files:
+      - { file: flag_off.png, cn: "旗帜-未激活" }
+      - { file: flag_blue_a.png, cn: "蓝旗-帧A" }
+      - { file: flag_blue_b.png, cn: "蓝旗-帧B" }
+      - { file: flag_green_a.png, cn: "绿旗-帧A" }
+      - { file: flag_green_b.png, cn: "绿旗-帧B" }
+      - { file: flag_red_a.png, cn: "红旗-帧A" }
+      - { file: flag_red_b.png, cn: "红旗-帧B" }
+      - { file: flag_yellow_a.png, cn: "黄旗-帧A" }
+      - { file: flag_yellow_b.png, cn: "黄旗-帧B" }
+
+  # ── HUD界面 ──
+  - name: hud
+    pattern: "hud_*.png"
+    count: 30
+    cn: "HUD界面元素"
+    description: "游戏内抬头显示，含数字/符号/状态图标/玩家头像"
+    tags: [hud, ui, interface, overlay]
+    files:
+      - { file: hud_character_0.png, cn: "HUD数字0" }
+      - { file: hud_character_1.png, cn: "HUD数字1" }
+      - { file: hud_character_2.png, cn: "HUD数字2" }
+      - { file: hud_character_3.png, cn: "HUD数字3" }
+      - { file: hud_character_4.png, cn: "HUD数字4" }
+      - { file: hud_character_5.png, cn: "HUD数字5" }
+      - { file: hud_character_6.png, cn: "HUD数字6" }
+      - { file: hud_character_7.png, cn: "HUD数字7" }
+      - { file: hud_character_8.png, cn: "HUD数字8" }
+      - { file: hud_character_9.png, cn: "HUD数字9" }
+      - { file: hud_character_multiply.png, cn: "HUD乘号" }
+      - { file: hud_character_percent.png, cn: "HUD百分号" }
+      - { file: hud_coin.png, cn: "HUD金币图标" }
+      - { file: hud_heart.png, cn: "HUD满心" }
+      - { file: hud_heart_empty.png, cn: "HUD空心" }
+      - { file: hud_heart_half.png, cn: "HUD半心" }
+      - { file: hud_key_blue.png, cn: "HUD蓝钥匙" }
+      - { file: hud_key_green.png, cn: "HUD绿钥匙" }
+      - { file: hud_key_red.png, cn: "HUD红钥匙" }
+      - { file: hud_key_yellow.png, cn: "HUD黄钥匙" }
+      - { file: hud_player_beige.png, cn: "HUD米色玩家头像" }
+      - { file: hud_player_green.png, cn: "HUD绿色玩家头像" }
+      - { file: hud_player_pink.png, cn: "HUD粉色玩家头像" }
+      - { file: hud_player_purple.png, cn: "HUD紫色玩家头像" }
+      - { file: hud_player_yellow.png, cn: "HUD黄色玩家头像" }
+      - { file: hud_player_helmet_beige.png, cn: "HUD米色头盔玩家头像" }
+      - { file: hud_player_helmet_green.png, cn: "HUD绿色头盔玩家头像" }
+      - { file: hud_player_helmet_pink.png, cn: "HUD粉色头盔玩家头像" }
+      - { file: hud_player_helmet_purple.png, cn: "HUD紫色头盔玩家头像" }
+      - { file: hud_player_helmet_yellow.png, cn: "HUD黄色头盔玩家头像" }

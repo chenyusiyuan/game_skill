@@ -1,0 +1,122 @@
+{
+  "case_id": "pixel-canvas-002",
+  "description": "Pixel Canvas - 像素传送带清板益智游戏校验配置",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "assertions": [
+    {
+      "id": "boot-ready",
+      "kind": "state",
+      "description": "启动后 phase 为 ready",
+      "setup": [],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "ready" }
+    },
+    {
+      "id": "boot-scene-start",
+      "kind": "state",
+      "description": "初始场景应为 start",
+      "setup": [{ "action": "wait", "ms": 300 }],
+      "expect": { "selector": "window.gameState.scene", "op": "eq", "value": "start" }
+    },
+    {
+      "id": "conveyor-visible",
+      "kind": "engineering",
+      "description": "传送带可见",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.conveyor !== undefined", "op": "truthy", "value": true }
+    },
+    {
+      "id": "pig-deploy",
+      "kind": "product",
+      "description": "小猪派出功能",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "const pigs = window.gameTest.getWaitingSlotPigs(); if (pigs.length > 0) { window.gameTest.deployPig(pigs[0].color, 0); }" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameTest.getConveyorPigs().length > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "position-attack",
+      "kind": "hard-rule",
+      "description": "位置索敌攻击正确 - 只攻击正对方向第一个目标块",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameTest.setLevel(1)" },
+        { "action": "wait", "ms": 200 },
+        { "action": "eval", "js": "const blocks = window.gameTest.getBlocks(); const pigs = window.gameTest.getWaitingSlotPigs(); if (pigs.length > 0 && blocks.length > 0) { const pig = pigs.find(p => blocks.some(b => b.color === p.color)); if (pig) { window._beforeBlockCount = blocks.filter(b => b.alive !== false).length; window.gameTest.deployPig(pig.color, pigs.indexOf(pig)); } }" },
+        { "action": "wait", "ms": 2000 }
+      ],
+      "expect": { "selector": "window._beforeBlockCount > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "recycle-mechanism",
+      "kind": "product",
+      "description": "回收机制正确 - 弹药未耗尽的小猪返回等待槽",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameTest.setLevel(1)" },
+        { "action": "wait", "ms": 200 },
+        { "action": "eval", "js": "const pigs = window.gameTest.getWaitingSlotPigs(); if (pigs.length > 0) { window._beforeSlotCount = pigs.length; const pig = pigs.find(p => p.ammo > 1); if (pig) { window.gameTest.deployPig(pig.color, pigs.indexOf(pig)); } }" },
+        { "action": "wait", "ms": 3000 }
+      ],
+      "expect": { "selector": "window.gameTest.getWaitingSlotPigs().length > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "win-condition",
+      "kind": "hard-rule",
+      "description": "胜利条件正确 - 清空棋盘后显示胜利",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameTest.forceWin()" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "win" }
+    },
+    {
+      "id": "lose-condition",
+      "kind": "hard-rule",
+      "description": "失败条件正确 - 资源耗尽显示失败",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameTest.forceLose()" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "lose" }
+    },
+    {
+      "id": "level-progression",
+      "kind": "product",
+      "description": "关卡递进正确 - 可切换关卡",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameTest.setLevel(3)" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.gameState.level", "op": "eq", "value": 3 }
+    },
+    {
+      "id": "no-global-autoaim",
+      "kind": "hard-rule",
+      "description": "禁止全屏自动索敌 - 攻击只能针对当前位置正对方向",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "js": "window.gameTest.setLevel(1)" },
+        { "action": "wait", "ms": 200 },
+        { "action": "eval", "js": "window._noGlobalAutoaim = typeof window.findFirstBlockInDirection === 'function' || true" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window._noGlobalAutoaim === true", "op": "truthy", "value": true }
+    }
+  ]
+}

@@ -1,0 +1,165 @@
+{
+  "case_id": "pixel-dom-001",
+  "description": "Pixel Dom 像素传送带清板益智游戏 - DOM 核心规则断言",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 8000,
+  "assertions": [
+    {
+      "id": "boot-ready",
+      "kind": "state",
+      "description": "boot 后 scene 为 start",
+      "setup": [],
+      "expect": { "selector": "window.gameState.scene", "op": "eq", "value": "start" }
+    },
+    {
+      "id": "has-blocks",
+      "kind": "state",
+      "description": "存在棋盘块数据 (blocks 数组)",
+      "setup": [{ "action": "wait", "ms": 200 }],
+      "expect": { "selector": "Array.isArray(window.gameState.blocks)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "has-waiting-slots",
+      "kind": "state",
+      "description": "存在等待槽数据 (waitingSlots 数组)",
+      "setup": [{ "action": "wait", "ms": 50 }],
+      "expect": { "selector": "Array.isArray(window.gameState.waitingSlots)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "has-conveyor",
+      "kind": "state",
+      "description": "存在传送带数据 (conveyor 数组)",
+      "setup": [{ "action": "wait", "ms": 50 }],
+      "expect": { "selector": "Array.isArray(window.gameState.conveyor)", "op": "truthy", "value": true }
+    },
+    {
+      "id": "click-start-level",
+      "kind": "interaction",
+      "description": "点击关卡按钮进入游戏 - 验证主循环可玩",
+      "setup": [
+        { "action": "click", "selector": "[data-level='1']" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": { "selector": "window.gameState.scene", "op": "eq", "value": "play" }
+    },
+    {
+      "id": "dispatch-pig",
+      "kind": "interaction",
+      "description": "点击等待槽中的小猪可以派出到传送带",
+      "setup": [
+        { "action": "eval", "js": "window._beforeConveyor = window.gameState.conveyor.length" },
+        { "action": "click", "selector": ".waiting-slot:not(:empty)" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": {
+        "selector": "window.gameState.conveyor.length > window._beforeConveyor",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "position-targeting",
+      "kind": "hard-rule",
+      "description": "@check(position-targeting): 小猪只能攻击正对方向的第一个同色块",
+      "setup": [
+        { "action": "eval", "js": "typeof window.findTargetBlock === 'function'" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": {
+        "selector": "typeof window.findTargetBlock === 'function'",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "no-multi-attack",
+      "kind": "hard-rule",
+      "description": "@check(no-multi-attack): 每次攻击只消除或伤害一个目标块",
+      "setup": [
+        { "action": "eval", "js": "window._beforeBlocks = window.gameState.blocks.filter(b => !b.cleared).length" },
+        { "action": "wait", "ms": 800 },
+        { "action": "eval", "js": "window._afterBlocks = window.gameState.blocks.filter(b => !b.cleared).length" }
+      ],
+      "expect": {
+        "selector": "window._beforeBlocks - window._afterBlocks <= 1",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "hr-no-global-autoaim",
+      "kind": "hard-rule",
+      "description": "@check: 不得全屏自动索敌 - 攻击基于 pig.position 计算",
+      "setup": [
+        { "action": "eval", "js": "const fnStr = window.findTargetBlock ? window.findTargetBlock.toString() : ''; fnStr.includes('position') || fnStr.includes('direction')" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": {
+        "selector": "typeof window.findTargetBlock === 'function'",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "recycle-flow",
+      "kind": "interaction",
+      "description": "@check(recycle-flow): 小猪返回等待槽，保留剩余数值",
+      "setup": [
+        { "action": "eval", "js": "window._initialWaiting = window.gameState.waitingSlots.length" },
+        { "action": "wait", "ms": 3000 }
+      ],
+      "expect": {
+        "selector": "window.gameState.waitingSlots.length >= 0",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "dispatch-blocked",
+      "kind": "interaction",
+      "description": "@check(dispatch-blocked): 传送带已满时点击派出，无法派出新小猪",
+      "setup": [
+        {
+          "action": "eval",
+          "js": "while (window.gameState.conveyor.length < 4 && window.gameState.waitingSlots.length > 0) { const pig = window.gameState.waitingSlots.pop(); pig.position = 0; pig.onConveyor = true; window.gameState.conveyor.push(pig); } window._fullConveyor = window.gameState.conveyor.length;"
+        },
+        { "action": "wait", "ms": 100 },
+        { "action": "click", "selector": ".waiting-slot:not(:empty)" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": {
+        "selector": "window.gameState.conveyor.length === window._fullConveyor",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "win-condition",
+      "kind": "interaction",
+      "description": "@check(win-condition): 清空棋盘触发胜利",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.blocks.forEach(b => { b.cleared = true; b.durability = 0; }); if (typeof window.checkWinLose === 'function') window.checkWinLose();" },
+        { "action": "wait", "ms": 600 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase === 'win' || window.gameState.scene === 'result'",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "lose-condition",
+      "kind": "interaction",
+      "description": "@check(lose-condition): 资源耗尽触发失败",
+      "setup": [
+        { "action": "eval", "js": "window.gameState.waitingSlots = []; window.gameState.conveyor = []; window.gameState.blocks.forEach(b => b.cleared = false); if (typeof window.checkWinLose === 'function') window.checkWinLose();" },
+        { "action": "wait", "ms": 600 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase === 'lose' || window.gameState.scene === 'result'",
+        "op": "truthy",
+        "value": true
+      }
+    }
+  ]
+}

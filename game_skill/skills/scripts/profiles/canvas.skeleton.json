@@ -1,0 +1,95 @@
+{
+  "case_id": "canvas",
+  "description": "canvas - 从 PRD @check 自动生成的骨架，需人工补 setup/expect",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "prd_hash": "4dfc2e317de6edb656e76940f6d9096edd7b35a5",
+  "prd_path": "cases/canvas/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "playable-loop",
+      "check_id": "playable-loop",
+      "kind": "state",
+      "description": "主循环可玩",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 点击开始 → 完成至少一轮配对 → 进入结算页\"",
+      "_prd_expect": "\"window.gameState.phase 最终进入 win 或 lose；得分有数值\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(playable-loop) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "match-rule-correct",
+      "check_id": "match-rule-correct",
+      "kind": "state",
+      "description": "配对规则正确",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 选择匹配的卡片对 → 检查消除和得分\"",
+      "_prd_expect": "\"selected[0].pairId == selected[1].pairId 时，两张卡片 matched=true，score 增加\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(match-rule-correct) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "timer-works",
+      "check_id": "timer-works",
+      "kind": "state",
+      "description": "计时器工作",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 等待时间流逝\"",
+      "_prd_expect": "\"state.timeLeft 持续减少，归零时 phase=lose\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(timer-works) 的 expect 改成真实判定"
+      }
+    },
+    {
+      "id": "combo-bonus",
+      "check_id": "combo-bonus",
+      "kind": "state",
+      "description": "连击奖励",
+      "_todo": "把 setup 和 expect 填完整。method/expect 原文见注释。",
+      "_prd_method": "\"Playwright 连续配对成功3次\"",
+      "_prd_expect": "\"第3次成功时获得额外5分\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        }
+      ],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true,
+        "_todo": "根据 @check(combo-bonus) 的 expect 改成真实判定"
+      }
+    }
+  ],
+  "hard_rule_assertions": []
+}

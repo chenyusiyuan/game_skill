@@ -1,0 +1,164 @@
+{
+  "case_id": "pixijs-diablo-roguelike-001",
+  "description": "Diablo-like Roguelike game verification profile",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 8000,
+  "assertions": [
+    {
+      "id": "game-boots",
+      "kind": "state",
+      "description": "游戏能正常启动",
+      "setup": [{ "action": "wait", "ms": 500 }],
+      "expect": { "selector": "window.gameState !== undefined && window.app !== undefined", "op": "truthy", "value": true }
+    },
+    {
+      "id": "class-selection",
+      "kind": "state",
+      "description": "职业选择功能正常 - @check(class-selection)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.phase === 'playing' && window.gameState.player.class !== null", "op": "truthy", "value": true }
+    },
+    {
+      "id": "select-warrior",
+      "kind": "state",
+      "description": "选择战士职业",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.startGameWithClass('warrior')" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.player && window.gameState.player.class === 'warrior'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "select-mage",
+      "kind": "state",
+      "description": "选择法师职业",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.startGameWithClass('mage')" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.player && window.gameState.player.class === 'mage'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "select-archer",
+      "kind": "state",
+      "description": "选择射手职业",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.startGameWithClass('archer')" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameState.player && window.gameState.player.class === 'archer'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "combat-works",
+      "kind": "state",
+      "description": "战斗系统正常工作 - @check(combat-works)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.startGameWithClass('warrior')" },
+        { "action": "wait", "ms": 200 },
+        { "action": "eval", "js": "window.gameTest.spawnEnemy('tank', 300, 200)" },
+        { "action": "wait", "ms": 100 },
+        { "action": "eval", "js": "const result = window.gameTest.calculateDamage(window.gameState.player, window.gameState.enemies[0]); window._combatTest = result;" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window._combatTest && window._combatTest.damage > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "damage-formula",
+      "kind": "hard-rule",
+      "description": "伤害公式正确 - @check(damage-formula)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.startGameWithClass('warrior')" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "typeof window.gameTest.calculateDamage === 'function'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "equipment-drop",
+      "kind": "state",
+      "description": "装备掉落系统 - @check(equipment-drop)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.startGameWithClass('warrior')" },
+        { "action": "wait", "ms": 200 },
+        { "action": "eval", "js": "window.gameTest.spawnAndKillEnemy()" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.gameState.pickups && window.gameState.pickups.length > 0", "op": "truthy", "value": true }
+    },
+    {
+      "id": "five-rarities",
+      "kind": "hard-rule",
+      "description": "5种装备品质 - @constraint(five-rarities)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.startGameWithClass('warrior')" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.gameTest.RARITIES && window.gameTest.RARITIES.length >= 5", "op": "truthy", "value": true }
+    },
+    {
+      "id": "skill-system",
+      "kind": "state",
+      "description": "技能系统存在",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.startGameWithClass('warrior')" },
+        { "action": "wait", "ms": 200 },
+        { "action": "eval", "js": "window._skillCount = Object.keys(window.gameState.player.skills).length;" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.player && window.gameState.player.skills && Object.keys(window.gameState.player.skills).length >= 4", "op": "truthy", "value": true }
+    },
+    {
+      "id": "ui-elements",
+      "kind": "state",
+      "description": "UI元素存在 - @check(ui-elements)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.startGameWithClass('warrior')" },
+        { "action": "wait", "ms": 300 }
+      ],
+      "expect": { "selector": "window.gameTest.hasHealthOrb === true && window.gameTest.hasManaOrb === true && window.gameTest.hasSkillBar === true", "op": "truthy", "value": true }
+    },
+    {
+      "id": "settings-tabs",
+      "kind": "state",
+      "description": "设置界面选项卡 - @check(settings-tabs)",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.openSettings()" },
+        { "action": "wait", "ms": 200 }
+      ],
+      "expect": { "selector": "window.gameState.settingsOpen === true || window.gameState.showSettings === true", "op": "truthy", "value": true }
+    },
+    {
+      "id": "enemy-ai-states",
+      "kind": "state",
+      "description": "敌人AI状态系统",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.startGameWithClass('warrior')" },
+        { "action": "wait", "ms": 200 },
+        { "action": "eval", "js": "window.gameTest.spawnEnemy('tank', 300, 200)" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.enemies && window.gameState.enemies[0] && window.gameState.enemies[0].aiState !== undefined", "op": "truthy", "value": true }
+    },
+    {
+      "id": "boss-phase",
+      "kind": "state",
+      "description": "Boss阶段切换",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.startGameWithClass('warrior')" },
+        { "action": "wait", "ms": 200 },
+        { "action": "eval", "js": "window.gameTest.spawnBoss()" },
+        { "action": "wait", "ms": 100 }
+      ],
+      "expect": { "selector": "window.gameState.boss !== null || (window.gameState.enemies && window.gameState.enemies.some(e => e.isBoss))", "op": "truthy", "value": true }
+    },
+    {
+      "id": "three-classes",
+      "kind": "hard-rule",
+      "description": "三职业系统 - @constraint(three-classes)",
+      "setup": [],
+      "expect": { "selector": "window.gameTest.CLASS_CONFIG && Object.keys(window.gameTest.CLASS_CONFIG).length >= 3", "op": "truthy", "value": true }
+    }
+  ]
+}

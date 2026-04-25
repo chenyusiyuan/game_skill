@@ -1,0 +1,250 @@
+# UI Pack - 素材语义索引
+# 来源: kenney_ui-pack
+# 分辨率: Double (2x)
+# 文件名: 语义文件名
+# 颜色变体: Blue, Green, Grey, Red, Yellow
+#
+# ── 风格与适用范围 ──
+# 视觉风格: cartoon-bright / minimal-modern（卡通明亮 / 简约现代）
+# 适用游戏类型: 所有类型 — 现代矢量 UI 组件，5 种颜色主题
+# 特别适合: 游戏主菜单、设置界面、表单、评分系统、音量控制
+# 不适用: 像素复古风格（请用 ui-pixel 代替）
+#
+# ── 目录结构 ──
+# buttons/{color}/  — 每色 30 个按钮文件
+# arrows/{color}/   — 每色 16 个箭头文件
+# checks/{color}/   — 每色 12 个复选框文件
+# icons/{color}/    — 每色 8 个图标文件
+# sliders/{color}/  — 每色 13 个滑块文件
+# stars/{color}/    — 每色 3 个星星文件
+# inputs/           — 24 个输入框/按钮文件（无颜色子目录）
+#
+# ── 分组概要（用途与组合关系）──
+#
+# 按钮 buttons/{color}/:
+#   形状: rectangle(矩形), round(圆形), square(方形)
+#   样式: border(描边), flat(纯色), gloss(高光), gradient(渐变), line(线框)
+#   深度: 无后缀(平面) / depth_(带阴影立体感)
+#   每种形状 × 5种样式 = 10个，加 depth 变体共 10个，每色共 30 个按钮
+#   用途: 主按钮(rectangle)、图标按钮(square)、动作按钮(round)
+#   组合: 搭配 icons/{color}/ 在按钮上叠加图标
+#   提示: depth 变体自带底部阴影，适合做按下/抬起的两态切换
+#
+# 箭头 arrows/{color}/:
+#   类型: basic(基础简洁), decorative(装饰华丽)
+#   方向: n(上), s(下), e(右), w(左)
+#   尺寸: 标准 / small(小尺寸)
+#   每种类型 × 4方向 × 2尺寸 = 16 个
+#   文件名: arrow_{type}_{direction}[_small].png
+#   用途: 翻页、导航、选择器左右切换、下拉菜单
+#   搭配: 配合 buttons 做带箭头的导航按钮
+#
+# 复选框 checks/{color}/:
+#   形状: round(圆形), square(方形)
+#   状态: color(彩色选中), grey(灰色未选中)
+#   标记: 无后缀(基础)/checkmark(对勾)/cross(叉号)/circle(圆点)/square(方块)
+#   圆形: check_round_color.png, check_round_grey.png, check_round_grey_circle.png, check_round_round_circle.png
+#   方形: check_square_color.png/grey.png + color_checkmark/cross/square + grey_checkmark/cross/square
+#   每色共 12 个
+#   用途: 设置菜单的选项开关、任务清单、多选列表
+#   组合: color 态 + grey 态 配对使用
+#
+# 图标 icons/{color}/:
+#   类型: 实心(icon_) / 轮廓(icon_outline_)
+#   形状: checkmark(对勾), cross(叉号), circle(圆形), square(方形)
+#   文件名: icon_{shape}.png / icon_outline_{shape}.png
+#   每色共 8 个
+#   用途: 状态指示（正确/错误）、标记、叠加在按钮上
+#   搭配: 叠加在 buttons/{color}/ 的方形/圆形按钮上
+#
+# 滑块 sliders/{color}/:
+#   方向: horizontal(水平), vertical(垂直)
+#   部件: color(彩色填充), grey(灰色底), section(分段), section_wide(宽分段)
+#   把手: slide_hangle.png (拖拽手柄，两个方向共用)
+#   水平: slide_horizontal_color.png/grey.png + color_section/section_wide + grey_section/section_wide
+#   垂直: slide_vertical_color.png/grey.png + color_section/section_wide + grey_section/section_wide
+#   每色共 13 个
+#   用途: 音量调节、亮度控制、进度显示
+#   组合: grey(底轨) + color(填充轨) + hangle(把手) 三层叠加
+#   提示: section_wide 版本适合更大的拖动区域
+#
+# 星星 stars/{color}/:
+#   star.png(实心星), star_outline.png(空心星), star_outline_depth.png(空心星带阴影)
+#   每色共 3 个
+#   用途: 评分系统（1-5星）、关卡评价、收藏标记
+#   组合: 实心(已获得) + 空心(未获得) 组合显示评分
+#
+# 输入框 inputs/:
+#   无颜色子目录，全部为中性灰/白色调
+#   按钮: button_rectangle_line/depth_line.png, button_round_line/depth_line.png, button_square_line/depth_line.png (6个)
+#   分割线: divider.png, divider_edges.png (2个)
+#   箭头图标: icon_arrow_down_dark/light/outline.png, icon_arrow_up_dark/light/outline.png (6个)
+#   播放图标: icon_play_dark/light/outline.png (3个)
+#   循环图标: icon_repeat_dark/light/outline.png (3个)
+#   输入框: input_rectangle/square.png, input_outline_rectangle/square.png (4个)
+#   共 24 个
+#   用途: 文本输入、搜索框、下拉选择器、表单组件
+#   组合: input(背景) + icon_arrow(下拉箭头) 做下拉选择器
+#   提示: dark/light/outline 三种图标风格适配不同背景色
+
+groups:
+  - name: buttons
+    dir: "buttons/{color}/"
+    files_per_color:
+      - button_rectangle_border.png
+      - button_rectangle_flat.png
+      - button_rectangle_gloss.png
+      - button_rectangle_gradient.png
+      - button_rectangle_line.png
+      - button_rectangle_depth_border.png
+      - button_rectangle_depth_flat.png
+      - button_rectangle_depth_gloss.png
+      - button_rectangle_depth_gradient.png
+      - button_rectangle_depth_line.png
+      - button_round_border.png
+      - button_round_flat.png
+      - button_round_gloss.png
+      - button_round_gradient.png
+      - button_round_line.png
+      - button_round_depth_border.png
+      - button_round_depth_flat.png
+      - button_round_depth_gloss.png
+      - button_round_depth_gradient.png
+      - button_round_depth_line.png
+      - button_square_border.png
+      - button_square_flat.png
+      - button_square_gloss.png
+      - button_square_gradient.png
+      - button_square_line.png
+      - button_square_depth_border.png
+      - button_square_depth_flat.png
+      - button_square_depth_gloss.png
+      - button_square_depth_gradient.png
+      - button_square_depth_line.png
+    colors: [Blue, Green, Grey, Red, Yellow]
+    count_per_color: 30
+    cn: "按钮"
+    tags: [button, rectangle, round, square, border, flat, gloss, gradient, line, depth]
+
+  - name: arrows
+    dir: "arrows/{color}/"
+    files_per_color:
+      - arrow_basic_n.png
+      - arrow_basic_s.png
+      - arrow_basic_e.png
+      - arrow_basic_w.png
+      - arrow_basic_n_small.png
+      - arrow_basic_s_small.png
+      - arrow_basic_e_small.png
+      - arrow_basic_w_small.png
+      - arrow_decorative_n.png
+      - arrow_decorative_s.png
+      - arrow_decorative_e.png
+      - arrow_decorative_w.png
+      - arrow_decorative_n_small.png
+      - arrow_decorative_s_small.png
+      - arrow_decorative_e_small.png
+      - arrow_decorative_w_small.png
+    colors: [Blue, Green, Grey, Red, Yellow]
+    count_per_color: 16
+    cn: "箭头"
+    tags: [arrow, direction, navigation, basic, decorative, small, north, south, east, west]
+
+  - name: checks
+    dir: "checks/{color}/"
+    files_per_color:
+      - check_round_color.png
+      - check_round_grey.png
+      - check_round_grey_circle.png
+      - check_round_round_circle.png
+      - check_square_color.png
+      - check_square_grey.png
+      - check_square_color_checkmark.png
+      - check_square_color_cross.png
+      - check_square_color_square.png
+      - check_square_grey_checkmark.png
+      - check_square_grey_cross.png
+      - check_square_grey_square.png
+    colors: [Blue, Green, Grey, Red, Yellow]
+    count_per_color: 12
+    cn: "复选框"
+    tags: [checkbox, check, round, square, toggle, select, checkmark, cross, color, grey]
+
+  - name: icons
+    dir: "icons/{color}/"
+    files_per_color:
+      - icon_checkmark.png
+      - icon_cross.png
+      - icon_circle.png
+      - icon_square.png
+      - icon_outline_checkmark.png
+      - icon_outline_cross.png
+      - icon_outline_circle.png
+      - icon_outline_square.png
+    colors: [Blue, Green, Grey, Red, Yellow]
+    count_per_color: 8
+    cn: "图标"
+    tags: [icon, checkmark, cross, circle, square, outline, status, indicator]
+
+  - name: sliders
+    dir: "sliders/{color}/"
+    files_per_color:
+      - slide_hangle.png
+      - slide_horizontal_color.png
+      - slide_horizontal_color_section.png
+      - slide_horizontal_color_section_wide.png
+      - slide_horizontal_grey.png
+      - slide_horizontal_grey_section.png
+      - slide_horizontal_grey_section_wide.png
+      - slide_vertical_color.png
+      - slide_vertical_color_section.png
+      - slide_vertical_color_section_wide.png
+      - slide_vertical_grey.png
+      - slide_vertical_grey_section.png
+      - slide_vertical_grey_section_wide.png
+    colors: [Blue, Green, Grey, Red, Yellow]
+    count_per_color: 13
+    cn: "滑块"
+    tags: [slider, slide, handle, horizontal, vertical, volume, progress, color, grey, section]
+
+  - name: stars
+    dir: "stars/{color}/"
+    files_per_color:
+      - star.png
+      - star_outline.png
+      - star_outline_depth.png
+    colors: [Blue, Green, Grey, Red, Yellow]
+    count_per_color: 3
+    cn: "星星"
+    tags: [star, rating, score, outline, depth, favorite]
+
+  - name: inputs
+    dir: "inputs/"
+    files:
+      - button_rectangle_line.png
+      - button_rectangle_depth_line.png
+      - button_round_line.png
+      - button_round_depth_line.png
+      - button_square_line.png
+      - button_square_depth_line.png
+      - divider.png
+      - divider_edges.png
+      - icon_arrow_down_dark.png
+      - icon_arrow_down_light.png
+      - icon_arrow_down_outline.png
+      - icon_arrow_up_dark.png
+      - icon_arrow_up_light.png
+      - icon_arrow_up_outline.png
+      - icon_play_dark.png
+      - icon_play_light.png
+      - icon_play_outline.png
+      - icon_repeat_dark.png
+      - icon_repeat_light.png
+      - icon_repeat_outline.png
+      - input_rectangle.png
+      - input_outline_rectangle.png
+      - input_square.png
+      - input_outline_square.png
+    count: 24
+    cn: "输入框"
+    tags: [input, text, field, form, divider, dropdown, arrow, play, repeat, outline]

@@ -1,0 +1,57 @@
+{
+  "projectId": "word-match-lite-002",
+  "name": "单词消消乐",
+  "genre": "edu-practice",
+  "assertions": [
+    {
+      "id": "gameState-exposed",
+      "description": "window.gameState 已暴露",
+      "kind": "state",
+      "expect": {
+        "selector": "typeof window.gameState",
+        "op": "eq",
+        "value": "object"
+      }
+    },
+    {
+      "id": "start-scene",
+      "description": "开始页显示正常",
+      "kind": "state",
+      "expect": {
+        "selector": "window.gameState.scene",
+        "op": "eq",
+        "value": "StartScene"
+      }
+    },
+    {
+      "id": "gameState-phase-ready",
+      "description": "初始状态为 ready",
+      "kind": "state",
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "ready"
+      }
+    },
+    {
+      "id": "word-bank-30",
+      "description": "词库包含 30 组单词",
+      "kind": "state",
+      "expect": {
+        "selector": "window.WORD_BANK ? window.WORD_BANK.length : 0",
+        "op": "eq",
+        "value": 30
+      }
+    },
+    {
+      "id": "3-levels-config",
+      "description": "包含 3 个关卡配置",
+      "kind": "state",
+      "expect": {
+        "selector": "window.LEVELS ? window.LEVELS.length : 0",
+        "op": "eq",
+        "value": 3
+      }
+    }
+  ]
+}

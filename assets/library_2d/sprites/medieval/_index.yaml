@@ -1,0 +1,69 @@
+# Medieval RTS - 素材语义索引
+# 来源: kenney_medieval-rts
+# 分辨率: Retina 2x, 64×64px 基础尺寸
+# 文件名: medieval{Category}_{编号:02d}.png
+#
+# ── 风格与适用范围 ──
+# 视觉风格: cartoon-bright / hand-drawn（卡通明亮 / 手绘风）
+# 适用游戏类型: 即时/回合制策略(RTS/TBS)、模拟经营、塔防、城堡建设
+# 不适用: 横版平台跳跃、像素复古风（请用 pixel-platformer 代替）
+#
+# ── 分组概要（用途与组合关系）──
+#
+# 自然环境 medievalEnvironment (01-21):
+#   用途: 地图装饰和自然障碍物
+#   内容: 不同大小的树木（绿树/松树/枯树）、岩石（大/小/堆）、灌木、草丛、
+#         山丘、水面元素（湖/河段）、花朵
+#   组合: 树木+灌木+草丛组成森林区域；岩石+山丘组成山地；水面元素拼接河流/湖泊
+#   提示: 环境元素放在地形瓦片上层作为装饰
+#
+# 建筑结构 medievalStructure (01-23):
+#   用途: 玩家可建造或已存在的建筑
+#   内容: 城堡主体(大/中/小)、塔楼(圆/方/带顶)、城墙(直/角/门)、
+#         民居(茅屋/石屋/木屋)、功能建筑(铁匠铺/仓库/兵营/农场/教堂/市场)、
+#         防御工事(箭塔/投石机座)
+#   组合: 城墙段+门+塔楼拼成城堡外围；民居+功能建筑组成村庄
+#   提示: 建筑有朝向变体，注意选择朝向一致的
+#
+# 地形瓦片 medievalTile (01-58):
+#   用途: 拼接地图的基础地面层
+#   内容: 草地(多变体)、泥路(直/弯/十字/T形)、河流(直/弯/桥)、
+#         沙地、雪地、耕地、城堡地面(石板)、悬崖边缘
+#   组合: 草地做底→泥路连接建筑→河流做天然屏障→桥梁提供通路
+#   提示: 地形瓦片等距拼接，注意边缘过渡自然
+#
+# 单位角色 medievalUnit (01-24):
+#   用途: 玩家可操控或敌方的军事/民用单位
+#   内容: 步兵(剑/矛/斧)、弓箭手、骑士/骑兵、国王/女王、
+#         农民/工人、牧师/法师、攻城器械(投石车/攻城塔)
+#   组合: 步兵守城墙→弓箭手在箭塔→骑兵野战→农民采集
+#   提示: 单位均为等距视角，朝向右下
+
+groups:
+  - name: environment
+    prefix: "medievalEnvironment_"
+    range: "01-21"
+    count: 21
+    cn: "自然环境"
+    tags: [environment, nature, tree, rock, bush, water, decoration]
+
+  - name: structures
+    prefix: "medievalStructure_"
+    range: "01-23"
+    count: 23
+    cn: "建筑结构"
+    tags: [building, castle, tower, wall, house, farm, church, defense]
+
+  - name: tiles
+    prefix: "medievalTile_"
+    range: "01-58"
+    count: 58
+    cn: "地形瓦片"
+    tags: [terrain, grass, road, river, bridge, sand, snow, ground]
+
+  - name: units
+    prefix: "medievalUnit_"
+    range: "01-24"
+    count: 24
+    cn: "单位角色"
+    tags: [character, unit, soldier, knight, archer, farmer, king, siege]
