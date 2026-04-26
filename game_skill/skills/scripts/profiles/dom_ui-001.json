@@ -1,75 +1,196 @@
 {
   "case_id": "dom_ui-001",
-  "description": "单词消消乐 - 面向小学生的英语配对游戏",
+  "description": "像素传送带清板 - 产品侧校验 profile",
   "game_html_relative": "game/index.html",
-  "boot_timeout_ms": 5000,
-  "prd_hash": "16d18f3c42ea0af33077690cf633963fe31c19fe",
-  "prd_path": "cases/dom_ui/docs/game-prd.md",
+  "boot_timeout_ms": 10000,
+  "prd_hash": "31ec18e330035b6b8cae2311911e26123ec9eb5c",
+  "prd_path": "cases/dom_ui-001/docs/game-prd.md",
   "assertions": [
     {
-      "id": "playable-loop",
-      "check_id": "playable-loop",
-      "kind": "interaction",
-      "description": "主循环可玩 - 点击配对成功后分数增加",
+      "id": "boot-success",
+      "check_id": "boot-success",
+      "kind": "boot",
+      "description": "游戏启动检查",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ]
+    },
+    {
+      "id": "dispatch-pig",
+      "check_id": "dispatch-pig",
+      "kind": "interaction",
+      "description": "派出小猪检查",
+      "setup": [
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 600 }
-      ],
-      "expect": {
-        "eval": "window.gameState.score > 0 || window.gameState.matchedPairs > 0",
-        "op": "eq",
-        "value": true
-      }
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "click", "selector": "[data-slot-index]" },
+        { "action": "click", "selector": "#btn-dispatch" },
+        { "action": "wait", "ms": 500 }
+      ]
     },
     {
-      "id": "time-penalty",
-      "check_id": "time-penalty",
+      "id": "color-match-attack",
+      "check_id": "color-match-attack",
       "kind": "interaction",
-      "description": "配对失败扣时间",
+      "description": "颜色匹配攻击检查",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.simulateWrongMatch()" },
-        { "action": "wait", "ms": 600 }
-      ],
-      "expect": {
-        "eval": "window.gameState.combo === 0",
-        "op": "eq",
-        "value": true
-      }
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "click", "selector": "[data-slot-index]" },
+        { "action": "click", "selector": "#btn-dispatch" },
+        { "action": "wait", "ms": 3000 }
+      ]
     },
     {
-      "id": "result-display",
-      "check_id": "result-display",
+      "id": "color-mismatch-skip",
+      "check_id": "color-mismatch-skip",
       "kind": "interaction",
-      "description": "结算页显示",
+      "description": "颜色不匹配跳过检查",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.showResult()" },
-        { "action": "wait", "ms": 300 }
-      ],
-      "expect": {
-        "eval": "window.gameState.phase === 'win' && document.body.innerText.includes('恭喜通关')",
-        "op": "eq",
-        "value": true
-      }
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "click", "selector": "[data-slot-index]" },
+        { "action": "click", "selector": "#btn-dispatch" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "recycle-pig",
+      "check_id": "recycle-pig",
+      "kind": "interaction",
+      "description": "回收小猪检查",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "const p = window.gameState.waitingSlots.find(Boolean); if (p) p.value = 99" },
+        { "action": "click", "selector": "[data-slot-index]" },
+        { "action": "click", "selector": "#btn-dispatch" },
+        { "action": "wait", "ms": 22000 }
+      ]
+    },
+    {
+      "id": "win-condition",
+      "check_id": "win-condition",
+      "kind": "interaction",
+      "description": "胜利条件检查",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 1000 }
+      ]
+    },
+    {
+      "id": "lose-condition",
+      "check_id": "lose-condition",
+      "kind": "interaction",
+      "description": "失败条件检查",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 1000 }
+      ]
     },
     {
       "id": "level-progression",
       "check_id": "level-progression",
       "kind": "interaction",
-      "description": "关卡递进 - 完成一关后进入下一关",
+      "description": "关卡递进检查",
       "setup": [
-        { "action": "eval", "code": "window.gameState.level = 1; window.gameTest.showResult()" },
-        { "action": "wait", "ms": 200 },
-        { "action": "eval", "code": "window.gameTest.clickNextButton()" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": {
-        "eval": "window.gameState.level === 2 && window.gameState.phase === 'playing'",
-        "op": "eq",
-        "value": true
-      }
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 1000 }
+      ]
+    },
+    {
+      "id": "no-global-autoaim-verify",
+      "check_id": "no-global-autoaim-verify",
+      "kind": "interaction",
+      "description": "禁止全屏索敌验证",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "const p = window.gameState.waitingSlots.find(Boolean); if (p) p.value = 99" },
+        { "action": "click", "selector": "[data-slot-index]" },
+        { "action": "click", "selector": "#btn-dispatch" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "no-penetration-verify",
+      "check_id": "no-penetration-verify",
+      "kind": "interaction",
+      "description": "禁止穿透验证",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "click", "selector": "[data-slot-index]" },
+        { "action": "click", "selector": "#btn-dispatch" },
+        { "action": "wait", "ms": 3000 }
+      ]
     }
   ],
-  "hard_rule_assertions": []
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-no-global-autoaim",
+      "hard_rule_id": "no-global-autoaim",
+      "kind": "hard-rule",
+      "description": "禁止全屏自动索敌",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "click", "selector": "[data-slot-index]" },
+        { "action": "click", "selector": "#btn-dispatch" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "hard-rule-single-target-attack",
+      "hard_rule_id": "single-target-attack",
+      "kind": "hard-rule",
+      "description": "禁止一次攻击多个同色块",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "click", "selector": "[data-slot-index]" },
+        { "action": "click", "selector": "#btn-dispatch" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "hard-rule-no-penetration",
+      "hard_rule_id": "no-penetration",
+      "kind": "hard-rule",
+      "description": "禁止穿透攻击",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "click", "selector": "[data-slot-index]" },
+        { "action": "click", "selector": "#btn-dispatch" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "hard-rule-conveyor-loop",
+      "hard_rule_id": "conveyor-loop",
+      "kind": "hard-rule",
+      "description": "传送带必须是环形",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "click", "selector": "[data-slot-index]" },
+        { "action": "click", "selector": "#btn-dispatch" },
+        { "action": "wait", "ms": 25000 }
+      ]
+    }
+  ]
 }

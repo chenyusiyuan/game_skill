@@ -90,6 +90,7 @@ window.game = new Phaser.Game({
 | Tween 多 target 共用 `from` 值 | **每个 target 必须独立 tween**（见下方详细说明） |
 | 异步交互链路（delayedCall / tween 回调）期间不加锁 | **必须加 `isProcessing` 锁**（见下方详细说明） |
 | hitArea 用场景级透明矩形覆盖 Container | **在 Container 上直接 setSize+setInteractive**（见下方详细说明） |
+| `Container.setInteractive({ useHandCursor: true })` 但没 `setSize` / hitArea | **必崩或点击无效**；Container 没有纹理尺寸，必须先定义交互区域 |
 | 每秒创建新 tween 导致叠加 | 复用或先停掉旧 tween |
 | ResultScene.create() 中直接改 currentLevel | 只在按钮回调中修改全局状态 |
 | 多个 Scene 重复定义 createButton 等工具方法 | 提取为 Scene 外的共用函数 |
@@ -149,6 +150,23 @@ zone.on("pointerdown", callback);
 ```
 
 **规则：交互区域必须是 Container 的一部分（setSize 或内部 zone），不能是独立的场景级对象。**
+
+**硬规则：任何 Phaser Container 绑定 `pointerdown` 前，必须满足以下二选一：**
+
+```js
+// A. Container 自身有尺寸
+container.setSize(width, height);
+container.setInteractive({ useHandCursor: true });
+
+// B. 显式 hitArea + callback
+container.setInteractive(
+  new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height),
+  Phaser.Geom.Rectangle.Contains,
+  { useHandCursor: true }
+);
+```
+
+不要对未知类型变量直接 `setInteractive({ useHandCursor: true })`。如果函数返回的是 `Container`（例如 `createPigSprite()`、`createCard()`、`createButton()`），该函数内部必须完成 `setSize` 或显式 hitArea，调用方只绑定 `pointerdown`。
 
 ### 异步交互状态锁（严重）
 

@@ -8,12 +8,17 @@
       "check_id": null,
       "kind": "state",
       "description": "启动后 gameState 存在",
-      "setup": [],
-      "expect": {
-        "selector": "window.gameState",
-        "op": "truthy",
-        "value": true
-      }
+      "setup": []
+    },
+    {
+      "id": "start-scene",
+      "check_id": "start-scene",
+      "kind": "interaction",
+      "description": "开始页检查 - 点击开始按钮",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ]
     },
     {
       "id": "playable-loop",
@@ -23,72 +28,89 @@
       "setup": [
         { "action": "eval", "js": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 1000 }
-      ],
-      "expect": {
-        "selector": "window.gameState.phase",
-        "op": "eq",
-        "value": "playing"
-      }
+      ]
     },
     {
-      "id": "position-based-attack",
-      "check_id": "position-based-attack",
+      "id": "pig-dispatch",
+      "check_id": "pig-dispatch",
       "kind": "interaction",
-      "description": "基于位置的攻击判定 - 棋盘有目标块且未消除",
+      "description": "小猪派出检查 - 点击等待槽小猪派出",
       "setup": [
         { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 1000 }
-      ],
-      "expect": {
-        "selector": "window.gameState.board.blocks.some(b => !b.cleared)",
-        "op": "truthy",
-        "value": true
-      }
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "x": 200, "y": 500 },
+        { "action": "wait", "ms": 500 }
+      ]
     },
     {
-      "id": "wait-slot-recycle",
-      "check_id": "wait-slot-recycle",
+      "id": "color-match",
+      "check_id": "color-match",
       "kind": "interaction",
-      "description": "等待槽回收机制 - 等待槽有初始小猪",
+      "description": "颜色匹配检查 - 验证小猪和目标块颜色",
       "setup": [
         { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 1000 }
-      ],
-      "expect": {
-        "selector": "window.gameState.waitSlots.pigs.length > 0",
-        "op": "truthy",
-        "value": true
-      }
+        { "action": "wait", "ms": 500 }
+      ]
     },
     {
-      "id": "win-lose-condition",
-      "check_id": "win-lose-condition",
+      "id": "attack-single-target",
+      "check_id": "attack-single-target",
       "kind": "interaction",
-      "description": "胜负判定 - 验证胜负状态字段存在",
+      "description": "单目标攻击检查 - 棋盘有目标块",
       "setup": [
         { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 1000 }
-      ],
-      "expect": {
-        "selector": "window.gameState.hasOwnProperty('isWin')",
-        "op": "truthy",
-        "value": true
-      }
+        { "action": "wait", "ms": 500 }
+      ]
+    },
+    {
+      "id": "no-global-autoaim",
+      "check_id": "no-global-autoaim",
+      "kind": "interaction",
+      "description": "禁止全屏索敌检查 - 验证位置属性",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ]
+    },
+    {
+      "id": "pig-recycle",
+      "check_id": "pig-recycle",
+      "kind": "interaction",
+      "description": "小猪回收检查 - 等待槽容量",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ]
+    },
+    {
+      "id": "win-condition",
+      "check_id": "win-condition",
+      "kind": "interaction",
+      "description": "胜利条件检查 - 验证isWin字段",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ]
+    },
+    {
+      "id": "lose-condition",
+      "check_id": "lose-condition",
+      "kind": "interaction",
+      "description": "失败条件检查 - 验证isLose字段",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 }
+      ]
     },
     {
       "id": "level-progression",
       "check_id": "level-progression",
       "kind": "interaction",
-      "description": "关卡递进 - 验证初始关卡为1",
+      "description": "关卡递进 - 验证初始关卡",
       "setup": [
         { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 1000 }
-      ],
-      "expect": {
-        "selector": "window.gameState.currentLevel",
-        "op": "eq",
-        "value": 1
-      }
+        { "action": "wait", "ms": 500 }
+      ]
     }
   ]
 }

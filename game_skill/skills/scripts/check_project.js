@@ -25,11 +25,14 @@ const _logPath = parseLogArg(process.argv);
 const log = createLogger(_logPath);
 
 const gameDir = resolve(process.argv[2] ?? "game/");
+// case-dir 推断：gameDir 形如 cases/{slug}/game/ → case-dir = gameDir/..
+const caseDir = resolve(gameDir, "..");
 const errors = [];
 
 function err(msg) { errors.push(msg); }
 function ok(msg) { console.log(`  ✓ ${msg}`); }
 function fail(msg) { console.log(`  ✗ ${msg}`); err(msg); }
+function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 
 console.log(`工程侧校验: ${gameDir}`);
 
@@ -155,6 +158,27 @@ if (engineId === "phaser3" || engineId === "phaser") {
       /this\.add\.rectangle\s*\([^)]*\)\s*\.setAlpha\s*\(\s*0\s*\)/.test(allSrc))
     fail("[ENGINE-PHASER] 禁止用场景级透明矩形做点击热区；请用 setInteractive() 绑定到具体 Container/Sprite");
   else ok("[ENGINE-PHASER] 无场景级透明矩形热区反模式");
+
+  const interactiveContainerIssues = [];
+  const containerVars = [...allSrc.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:this|scene)\.add\.container\s*\(/g)]
+    .map((m) => m[1]);
+  for (const name of containerVars) {
+    const n = escapeRegExp(name);
+    const usesInteractive = new RegExp(`\\b${n}\\.setInteractive\\s*\\(`).test(allSrc);
+    if (!usesInteractive) continue;
+    const hasSize = new RegExp(`\\b${n}\\.setSize\\s*\\(`).test(allSrc);
+    const explicitHitArea = new RegExp(`\\b${n}\\.setInteractive\\s*\\(\\s*(?:new\\s+)?Phaser\\.Geom\\.|\\b${n}\\.input\\.hitArea\\b`).test(allSrc);
+    if (!hasSize && !explicitHitArea) {
+      interactiveContainerIssues.push(name);
+    }
+  }
+  const chainedBadContainer = /(?:this|scene)\.add\.container\s*\([\s\S]{0,240}?\)(?![\s\S]{0,160}?\.setSize\s*\()[\s\S]{0,160}?\.setInteractive\s*\(/.test(allSrc);
+  if (interactiveContainerIssues.length > 0 || chainedBadContainer) {
+    const names = interactiveContainerIssues.length > 0 ? ` (${interactiveContainerIssues.join(", ")})` : "";
+    fail(`[ENGINE-PHASER] Container setInteractive 必须先 setSize(w,h) 或显式 hitArea${names}`);
+  } else {
+    ok("[ENGINE-PHASER] Container 交互包含 setSize 或显式 hitArea");
+  }
 }
 
 if (engineId === "pixijs" || engineId === "pixi") {
@@ -215,6 +239,40 @@ if (engineId === "three") {
   else ok("[ENGINE-THREE] 无 three@latest 用法");
 }
 
+// ─── 8.1 mechanics → code 语义落点检查 ────────────────────────────────
+const mechanicsPath = join(caseDir, "specs/mechanics.yaml");
+if (existsSync(mechanicsPath)) {
+  const mechanicsRaw = readFileSync(mechanicsPath, "utf-8");
+  const hasGridRaycast = /primitive:\s*ray-cast@v1[\s\S]{0,700}coord-system:\s*grid/.test(mechanicsRaw);
+  if (hasGridRaycast) {
+    if (!/\bgridPosition\b/.test(allSrc)) {
+      fail("[MECHANICS-RAYCAST] grid ray-cast 必须从 source.gridPosition 投射；代码中未发现 gridPosition");
+    } else {
+      ok("[MECHANICS-RAYCAST] 代码包含 gridPosition 语义");
+    }
+    if (/startRow\s*=.*segmentId[\s\S]{0,160}startCol\s*=.*segmentId/.test(allSrc) &&
+        !/current(Row|Col)\s*=.*gridPosition|gridPosition\.(row|col)[\s\S]{0,160}current(Row|Col)/.test(allSrc)) {
+      fail("[MECHANICS-RAYCAST] 检测到按 segment 固定整行/整列起点扫描，未从 source.gridPosition + direction 逐格投射");
+    }
+  }
+
+  if (/shape:\s*rect-loop/.test(mechanicsRaw) &&
+      /draw\w*(?:Conveyor|Track|Path)?[\s\S]{0,1200}\.arc\s*\(/i.test(allSrc)) {
+    fail("[MECHANICS-TRACK] rect-loop 轨道必须画直角闭环，不能在轨道绘制函数里使用 arc() 画圆");
+  }
+}
+
+if (engineId === "dom-ui" || engineId === "dom") {
+  const renderRebuildsWholeApp = /function\s+render\s*\([^)]*\)\s*{[\s\S]{0,2500}\b\w+\.innerHTML\s*=/.test(allSrc);
+  const tickCallsRender = /(setInterval|requestAnimationFrame)\s*\([\s\S]{0,1200}\brender\s*\(/.test(allSrc) ||
+    /function\s+gameTick\s*\([^)]*\)\s*{[\s\S]{0,1200}\brender\s*\(/.test(allSrc);
+  if (renderRebuildsWholeApp && tickCallsRender) {
+    fail("[ENGINE-DOM] tick/RAF 中反复 render() 且 render() 重写 innerHTML，容易闪烁并丢事件绑定；请改为静态 shell + keyed update");
+  } else {
+    ok("[ENGINE-DOM] 未发现 tick 中整页 innerHTML 重建反模式");
+  }
+}
+
 // 通用：Canvas / Pixi / Phaser / Three 引擎必须暴露测试 API
 if (["phaser3", "phaser", "pixijs", "pixi", "canvas", "three"].includes(engineId)) {
   const hasTestApi = /window\.gameTest\s*=/.test(allSrc) ||
@@ -234,8 +292,6 @@ if (/match|select|click.*card|配对|消除/.test(allSrc.toLowerCase())) {
 }
 
 // ─── 9. 素材选择校验（链式调用 check_asset_selection.js）──────────────────
-// case-dir 推断：gameDir 形如 cases/{slug}/game/ → case-dir = gameDir/..
-const caseDir = resolve(gameDir, "..");
 const assetsYamlPath = join(caseDir, "specs/assets.yaml");
 if (existsSync(assetsYamlPath)) {
   const contractChecker = resolve(dirname(new URL(import.meta.url).pathname), "check_implementation_contract.js");

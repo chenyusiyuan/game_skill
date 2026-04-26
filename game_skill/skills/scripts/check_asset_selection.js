@@ -98,7 +98,7 @@ const pathPrefixes = [...packById.values()]
   .sort((a, b) => b.prefix.length - a.prefix.length);  // 长前缀优先
 
 function packIdFromSource(source) {
-  // source 形如 "assets/library_2d/ui-pixel/tile_0010.png" 或 "assets/library_3d/models/..."
+  // source 形如 "assets/library_2d/ui-pixel/tile_0013.png" 或 "assets/library_3d/models/..."
   const m = source.match(/^assets\/library_(?:2d|3d)\/(.+)$/);
   if (!m) return null;
   const rel = m[1];
@@ -182,6 +182,7 @@ const sections = ["images", "audio", "spritesheets", "fonts"];
 
 // T8: 从 PRD 抽所有 @entity / @ui 的 id，用于 binding-to 校验
 const prdEntityUiIds = loadPrdEntityUiIds(caseDir);
+const colorPrimitiveIds = loadColorPrimitiveEntityIds(caseDir);
 
 const perSectionCount = {};
 const assetItems = [];
@@ -200,6 +201,17 @@ for (const sec of sections) {
 
     if (bindingTo && bindingTo !== "decor" && prdEntityUiIds.size > 0 && !prdEntityUiIds.has(String(bindingTo))) {
       fail(`[${sec}.${id}] binding-to="${bindingTo}" 在 PRD 的 @entity/@ui 里不存在；合法值（节选）: ${[...prdEntityUiIds].slice(0, 8).join(", ")}...`);
+    }
+
+    if (["images", "spritesheets"].includes(sec) && isColorBlockSemantic({ id, item, bindingTo, colorPrimitiveIds })) {
+      const visualPrimitive = String(item["visual-primitive"] ?? "");
+      if (type === "local-file") {
+        fail(`[${sec}.${id}] binding-to="${bindingTo}" 是色块/目标块语义，必须使用 generated/graphics-generated/inline-svg + visual-primitive: color-block；禁止绑定具象 local-file 素材: ${source}`);
+      } else if (visualPrimitive !== "color-block") {
+        fail(`[${sec}.${id}] 色块/目标块语义缺少 visual-primitive: color-block`);
+      } else {
+        ok(`[${sec}.${id}] 色块语义使用 generated primitive: color-block`);
+      }
     }
 
     // fonts 的 type 字段是 optional，source google-fonts 也算合法
@@ -392,4 +404,30 @@ function loadPrdEntityUiIds(caseDir) {
     }
   } catch {}
   return ids;
+}
+
+function loadColorPrimitiveEntityIds(caseDir) {
+  const prdPath = join(caseDir, "docs/game-prd.md");
+  const ids = new Set();
+  if (!existsSync(prdPath)) return ids;
+  try {
+    const content = readFileSync(prdPath, "utf-8");
+    const re = /^#{2,4}[ \t]+@(entity|ui)\(([^)]+)\)([^\n]*)\n([\s\S]*?)(?=^#{2,4}[ \t]+@|\n## |\n# |$)/gm;
+    let m;
+    while ((m = re.exec(content)) !== null) {
+      const id = m[2].trim();
+      const block = `${m[3]}\n${m[4]}`.toLowerCase();
+      const isBlock = /色块|方块|目标块|color\s*block|\bblock\b/.test(block) || /\bblock\b/.test(id.toLowerCase());
+      const hasColorField = /color|颜色/.test(block);
+      if (isBlock && hasColorField) ids.add(id);
+    }
+  } catch {}
+  return ids;
+}
+
+function isColorBlockSemantic({ id, item, bindingTo, colorPrimitiveIds }) {
+  const text = `${id} ${item?.usage ?? ""} ${item?.["visual-primitive"] ?? ""}`.toLowerCase();
+  if (String(item?.["visual-primitive"] ?? "") === "color-block") return true;
+  if (bindingTo && colorPrimitiveIds.has(String(bindingTo))) return true;
+  return /色块|目标块|方块|color\s*block/.test(text);
 }

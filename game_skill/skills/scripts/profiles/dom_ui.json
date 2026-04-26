@@ -1,78 +1,110 @@
 {
-  "case_id": "dom_ui-2026-04-26",
-  "description": "像素传送带清板益智游戏 - DOM引擎",
+  "case_id": "dom_ui-001",
+  "description": "dom_ui-001 - 从 PRD @check 自动生成的驱动脚本骨架，需人工补真实 setup",
   "game_html_relative": "game/index.html",
   "boot_timeout_ms": 5000,
-  "prd_hash": "93b7d83740b8392bbe4e85a7d04593c126760470",
+  "prd_hash": "9d008cfdb910da430c7fdc8e8bf0e29af7fb5cec",
   "prd_path": "cases/dom_ui/docs/game-prd.md",
   "assertions": [
     {
-      "id": "color-match-attack",
-      "check_id": "color-match-attack",
+      "id": "click-pig-spawn",
+      "check_id": "click-pig-spawn",
       "kind": "interaction",
-      "description": "颜色匹配攻击",
+      "description": "点击派出小猪",
       "setup": [
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 800 },
-        { "action": "eval", "code": "(() => { const slots = window.gameTest.getWaitingSlots(); const redSlot = slots.find(s => s.pig && s.pig.color === 'red'); if (redSlot) { window.gameTest.dispatchPig(redSlot.index); return true; } return false; })()" },
-        { "action": "wait", "ms": 4500 }
-      ],
-      "expect": {
-        "eval": "(() => { const blocks = window.gameTest.getTargetBlocks(); const cleared = blocks.filter(b => b.cleared && b.color === 'red'); return cleared.length > 0; })()",
-        "op": "truthy",
-        "value": true
-      }
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start"
+        },
+        {
+          "action": "wait",
+          "ms": 1500
+        },
+        {
+          "action": "click",
+          "selector": ".waiting-slot-cell[data-pig-id]"
+        },
+        {
+          "action": "wait",
+          "ms": 3000
+        }
+      ]
     },
     {
-      "id": "position-based-targeting",
-      "check_id": "position-based-targeting",
-      "kind": "state",
-      "description": "位置依序索敌",
-      "setup": [
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 800 }
-      ],
-      "expect": {
-        "eval": "window.gameState && Array.isArray(window.gameState.blocks)",
-        "op": "truthy",
-        "value": true
-      }
-    },
-    {
-      "id": "single-attack-per-pass",
-      "check_id": "single-attack-per-pass",
-      "kind": "state",
-      "description": "每次经过只攻击一个",
-      "setup": [
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 800 }
-      ],
-      "expect": {
-        "eval": "window.gameState.totalAttacks === 0",
-        "op": "truthy",
-        "value": true
-      }
-    },
-    {
-      "id": "recycle-mechanics",
-      "check_id": "recycle-mechanics",
+      "id": "attack-matches-color",
+      "check_id": "attack-matches-color",
       "kind": "interaction",
-      "description": "回收机制",
+      "description": "攻击颜色匹配",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"红色小猪移动到棋盘上方 → 只攻击红色目标块\"",
+      "_prd_expect": "\"只有红色目标块耐久减少\"",
       "setup": [
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 800 },
-        { "action": "eval", "code": "(() => { const slots = window.gameTest.getWaitingSlots(); const slot = slots.find(s => s.pig && s.pig.value >= 5); if (slot) { window.gameTest.dispatchPig(slot.index); return true; } return false; })()" },
-        { "action": "wait", "ms": 12000 }
-      ],
-      "expect": {
-        "eval": "(() => { const slots = window.gameTest.getWaitingSlots(); const recycled = slots.find(s => s.pig && s.pig.status === 'recycled'); const conveyorCount = window.gameState.conveyor.pigCount; return recycled !== undefined || conveyorCount === 0; })()",
-        "op": "truthy",
-        "value": true
-      }
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "attack-no-mismatch",
+      "check_id": "attack-no-mismatch",
+      "kind": "interaction",
+      "description": "颜色不匹配不攻击",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"红色小猪正对蓝色目标块 → 不攻击，继续移动\"",
+      "_prd_expect": "\"蓝色目标块耐久不变，小猪继续前进\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "waiting-slot-recycle",
+      "check_id": "waiting-slot-recycle",
+      "kind": "interaction",
+      "description": "等待槽回收",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"小猪绕一圈后仍有弹药 → 回收到等待槽\"",
+      "_prd_expect": "\"等待槽中出现该小猪且弹药值正确\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
     },
     {
       "id": "win-condition",
@@ -80,71 +112,51 @@
       "kind": "interaction",
       "description": "胜利条件",
       "setup": [
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 800 },
-        { "action": "eval", "code": "(() => { window.gameState.blocks.forEach(b => b.cleared = true); window.gameState.remainingBlocks = 0; window.checkWinLose(); return true; })()" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": {
-        "eval": "window.gameState.phase === 'win'",
-        "op": "truthy",
-        "value": true
-      }
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.forceWin()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
     },
     {
       "id": "lose-condition",
       "check_id": "lose-condition",
       "kind": "interaction",
       "description": "失败条件",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"资源耗尽仍有目标块 → 进入失败页\"",
+      "_prd_expect": "\"state == lose AND 显示失败提示\"",
       "setup": [
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 800 },
-        { "action": "eval", "code": "(() => { window.gameState.slots.forEach(s => s.pigId = null); window.gameState.conveyor.pigCount = 0; window.checkWinLose(); return true; })()" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": {
-        "eval": "window.gameState.phase === 'lose'",
-        "op": "truthy",
-        "value": true
-      }
-    },
-    {
-      "id": "level-progression",
-      "check_id": "level-progression",
-      "kind": "interaction",
-      "description": "关卡递进",
-      "setup": [
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 800 },
-        { "action": "eval", "code": "(() => { window.gameState.phase = 'win'; window.gameState.currentLevel = 1; window.render(); return true; })()" },
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.clickNextButton()" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": {
-        "eval": "window.gameState.currentLevel === 2",
-        "op": "truthy",
-        "value": true
-      }
-    },
-    {
-      "id": "conveyor-capacity",
-      "check_id": "conveyor-capacity",
-      "kind": "state",
-      "description": "传送带容量",
-      "setup": [
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 800 }
-      ],
-      "expect": {
-        "eval": "window.gameState.conveyor.maxCapacity === 5",
-        "op": "truthy",
-        "value": true
-      }
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
     }
   ],
   "hard_rule_assertions": [
@@ -152,65 +164,89 @@
       "id": "hard-rule-no-global-autoaim",
       "hard_rule_id": "no-global-autoaim",
       "kind": "hard-rule",
-      "description": "禁止全屏自动索敌 - 使用位置依序索敌",
+      "description": "禁止全屏自动索敌",
+      "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
       "setup": [
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 800 }
-      ],
-      "expect": {
-        "eval": "window.gameState !== undefined",
-        "op": "truthy",
-        "value": true
-      }
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
     },
     {
-      "id": "hard-rule-no-multi-attack",
-      "hard_rule_id": "no-multi-attack",
+      "id": "hard-rule-single-block-attack",
+      "hard_rule_id": "single-block-attack",
       "kind": "hard-rule",
-      "description": "禁止一次攻击多个块",
+      "description": "禁止一次攻击多块",
+      "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
       "setup": [
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 800 }
-      ],
-      "expect": {
-        "eval": "window.gameState.totalAttacks !== undefined",
-        "op": "truthy",
-        "value": true
-      }
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
     },
     {
       "id": "hard-rule-no-penetration",
       "hard_rule_id": "no-penetration",
       "kind": "hard-rule",
       "description": "禁止穿透攻击",
+      "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
       "setup": [
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 800 }
-      ],
-      "expect": {
-        "eval": "window.gameState !== undefined",
-        "op": "truthy",
-        "value": true
-      }
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
     },
     {
-      "id": "hard-rule-conveyor-required",
-      "hard_rule_id": "conveyor-required",
+      "id": "hard-rule-conveyor-loop",
+      "hard_rule_id": "conveyor-loop",
       "kind": "hard-rule",
-      "description": "必须有传送带",
+      "description": "传送带必须闭环",
+      "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
       "setup": [
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 800 }
-      ],
-      "expect": {
-        "eval": "window.gameState.conveyor !== undefined && window.gameState.conveyor.maxCapacity > 0",
-        "op": "truthy",
-        "value": true
-      }
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
     }
   ]
 }

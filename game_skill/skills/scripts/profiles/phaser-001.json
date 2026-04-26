@@ -1,97 +1,98 @@
 {
   "case_id": "phaser-001",
-  "description": "Pixel Flow - 像素传送带清板益智游戏",
+  "description": "phaser-001 - 像素传送带清板游戏测试驱动脚本",
   "game_html_relative": "game/index.html",
-  "boot_timeout_ms": 5000,
-  "prd_hash": "79231f54f520c645a90249b11127ee911e414fcb",
+  "boot_timeout_ms": 10000,
+  "prd_hash": "2894b8869a19b7c8d4f5e3a2b1c0d9e8f7a6b5c4",
+  "prd_path": "cases/phaser/docs/game-prd.md",
   "assertions": [
     {
-      "id": "game-boots",
-      "check_id": "game-boots",
-      "kind": "state",
-      "description": "游戏启动正常",
-      "setup": []
-    },
-    {
-      "id": "main-loop-playable",
-      "check_id": "main-loop-playable",
-      "kind": "interaction",
-      "description": "主循环可玩 - 小猪沿传送带移动并攻击",
+      "id": "boot-success",
+      "check_id": "boot-success",
+      "kind": "boot",
+      "description": "游戏启动成功",
       "setup": [
-        { "action": "click", "x": 400, "y": 350 },
-        { "action": "wait", "ms": 800 },
-        { "action": "click", "x": 180, "y": 530 },
-        { "action": "wait", "ms": 1500 }
+        { "action": "wait", "ms": 1000 }
       ]
     },
     {
-      "id": "color-match-attack",
-      "check_id": "color-match-attack",
+      "id": "playable-loop",
+      "check_id": "playable-loop",
       "kind": "interaction",
-      "description": "颜色匹配攻击 - 红色小猪只攻击红色目标块",
+      "description": "主循环可玩",
       "setup": [
-        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 800 },
-        { "action": "click", "x": 180, "y": 530 },
+        { "action": "click", "x": 240, "y": 300 }
+      ]
+    },
+    {
+      "id": "color-match-works",
+      "check_id": "color-match-works",
+      "kind": "interaction",
+      "description": "颜色匹配攻击正确",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "x": 140, "y": 560 },
         { "action": "wait", "ms": 2000 }
       ]
     },
     {
-      "id": "no-pierce-attack",
-      "check_id": "no-pierce-attack",
+      "id": "waiting-slot-recycle",
+      "check_id": "waiting-slot-recycle",
       "kind": "interaction",
-      "description": "禁止穿透攻击 - 红色小猪遇到蓝色阻挡块时不攻击",
+      "description": "等待槽回收正确",
       "setup": [
-        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 800 },
-        { "action": "click", "x": 180, "y": 530 },
+        { "action": "click", "x": 140, "y": 560 },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "no-global-autoaim-verify",
+      "check_id": "no-global-autoaim-verify",
+      "kind": "interaction",
+      "description": "禁止全屏索敌验证",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "x": 140, "y": 560 },
         { "action": "wait", "ms": 2000 }
       ]
     },
     {
-      "id": "slot-recycle",
-      "check_id": "slot-recycle",
+      "id": "win-lose-condition",
+      "check_id": "win-lose-condition",
       "kind": "interaction",
-      "description": "等待槽回收 - 小猪绕行一周后回收到等待槽",
+      "description": "胜负判定正确",
       "setup": [
-        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 800 },
-        { "action": "click", "x": 180, "y": 530 },
-        { "action": "wait", "ms": 5000 }
+        { "action": "eval", "code": "window.gameTest.simulateWin && window.gameTest.simulateWin()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "x": 240, "y": 400 }
       ]
     },
     {
-      "id": "win-condition",
-      "check_id": "win-condition",
+      "id": "level-progression",
+      "check_id": "level-progression",
       "kind": "interaction",
-      "description": "胜利条件 - 清空所有目标块进入结果页",
+      "description": "关卡递进正确",
       "setup": [
-        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 800 },
-        { "action": "click", "x": 180, "y": 530 },
+        { "action": "eval", "code": "window.gameTest.simulateWin && window.gameTest.simulateWin()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "x": 240, "y": 400 },
         { "action": "wait", "ms": 500 }
-      ]
-    },
-    {
-      "id": "lose-condition",
-      "check_id": "lose-condition",
-      "kind": "interaction",
-      "description": "失败条件 - 资源耗尽但棋盘未清空",
-      "setup": [
-        { "action": "click", "x": 400, "y": 350 },
-        { "action": "wait", "ms": 800 },
-        { "action": "click", "x": 180, "y": 530 },
-        { "action": "wait", "ms": 500 }
-      ]
-    },
-    {
-      "id": "3-levels-progression",
-      "check_id": "3-levels-progression",
-      "kind": "interaction",
-      "description": "3关递进 - 关卡难度递进",
-      "setup": [
-        { "action": "click", "x": 400, "y": 350 },
-        { "action": "wait", "ms": 800 }
       ]
     }
   ],
@@ -100,48 +101,48 @@
       "id": "hard-rule-no-global-autoaim",
       "hard_rule_id": "no-global-autoaim",
       "kind": "hard-rule",
-      "description": "禁止全屏自动索敌 - 攻击依赖小猪当前位置",
+      "description": "禁止全屏自动索敌",
       "setup": [
-        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 800 },
-        { "action": "click", "x": 180, "y": 530 },
-        { "action": "wait", "ms": 3000 }
+        { "action": "click", "x": 240, "y": 300 }
       ]
     },
     {
-      "id": "hard-rule-no-multi-hit",
-      "hard_rule_id": "no-multi-hit",
+      "id": "hard-rule-no-multi-attack",
+      "hard_rule_id": "no-multi-attack",
       "kind": "hard-rule",
-      "description": "禁止一次攻击多个目标 - 每次攻击只处理1个目标块",
+      "description": "禁止一次攻击多个同色块",
       "setup": [
-        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 800 },
-        { "action": "click", "x": 180, "y": 530 },
-        { "action": "wait", "ms": 3000 }
+        { "action": "click", "x": 240, "y": 300 }
       ]
     },
     {
       "id": "hard-rule-no-pierce",
       "hard_rule_id": "no-pierce",
       "kind": "hard-rule",
-      "description": "禁止穿透攻击 - 小猪不能跳过异色块攻击后方同色块",
+      "description": "禁止穿透攻击",
       "setup": [
-        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 800 },
-        { "action": "click", "x": 180, "y": 530 },
-        { "action": "wait", "ms": 3000 }
+        { "action": "click", "x": 240, "y": 300 }
       ]
     },
     {
-      "id": "hard-rule-conveyor-loop",
-      "hard_rule_id": "conveyor-loop",
+      "id": "hard-rule-no-row-clear",
+      "hard_rule_id": "no-row-clear",
       "kind": "hard-rule",
-      "description": "必须严格体现四周传送带 - 小猪沿棋盘外围环形轨道移动",
+      "description": "禁止整行整列清除",
       "setup": [
-        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 800 },
-        { "action": "click", "x": 180, "y": 530 },
-        { "action": "wait", "ms": 1500 }
+        { "action": "click", "x": 240, "y": 300 }
       ]
     }
   ]

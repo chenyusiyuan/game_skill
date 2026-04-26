@@ -13,7 +13,7 @@ export class MainScene extends Phaser.Scene {
     // 示例（根据 assets.yaml 替换为实际素材路径）：
     // const BASE = "../../../assets/library_2d";
     // this.load.image("floor", `${BASE}/tiles/dungeon/tile_0000.png`);
-    // this.load.spritesheet("player", `${BASE}/tiles/dungeon/tile_0097.png`, { frameWidth: 16, frameHeight: 16 });
+    // this.load.spritesheet("player", `${BASE}/tiles/dungeon/tile_0030.png`, { frameWidth: 16, frameHeight: 16 });
     // this.load.audio("hit", `${BASE}/audio/sfx/hit.wav`);
     //
     // ⚠️ 如果 assets.yaml 有 local-file 素材，此处必须加载，禁止全部用程序化绘制替代

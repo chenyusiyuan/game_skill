@@ -1,6 +1,6 @@
 ---
 name: game-phase-3-expand
-description: "Phase 3: 规格展开（始终必做）。每次 codegen 前都把 GamePRD 的 @scene/@rule/@resource/@entity 展开为 specs/{scene,rule,data,assets,event-graph,implementation-contract}.yaml，作为 Phase 4 的精确输入。"
+description: "Phase 3: 规格展开（始终必做）。每次 codegen 前都把 GamePRD 的 @scene/@rule/@resource/@entity 展开为 specs/{mechanics,scene,rule,data,assets,event-graph,implementation-contract}.yaml，作为 Phase 4 的精确输入。"
 ---
 
 # Phase 3: Expand（始终必做）
@@ -11,11 +11,12 @@ description: "Phase 3: 规格展开（始终必做）。每次 codegen 前都把
 
 1. LLM 从 markdown 直接 codegen 会做额外解释工作，错误面更大
 2. yaml 是对 PRD 的无损拆解，可以让 codegen 子 agent 一次只关注一个维度
-3. 简单游戏的 expand 成本也很低（并发 5 份 yaml，几秒完成）
+3. 简单游戏的 expand 成本也很低（先拆 mechanics，再并发 5 个 expander 产物）
 4. 有 `specs/rule.yaml` 后，Phase 5 产品侧断言可以对照 yaml 定位失败点
 
 **输出**：
 - `specs/scene.yaml`：每个场景的布局、交互热区、UI 元素
+- `specs/mechanics.yaml`：玩法 primitive DAG，作为 rule/event-graph/codegen 的语义基线
 - `specs/rule.yaml`：每条 `@rule` 的展开伪代码
 - `specs/data.yaml`：`@resource` 的 schema + 示例数据
 - `specs/assets.yaml`：资源清单（图片 / 音频 / 字体）
@@ -28,6 +29,7 @@ description: "Phase 3: 规格展开（始终必做）。每次 codegen 前都把
 
 - `docs/game-prd.md` 已通过 `check_game_prd.js`（包含 @rule.effect 伪代码检查）
 - GamePRD 中 `@rule.effect` 已是伪代码风格——本阶段**不做翻译**，只做**拆解**
+- `docs/spec-clarifications.md` 已存在。它由 Phase 2.5 `spec-clarify.md` 生成，记录功能机制澄清和默认假设；本阶段必须读取并遵守。
 
 ---
 
@@ -47,11 +49,19 @@ node ${SKILL_DIR}/scripts/extract_game_prd.js docs/game-prd.md --list
 - `ENTITIES`：所有 `@entity(id)` 列表
 - `CONSTRAINTS`：所有 `@constraint(id)` 列表（重点挑 hard-rule）
 
+### Step 1.5：读取 Spec Clarifications
+
+```bash
+test -f docs/spec-clarifications.md
+```
+
+若文件缺失，停止进入 Expand，回到 Phase 2.5。不要让 mechanic-decomposer 或 gameplay-expander 在没有机制澄清记录的情况下自行猜测。
+
 ### Step 2：子 agent 并发展开
 
 **前置：读取 `references/common/game-systems.md` 的模块组合指南**，识别当前游戏需要的通用系统模块（§1-§16），在展开 RULE 层时引用对应模块的核心逻辑。
 
-**事务语义**：5 份维度 yaml 先写到 `specs/.pending/`；全部成功后，主 agent 用脚本生成第 6 份 `implementation-contract.yaml`，也写到 `.pending/`。6 份全部通过 gate 后由主 agent 一次性 mv 到 `specs/`。子任务失败时保留 `.pending/` 下已成功的文件，下次恢复只重跑未完成部分。
+**事务语义**：先由 mechanic-decomposer 读取 `docs/spec-clarifications.md` 并写 `specs/.pending/mechanics.yaml`；5 份维度 yaml 继续写到 `specs/.pending/`；全部成功后，主 agent 用脚本生成 `implementation-contract.yaml`，也写到 `.pending/`。7 份全部通过 gate 后由主 agent 一次性 mv 到 `specs/`。子任务失败时保留 `.pending/` 下已成功的文件，下次恢复只重跑未完成部分。
 
 同 turn 内发 5 个 `task_new`（agent_role = `gameplay-expander`），输出路径必须是 `specs/.pending/<dim>.yaml`：
 
@@ -64,7 +74,7 @@ task_new({
 task_new({
   task_id: "expand-rule",
   agent_role: "gameplay-expander",
-  task: "展开 RULE 层：为每条 @rule 写 pseudocode (trigger/condition/effect)，引用 game-systems.md 对应模块的数据结构，写 specs/.pending/rule.yaml"
+  task: "展开 RULE 层：读取 docs/spec-clarifications.md，为每条 @rule 写 pseudocode (trigger/condition/effect)，引用 game-systems.md 对应模块的数据结构，写 specs/.pending/rule.yaml"
 })
 task_new({
   task_id: "expand-data",
@@ -74,12 +84,12 @@ task_new({
 task_new({
   task_id: "expand-assets",
   agent_role: "gameplay-expander",
-  task: "展开 ASSETS 层：\n1. 根据引擎类型读取对应素材库 catalog：2D 引擎（phaser3/pixijs/canvas/dom-ui）读 assets/library_2d/catalog.yaml，Three.js 引擎读 assets/library_3d/catalog.yaml（**无论当前引擎是哪种，都必须执行此步骤**——素材选择与引擎无关，但素材库按 2D/3D 分开）\n2. 从 PRD front-matter 取出 color-scheme.palette-id 和 genre；genre 必须是 catalog.yaml 顶部 genres 枚举里的合法 id（否则视为 PRD bug，直接失败）。2D catalog 必须用 palette-style-aliases 将 palette-id 映射为 asset-style；若缺映射，视为 catalog 覆盖缺口直接失败。3D catalog 无 suitable-styles 时使用 lowpoly-3d 作为 asset-style。\n3. 候选包筛选（按优先级）：\n   a. 先查 catalog.style-genre-preferred 表，取 asset-style + genre 组合的首选包列表作为必选候选\n   b. 再遍历 packs：suitable-styles 命中 asset-style 或 [all]，且 suitable-genres 命中 genre 或 [all]，加入候选\n   c. 结果为候选包清单 C\n4. 选择具体文件：\n   - 语义文件名的包（naming='语义文件名'）：ls 目录按文件名选\n   - tile_XXXX 编号的包：读 catalog 中 index 字段指向的 _index.yaml，搜索关键词找到编号\n   - 需要某类语义元素（heart/coin/sword/button/panel 等）时，先查 catalog.semantic-hints 反向索引，在命中的包里挑，避免漏选或乱选\n5. **local-file 占比硬性门槛**：images 和 audio 中 type==local-file 比例必须 ≥ 30%（至少 UI 件和图标走 local-file）；仅当 catalog 里对应语义槽确实缺素材时，才可用 inline-svg / graphics-generated / synthesized 补足；且必须在 selection-report 里写明原因\n6. **no-external-assets 约束的正确解读**（关键——不得误判）：\n   - PRD 中的 `@constraint(no-external-assets)` 仅禁止运行时从远程 CDN/HTTP 服务拉取资源（如 cdn.jsdelivr.net、googleapis.com 字体等），目的是让 `run-mode=file` 双击可运行、离线可用\n   - 项目仓库内 `assets/library_2d/` 与 `assets/library_3d/` 是**项目自包含**的本地资源（相对路径引用），不构成\"外部依赖\"，必须照常使用\n   - 遇到 no-external-assets 约束时，expander **禁止**据此把所有候选包 reject、把 images 设为 []；应正常走 local-file，反而把 google-fonts 这类远程字体替换为系统字体或 library_2d/fonts 本地字体\n   - 若 expander 产出的 assets.yaml 出现 \"images: []\"，视为误判，Phase 3 判 FAIL 要求整改\n7. 输出 specs/.pending/assets.yaml，末尾追加 selection-report 段，格式见 prd.md 后面的模板；每个候选包记录 {id, used: true|false, reason}，每个 type!=local-file 条目记录 {id, reason: 'catalog 缺对应语义 / 需要动态生成 / ...'}\n8. 路径规则：type==local-file 的 source 写项目根相对路径，2D 引擎如 assets/library_2d/ui-pixel/tile_0010.png，Three.js 引擎如 assets/library_3d/models/platformer/character.glb；禁止写 ../../../ 前缀（那是 codegen 的职责）"
+  task: "展开 ASSETS 层：\n1. 根据引擎类型读取对应素材库 catalog：2D 引擎（phaser3/pixijs/canvas/dom-ui）读 assets/library_2d/catalog.yaml，Three.js 引擎读 assets/library_3d/catalog.yaml（**无论当前引擎是哪种，都必须执行此步骤**——素材选择与引擎无关，但素材库按 2D/3D 分开）\n2. 从 PRD front-matter 取出 color-scheme.palette-id 和 genre；genre 必须是 catalog.yaml 顶部 genres 枚举里的合法 id（否则视为 PRD bug，直接失败）。2D catalog 必须用 palette-style-aliases 将 palette-id 映射为 asset-style；若缺映射，视为 catalog 覆盖缺口直接失败。3D catalog 无 suitable-styles 时使用 lowpoly-3d 作为 asset-style。\n3. 候选包筛选（按优先级）：\n   a. 先查 catalog.style-genre-preferred 表，取 asset-style + genre 组合的首选包列表作为必选候选\n   b. 再遍历 packs：suitable-styles 命中 asset-style 或 [all]，且 suitable-genres 命中 genre 或 [all]，加入候选\n   c. 结果为候选包清单 C\n4. 选择具体文件：\n   - 语义文件名的包（naming='语义文件名'）：ls 目录按文件名选\n   - tile_XXXX 编号的包：读 catalog 中 index 字段指向的 _index.yaml，搜索关键词找到编号\n   - 需要某类语义元素（heart/coin/sword/button/panel 等）时，先查 catalog.semantic-hints 反向索引，在命中的包里挑，避免漏选或乱选\n   - **色块/目标块例外**：若 @entity/@ui 的语义是 色块/方块/目标块/color block，且玩法依赖 color 字段，必须输出 type: generated（或 graphics-generated/inline-svg）并写 visual-primitive: color-block；不要去 catalog 里挑 coin/gem/dungeon tile 之类具象素材。library-first 只作用于角色、UI、HUD、背景等真实素材槽，不覆盖抽象色块。\n5. **local-file 占比硬性门槛**：images 和 audio 中 type==local-file 比例必须 ≥ 30%（至少 UI 件和图标走 local-file）；仅当 catalog 里对应语义槽确实缺素材、或该语义本来就是抽象 color-block 时，才可用 inline-svg / graphics-generated / synthesized 补足；且必须在 selection-report 里写明原因\n6. **no-external-assets 约束的正确解读**（关键——不得误判）：\n   - PRD 中的 `@constraint(no-external-assets)` 仅禁止运行时从远程 CDN/HTTP 服务拉取资源（如 cdn.jsdelivr.net、googleapis.com 字体等），目的是让 `run-mode=file` 双击可运行、离线可用\n   - 项目仓库内 `assets/library_2d/` 与 `assets/library_3d/` 是**项目自包含**的本地资源（相对路径引用），不构成\"外部依赖\"，必须照常使用\n   - 遇到 no-external-assets 约束时，expander **禁止**据此把所有候选包 reject、把 images 设为 []；应正常走 local-file，反而把 google-fonts 这类远程字体替换为系统字体或 library_2d/fonts 本地字体\n   - 若 expander 产出的 assets.yaml 出现 \"images: []\"，视为误判，Phase 3 判 FAIL 要求整改\n7. 输出 specs/.pending/assets.yaml，末尾追加 selection-report 段，格式见 prd.md 后面的模板；每个候选包记录 {id, used: true|false, reason}，每个 type!=local-file 条目记录 {id, reason: 'catalog 缺对应语义 / 抽象 color-block 需要程序化生成 / 需要动态生成 / ...'}\n8. 路径规则：type==local-file 的 source 写项目根相对路径，2D 引擎如 assets/library_2d/ui-pixel/tile_0013.png，Three.js 引擎如 assets/library_3d/models/platformer/character.glb；禁止写 ../../../ 前缀（那是 codegen 的职责）"
 })
 task_new({
   task_id: "expand-event-graph",
   agent_role: "gameplay-expander",
-  task: "展开 EVENT-GRAPH 层：读 game-systems.md 契约速查表，按已选模块的 inputEvents/outputEvents 生成事件连接蓝图，写 specs/.pending/event-graph.yaml"
+  task: "展开 EVENT-GRAPH 层：读取 docs/spec-clarifications.md 和 game-systems.md 契约速查表，按已选模块的 inputEvents/outputEvents 生成事件连接蓝图，写 specs/.pending/event-graph.yaml"
 })
 ```
 
@@ -87,14 +97,14 @@ task_new({
 
 ### Step 2.5：生成 Implementation Contract（不可跳过）
 
-5 份维度 yaml 都成功写到 `specs/.pending/` 后，主 agent 立刻生成增强契约层：
+5 个 expander 维度产物都成功写到 `specs/.pending/` 后，主 agent 立刻生成增强契约层：
 
 ```bash
 node ${SKILL_DIR}/scripts/generate_implementation_contract.js cases/${PROJECT}/ \
   --out specs/.pending/implementation-contract.yaml
 ```
 
-`implementation-contract.yaml` 不是给 LLM 自由发挥的新文档，而是把前 5 份 specs 收束成 codegen 必须遵守的机器契约：
+`implementation-contract.yaml` 不是给 LLM 自由发挥的新文档，而是把前序 specs 收束成 codegen 必须遵守的机器契约：
 
 - `runtime`：engine + run-mode
 - `boot`：entry scene、ready condition、start action、scene transitions
@@ -115,7 +125,7 @@ node ${SKILL_DIR}/scripts/generate_implementation_contract.js cases/${PROJECT}/ 
 
 ### Step 4：原子提交
 
-所有 6 个 subtask 都 `completed` 后：
+所有 7 个 subtask 都 `completed` 后：
 
 ```bash
 mv cases/${PROJECT}/specs/.pending/*.yaml cases/${PROJECT}/specs/
@@ -128,7 +138,7 @@ rmdir cases/${PROJECT}/specs/.pending
 node -e "
 import('./game_skill/skills/scripts/_state.js').then(m => {
   let st = m.readState('cases/${PROJECT}/.game/state.json');
-  st = m.commitExpand(st);  // 内部校验 6 subtask 全 completed，否则抛错
+  st = m.commitExpand(st);  // 内部校验 7 subtask 全 completed，否则抛错
   m.writeState('cases/${PROJECT}/.game/state.json', st);
 })
 "
@@ -418,25 +428,37 @@ asset-style: pixel-retro            # 从 palette-id 映射得到，用于匹配
 #      codegen 可选消费，verify 不强制
 # 写错或漏写 binding-to 会让 check_asset_selection.js 直接 fail。
 # 原则：尽量绑核心 @entity/@ui；写 decor 是退路，不要用它水通过——decor 超过 40% 会 warn。
+#
+# 色块/目标块规则：
+# 如果 @entity/@ui 的语义是 色块/方块/目标块/color block，且玩法依赖 color 字段，
+# 不要绑定具象 local-file 素材。应使用 generated/graphics-generated，并显式声明：
+#   visual-primitive: color-block
+# codegen 将用 PRD color-scheme 的色值画纯色格子、描边和耐久角标。
 
 # ── 图片资源 ──
 images:
   # 优先使用本地 Kenney 素材（相对于项目根目录）
   - id: btn-start
-    source: assets/library_2d/ui-pixel/tile_0010.png    # 像素按钮左端
+    source: assets/library_2d/ui-pixel/tile_0013.png    # 像素按钮左端(button_left)
     type: local-file
     binding-to: btn-start           # → @ui(btn-start)
-    usage: "开始按钮（与 tile_0011 + tile_0012 拼成完整按钮）"
+    usage: "开始按钮（与 tile_0014 + tile_0015 拼成完整按钮）"
   - id: heart-full
-    source: assets/library_2d/ui-pixel/tile_0026.png    # 满心
+    source: assets/library_2d/ui-pixel/tile_0031.png    # 满心(heart_full)
     type: local-file
     binding-to: hud-hearts          # → @ui(hud-hearts)
     usage: "HUD 生命值（满）"
   - id: heart-empty
-    source: assets/library_2d/ui-pixel/tile_0028.png    # 空心
+    source: assets/library_2d/ui-pixel/tile_0033.png    # 空心(heart_empty)
     type: local-file
     binding-to: hud-hearts
     usage: "HUD 生命值（空）"
+  - id: block-red
+    source: generated
+    type: generated
+    binding-to: block
+    visual-primitive: color-block
+    usage: "红色目标色块（纯色格子，不绑定具象素材）"
   # 本地素材不足时，用 inline-svg 或 graphics-generated 补充
   - id: custom-bg
     source: inline-svg
@@ -600,7 +622,7 @@ test-hooks:
 
 ## 输出清单
 
-- [ ] 6 份 yaml 均存在且语法合法（含 implementation-contract.yaml）
+- [ ] 7 份 yaml 均存在且语法合法（含 mechanics.yaml 与 implementation-contract.yaml）
 - [ ] 每条 rule 有 trigger+condition+effect（effect 拆分为 logic + visual）
 - [ ] 每个 scene 有 zones + ui-slots + enter-transition + enter-sequence
 - [ ] scene.yaml 包含 boot-contract 段（entry-scene + ready-condition + start-action + scene-transitions）

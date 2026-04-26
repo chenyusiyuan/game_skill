@@ -9,6 +9,7 @@
  *   真相来源 = (a) window.__trace 覆盖 PRD 的 @rule
  *             (b) 全程无 console.error / pageerror
  *             (c) profile 至少 1 条 action: click（真 DOM click 或 canvas 坐标）
+ *             (d) 每条交互类 assertion 自身包含真实用户输入，不能只调 window.gameTest
  *
  * 退出码:
  *   0 = 全部关键检查通过
@@ -68,22 +69,69 @@ if (hasExpectField) {
   profileShapeErrors.push(`[PROFILE] profile 包含 expect 段；新链路中 profile 只能写 setup，产品判定由 window.__trace + runtime errors 承担`);
 }
 
-// T7: profile 必须至少 1 条 action: click，否则判 profile 不合规（T7）
-// 防止模型把所有 setup 都改成 eval 绕过真实 UI 交互
-function hasRealClick(profile) {
-  const assertions = [
-    ...(Array.isArray(profile.assertions) ? profile.assertions : []),
-    ...(Array.isArray(profile.hard_rule_assertions) ? profile.hard_rule_assertions : []),
-  ];
-  for (const a of assertions) {
-    for (const s of a.setup ?? []) {
-      if (s.action === "click" && s.selector) return true;
-      if (s.action === "click" && Number.isFinite(s.x) && Number.isFinite(s.y)) return true;
-    }
+function assertionText(a) {
+  return [
+    a.id,
+    a.check_id,
+    a.hard_rule_id,
+    a.description,
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function hasRealClickStep(a) {
+  for (const s of a.setup ?? []) {
+    if (s.action === "click" && s.selector) return true;
+    if (s.action === "click" && Number.isFinite(s.x) && Number.isFinite(s.y)) return true;
   }
   return false;
 }
-const clickOk = hasRealClick(profile);
+
+function hasRealUserInputStep(a) {
+  for (const s of a.setup ?? []) {
+    if (s.action === "click" && (s.selector || (Number.isFinite(s.x) && Number.isFinite(s.y)))) return true;
+    if (s.action === "press" && s.key) return true;
+    if (s.action === "fill" && s.selector) return true;
+  }
+  return false;
+}
+
+function isInteractionAssertion(a) {
+  const text = assertionText(a);
+  return a.kind === "interaction" ||
+    /(^|[-_\s])(click|tap|press|drag|input|select|choose|dispatch|start|retry|next|slot|card|tile|button|pig)([-_\s]|$)/i.test(text) ||
+    /点击|点按|拖拽|输入|选择|派出|开始|重试|下一关|按钮|小猪|卡片|槽位|格子|棋子/.test(text);
+}
+
+function isClickLikeAssertion(a) {
+  const text = assertionText(a);
+  return /(^|[-_\s])(click|tap|dispatch|select|choose|start|retry|next|slot|card|tile|button|pig)([-_\s]|$)/i.test(text) ||
+    /点击|点按|选择|派出|开始|重试|下一关|按钮|小猪|卡片|槽位|格子|棋子/.test(text);
+}
+
+function hasGameTestBridgeStep(a) {
+  return (a.setup ?? []).some((s) => {
+    if (s.action !== "eval") return false;
+    const code = String(s.js ?? s.code ?? "");
+    return /window\.gameTest\.(?:click|dispatch|select|choose|start|retry|next|simulate|spawn|open|press|tap)/.test(code);
+  });
+}
+
+// T7: profile 必须包含真实用户输入；交互类 assertion 不能只用 window.gameTest 绕过 UI。
+const clickOk = allAssertions.some(hasRealClickStep);
+if (!clickOk) {
+  profileShapeErrors.push(`[PROFILE] profile 中没有任何真实 action: click 步骤——必须至少 1 条 selector click 或 x/y 坐标 click，否则无法暴露 hitArea/按钮错位类 bug`);
+}
+for (const a of allAssertions) {
+  if (!isInteractionAssertion(a)) continue;
+  if (isClickLikeAssertion(a) && !hasRealClickStep(a)) {
+    profileShapeErrors.push(`[PROFILE] 交互类 assertion "${a.id}" 缺少真实 action: click；不能只用 window.gameTest 或直接改 state 绕过 UI`);
+  } else if (!hasRealUserInputStep(a)) {
+    profileShapeErrors.push(`[PROFILE] 交互类 assertion "${a.id}" 缺少真实用户输入步骤；至少需要 click/press/fill 之一`);
+  }
+  if (!hasRealUserInputStep(a) && hasGameTestBridgeStep(a)) {
+    profileShapeErrors.push(`[PROFILE] 交互类 assertion "${a.id}" 只通过 window.gameTest 驱动；测试桥接只能辅助，不能替代真实输入链路`);
+  }
+}
 
 // === Pre-flight: PRD @check coverage validation ===
 if (!skipCoverageCheck) {
@@ -150,6 +198,20 @@ if (!skipCoverageCheck) {
   }
 }
 
+if (profileShapeErrors.length > 0) {
+  console.log(`\n✗ profile 形状不合规:`);
+  for (const e of profileShapeErrors) console.log("  " + e);
+  log.entry({
+    type: "profile-invalid",
+    phase: "verify",
+    step: "playthrough",
+    script: "check_playthrough.js",
+    exit_code: 4,
+    profile_errors: profileShapeErrors,
+  });
+  process.exit(4);
+}
+
 // Dynamic import playwright
 let chromium;
 try {
@@ -199,6 +261,12 @@ try {
 let stateFails = 0;
 let hardFails = 0;
 const results = [];
+const aggregateTrace = [];
+
+async function collectTraceSnapshot() {
+  const trace = await page.evaluate(() => Array.isArray(window.__trace) ? window.__trace : null).catch(() => null);
+  if (Array.isArray(trace)) aggregateTrace.push(...trace);
+}
 
 async function loadFreshPage() {
   await page.goto(launch.url, { waitUntil: "networkidle", timeout: profile.boot_timeout_ms ?? 5000 });
@@ -223,7 +291,10 @@ for (let idx = 0; idx < allAssertions.length; idx++) {
   const a = allAssertions[idx];
   const label = `[${a.id}] ${a.description}`;
   try {
-    if (idx > 0) await loadFreshPage();
+    if (idx > 0) {
+      await collectTraceSnapshot();
+      await loadFreshPage();
+    }
     for (const step of a.setup ?? []) {
       if (step.action === "click") {
         if (step.selector) {
@@ -256,9 +327,10 @@ for (let idx = 0; idx < allAssertions.length; idx++) {
     else stateFails++;
   }
 }
+await collectTraceSnapshot();
 
 // ── T4 核心：trace 覆盖率判定 ──
-const trace = await page.evaluate(() => Array.isArray(window.__trace) ? window.__trace : null);
+const trace = aggregateTrace.length > 0 ? aggregateTrace : null;
 
 let traceCoverage = null;
 const traceErrors = [];
@@ -278,13 +350,9 @@ if (!hasTraceBaseline) {
 }
 
 // T7: 真 DOM click 检查
-if (!clickOk) {
-  traceErrors.push(`[PROFILE] profile 中没有任何真实 action: click 步骤——必须至少 1 条 selector click 或 x/y 坐标 click，否则无法暴露 hitArea/按钮错位类 bug`);
-} else {
+if (clickOk) {
   console.log(`  ✓ [PROFILE] 至少 1 条 action: click`);
 }
-
-traceErrors.push(...profileShapeErrors);
 
 // console error 计入 exit code（不只是 log）
 if (consoleErrors.length > 0) {

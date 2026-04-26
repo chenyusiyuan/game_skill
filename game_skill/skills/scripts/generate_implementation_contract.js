@@ -133,7 +133,9 @@ function collectAssetBindings(spec, strategy) {
       if (!id) continue;
       const source = item.source ?? "";
       const type = normalizeType(item.type, source, section);
-      const role = inferRole({ id, usage: item.usage, source, section });
+      let role = inferRole({ id, usage: item.usage, source, section });
+      const visualPrimitive = item["visual-primitive"] ?? null;
+      if (visualPrimitive === "color-block") role = "color-block";
       const kind = inferAssetKind({ id, usage: item.usage, source, section, type });
       const isOptionalState = /hover|悬停|outline|empty|备用|fallback|backup/i.test(`${id} ${item.usage ?? ""}`);
       const isDecorativeRole = ["particle", "hud-indicator", "decorative"].includes(role);
@@ -143,7 +145,7 @@ function collectAssetBindings(spec, strategy) {
       // generated-only: generated/local-file 都可以 must-render（只要有真 binding）
       const typeAllowed = allowGeneratedMustRender
         ? (type === "local-file" || type === "graphics-generated" || type === "inline-svg")
-        : (type === "local-file");
+        : (type === "local-file" || (visualPrimitive === "color-block" && ["graphics-generated", "inline-svg"].includes(type)));
       const mustRender = typeAllowed && section !== "fonts" && !isOptionalState && hasRealBinding;
       out.push({
         id: String(id),
@@ -153,6 +155,7 @@ function collectAssetBindings(spec, strategy) {
         type,
         source: source || type,
         "binding-to": bindingTo,
+        ...(visualPrimitive ? { "visual-primitive": visualPrimitive } : {}),
         "render-as": inferRenderAs(section, type, role),
         "text-bearing": isTextBearing(role),
         "must-render": mustRender,

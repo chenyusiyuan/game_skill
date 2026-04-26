@@ -1,6 +1,6 @@
 ---
 name: game-game-checker
-description: Phase 5 校验修复子 agent。跑 check_project / check_playthrough / check_skill_compliance，根据失败输出定位修复点。可被反复调用做修复循环。
+description: Phase 5 校验修复子 agent。优先跑 verify_all，或按层跑 check_mechanics / check_project / check_playthrough / check_skill_compliance，根据失败输出定位修复点。
 tools: Read, Edit, Bash, Grep, Glob
 ---
 
@@ -12,7 +12,7 @@ tools: Read, Edit, Bash, Grep, Glob
 
 | 字段 | 必填 | 说明 |
 |---|---|---|
-| `【层】` | ✅ | `boot` \| `project` \| `playthrough` \| `compliance`（`contract` 仅作可选诊断层；正常工程侧已由 `project` 链式覆盖） |
+| `【层】` | ✅ | `all` \| `mechanics` \| `boot` \| `project` \| `playthrough` \| `compliance`（`contract` 仅作可选诊断层；正常工程侧已由 `project` 链式覆盖） |
 | `【case】` | 条件 | playthrough 必填；其他可选 |
 | `【project】` | ✅ | project slug（用于定位 state/log） |
 | `【round】` | ✅ | 当前第几轮（≥ 1） |
@@ -36,7 +36,39 @@ tools: Read, Edit, Bash, Grep, Glob
 
 ## 执行步骤
 
-1. 跑对应脚本（**必须**带 `--log cases/<project>/.game/log.jsonl`）：
+### 0. Spec Freeze 校验（每次调用都必须做的第一件事）
+
+进入本 agent 前，主 agent 已在 Phase 5 入口跑过 `freeze_specs.js` 写 `.game/freeze.json`。
+本 agent 每次进入、每个修复轮 **都必须**在做任何事之前先跑：
+
+```
+node game_skill/skills/scripts/freeze_specs.js cases/<project> --verify \
+  --log cases/<project>/.game/log.jsonl
+```
+
+- 退出码 `0` → 通过，继续步骤 1
+- 退出码 `1` → **hard fail**：说明某一轮修复动了 PRD / specs 里的冻结内容
+  （包括 `docs/game-prd.md` 与 `specs/*.yaml`，含 `specs/mechanics.yaml`）。
+  立刻返回：
+  ```json
+  {
+    "status": "failed",
+    "layer": "<layer>",
+    "round": <round>,
+    "budget_remaining": <rest>,
+    "script_exit_code": 1,
+    "reason": "spec-freeze-violated",
+    "remaining_failures": [{ "assertion_id": "freeze", "reason": "<diff>" }]
+  }
+  ```
+  **不得尝试修复 specs**：修复轮只能改 `cases/<project>/game/` 下的实现代码。
+  如果确实是 PRD/specs 有错，整个 Phase 5 返回 failed 回 Phase 2 重做。
+
+### 1. 跑对应脚本
+
+跑对应脚本（**必须**带 `--log cases/<project>/.game/log.jsonl`）：
+   - `all` → `verify_all.js cases/<project> --profile <case> --log ...`
+   - `mechanics` → `check_mechanics.js cases/<project>`
    - `boot` → `check_game_boots.js cases/<project>/game/ --log ...`
    - `contract` → `check_implementation_contract.js cases/<project>/ --stage codegen --log ...`（仅诊断单层失败时使用）
    - `project` → `check_project.js cases/<project>/game/ --log ...`
@@ -48,14 +80,17 @@ tools: Read, Edit, Bash, Grep, Glob
    - `1` → 软失败（普通 assertion / 工程问题）→ 进入修复
    - `2` → 硬失败（hard-rule assertion）→ 进入修复（优先级最高）
    - `3` → 环境问题 → 返回 `{ "status": "environment_failure", ... }`，不消耗预算
-   - `4` → profile 覆盖率不足（playthrough only）→ 返回 `{ "status": "profile_missing", ... }`
+   - `4` → profile 覆盖率不足或交互类 assertion 缺真实输入（playthrough / verify_all）→ 返回 `{ "status": "profile_missing", ... }`
 
 3. 修复（消耗 1 轮预算）：
    - **修复前**先写 `fix-applied` 日志到 log.jsonl
    - 读失败输出每条 assertion error
    - grep 定位相关代码
    - 用 Edit 做**小步**修复
-   - 回到步骤 1 重跑
+   - ⚠️ **Spec Freeze 硬约束**：修复只能改 `cases/<project>/game/` 下的实现代码文件；
+     严禁修改 `docs/game-prd.md` 与 `cases/<project>/specs/*.yaml`（含 `mechanics.yaml`）。
+     修完回到**步骤 0 重新 verify**，verify 通过后再跑步骤 1 的对应脚本。
+   - 若 `mechanics` 层失败，不在 Phase 5 内改 game/ 硬凑；返回 failed，让主流程回 Phase 3 修 primitive DAG 后重新 codegen。
 
 4. 若【budget】用完仍未通过，返回 failed（见下）。
 
@@ -110,6 +145,8 @@ tools: Read, Edit, Bash, Grep, Glob
 ## 禁止事项
 
 - ❌ 修改 `docs/game-prd.md`（PRD 错应整个 Phase 5 标 failed 回 Phase 2）
+- ❌ 修改 `cases/<project>/specs/*.yaml`（包括 `mechanics.yaml`）——已被 freeze
+- ❌ 跳过或注释掉步骤 0 的 `freeze_specs.js --verify`
 - ❌ 修改 `game_skill/skills/scripts/profiles/*.json` 让断言变宽松（那是协议）
 - ❌ 超预算继续修
 - ❌ 用 `try/catch` 吞 error
@@ -119,4 +156,4 @@ tools: Read, Edit, Bash, Grep, Glob
 ## 特殊情况
 
 - **environment_failure**：直接返回，提示主 agent 先跑 `npx playwright install chromium` 等补齐环境
-- **profile_missing**：返回后主 agent 应先从 Phase 2 产出的 `${PROJECT}.skeleton.json` 拷贝一份为 `${PROJECT}.json` 并补 setup/expect，再重试
+- **profile_missing**：返回后主 agent 应先从 Phase 2 产出的 `${PROJECT}.skeleton.json` 拷贝一份为 `${PROJECT}.json` 并补真实 setup，再重试；交互类 assertion 必须有真实 click/press/fill，不能只调 `window.gameTest`

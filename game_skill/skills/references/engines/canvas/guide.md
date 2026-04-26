@@ -48,9 +48,9 @@ function loadImage(src) {
 async function preloadAssets() {
   const BASE = "../../../assets/library_2d";
   const assets = {
-    player: await loadImage(`${BASE}/tiles/dungeon/tile_0097.png`),
+    player: await loadImage(`${BASE}/tiles/dungeon/tile_0030.png`),
     floor: await loadImage(`${BASE}/tiles/dungeon/tile_0000.png`),
-    wall: await loadImage(`${BASE}/tiles/dungeon/tile_0001.png`),
+    wall: await loadImage(`${BASE}/tiles/dungeon/tile_0009.png`),
   };
   return assets;
 }

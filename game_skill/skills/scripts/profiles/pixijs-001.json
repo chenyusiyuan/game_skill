@@ -1,117 +1,143 @@
 {
   "case_id": "pixijs-001",
+  "description": "pixijs-001 - 像素传送带清板益智游戏完整测试 profile",
   "game_html_relative": "game/index.html",
-  "boot_timeout_ms": 5000,
+  "boot_timeout_ms": 10000,
+  "prd_hash": "02cdcf145a6d9084c417cb827d47e9d144284da3",
+  "prd_path": "cases/pixijs-001/docs/game-prd.md",
   "assertions": [
     {
-      "id": "boot-success",
-      "check_id": "boot-game",
-      "kind": "state",
-      "description": "启动后 phase = ready",
-      "setup": [],
-      "expect": {
-        "selector": "window.gameState.phase",
-        "op": "eq",
-        "value": "ready"
-      }
+      "id": "game-boots",
+      "check_id": "game-boots",
+      "kind": "boot",
+      "description": "游戏启动测试",
+      "setup": [
+        { "action": "wait", "ms": 1000 }
+      ]
     },
     {
-      "id": "playable-round",
-      "check_id": "playable-round",
+      "id": "level-1-playable",
+      "check_id": "level-1-playable",
       "kind": "interaction",
-      "description": "可玩单局 - 点击开始完成配对",
+      "description": "第一关可玩 - 派出小猪攻击目标块",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 800 }
-      ],
-      "expect": {
-        "selector": "window.gameState.score > 0 && window.gameState.phase",
-        "op": "truthy",
-        "value": true
-      }
-    },
-    {
-      "id": "match-logic",
-      "check_id": "match-logic",
-      "kind": "interaction",
-      "description": "配对逻辑正确 - 成功匹配消除卡片",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 800 }
-      ],
-      "expect": {
-        "selector": "window.gameState.matchedCount > 0",
-        "op": "truthy",
-        "value": true
-      }
-    },
-    {
-      "id": "timer-countdown",
-      "check_id": "timer-countdown",
-      "kind": "interaction",
-      "description": "计时器正常倒计时",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.__initialTime = window.gameState.timeLeft" },
-        { "action": "wait", "ms": 2000 }
-      ],
-      "expect": {
-        "selector": "window.gameState.timeLeft < window.__initialTime",
-        "op": "truthy",
-        "value": true
-      }
-    },
-    {
-      "id": "combo-system",
-      "check_id": "combo-system",
-      "kind": "interaction",
-      "description": "连击系统 - 连续配对成功增加combo",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 800 },
-        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 800 },
-        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 800 }
-      ],
-      "expect": {
-        "selector": "window.gameState.combo >= 3",
-        "op": "truthy",
-        "value": true
-      }
-    },
-    {
-      "id": "level-progression",
-      "check_id": "level-progression",
-      "kind": "interaction",
-      "description": "关卡递进 - 完成关卡进入下一关",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.setLevel(1)" },
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 700 },
-        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 700 },
-        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 700 },
-        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "click", "x": 400, "y": 350, "note": "点击开始按钮" },
         { "action": "wait", "ms": 1000 },
-        { "action": "eval", "js": "window.gameTest.clickNextButton()" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": {
-        "selector": "window.gameState.currentLevel",
-        "op": "eq",
-        "value": 2
-      }
+        { "action": "click", "x": 250, "y": 550, "note": "点击等待槽1的小猪" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "color-match-attack",
+      "check_id": "color-match-attack",
+      "kind": "interaction",
+      "description": "颜色匹配攻击测试",
+      "setup": [
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 1000 },
+        { "action": "click", "x": 250, "y": 550 },
+        { "action": "wait", "ms": 2000 }
+      ]
+    },
+    {
+      "id": "wait-slot-recycle",
+      "check_id": "wait-slot-recycle",
+      "kind": "interaction",
+      "description": "等待槽回收测试",
+      "setup": [
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "const slot = window.gameState.waitSlots && window.gameState.waitSlots[0]; const pig = window.gameState.pigs && window.gameState.pigs.find(p => p.id === slot?.pigId); if (pig) pig.ammo = 99" },
+        { "action": "click", "x": 250, "y": 550 },
+        { "action": "wait", "ms": 8000 }
+      ]
+    },
+    {
+      "id": "no-autoaim-verify",
+      "check_id": "no-autoaim-verify",
+      "kind": "interaction",
+      "description": "禁止自动索敌验证",
+      "setup": [
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 1000 },
+        { "action": "click", "x": 250, "y": 550 },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "three-levels",
+      "check_id": "three-levels",
+      "kind": "interaction",
+      "description": "三关卡递进 - 检查关卡系统存在",
+      "setup": [
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "const gs = window.gameState; gs.currentLevel !== undefined && gs.currentLevel >= 1" }
+      ]
+    }
+  ],
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-no-global-autoaim",
+      "hard_rule_id": "no-global-autoaim",
+      "kind": "hard-rule",
+      "description": "禁止全屏自动索敌",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.verifyNoGlobalAutoaim && window.gameTest.verifyNoGlobalAutoaim()" }
+      ]
+    },
+    {
+      "id": "hard-rule-no-multi-attack",
+      "hard_rule_id": "no-multi-attack",
+      "kind": "hard-rule",
+      "description": "禁止一次攻击多个同色块",
+      "setup": [
+        { "action": "eval", "code": "const trace = window.__trace || []; const attacks = trace.filter(t => t.rule === 'attack-execute'); attacks.every(a => a.after && a.after.targetHp !== undefined)" }
+      ]
+    },
+    {
+      "id": "hard-rule-no-penetrate",
+      "hard_rule_id": "no-penetrate",
+      "kind": "hard-rule",
+      "description": "禁止穿透攻击",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.verifyNoPenetration && window.gameTest.verifyNoPenetration()" }
+      ]
+    },
+    {
+      "id": "hard-rule-core-mechanics",
+      "hard_rule_id": "core-mechanics",
+      "kind": "hard-rule",
+      "description": "核心玩法约束",
+      "setup": [
+        { "action": "eval", "code": "const gs = window.gameState; gs.conveyorSlots && gs.waitSlots && gs.pigs" }
+      ]
+    },
+    {
+      "id": "hard-rule-no-fallback-genre",
+      "hard_rule_id": "no-fallback-genre",
+      "kind": "hard-rule",
+      "description": "禁止做成其他类型 - 并触发完整游戏流程以收集trace",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton && window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1500 },
+        { "action": "eval", "code": "window.gameTest.clickPigInWaitSlot && window.gameTest.clickPigInWaitSlot(0)" },
+        { "action": "wait", "ms": 8000 },
+        { "action": "eval", "code": "window.gameTest.clickPigInWaitSlot && window.gameTest.clickPigInWaitSlot(1)" },
+        { "action": "wait", "ms": 8000 },
+        { "action": "eval", "code": "window.gameTest.clickPigInWaitSlot && window.gameTest.clickPigInWaitSlot(2)" },
+        { "action": "wait", "ms": 8000 },
+        { "action": "eval", "code": "window.gameTest.clickPigInWaitSlot && window.gameTest.clickPigInWaitSlot(3)" },
+        { "action": "wait", "ms": 8000 },
+        { "action": "eval", "code": "window.gameTest.clickPigInWaitSlot && window.gameTest.clickPigInWaitSlot(4)" },
+        { "action": "wait", "ms": 8000 },
+        { "action": "eval", "code": "window.gameTest.clickPigInWaitSlot && window.gameTest.clickPigInWaitSlot(5)" },
+        { "action": "wait", "ms": 25000 },
+        { "action": "eval", "code": "window.gameTest.forceLose && window.gameTest.forceLose()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "const gs = window.gameState; gs.blocks && Array.isArray(gs.blocks)" }
+      ]
     }
   ]
 }

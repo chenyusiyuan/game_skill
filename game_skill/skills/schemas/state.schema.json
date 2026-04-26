@@ -58,9 +58,10 @@
               "properties": {
                 "subtasks": {
                   "type": "object",
-                  "description": "Phase 3 expander 与契约生成的子任务状态。主 agent 恢复时据此判断哪些子任务还没完成。",
+                  "description": "Phase 3 expander 与契约生成的子任务状态。主 agent 恢复时据此判断哪些子任务还没完成。mechanics 由 Phase 3.0 mechanic-decomposer 产出（老 case 可置 skipped）。",
                   "additionalProperties": false,
                   "properties": {
+                    "mechanics": { "$ref": "#/definitions/subtask" },
                     "scene": { "$ref": "#/definitions/subtask" },
                     "rule": { "$ref": "#/definitions/subtask" },
                     "data": { "$ref": "#/definitions/subtask" },
@@ -144,14 +145,18 @@
       "type": "object",
       "required": ["status"],
       "properties": {
-        "status": { "type": "string", "enum": ["pending", "running", "completed", "failed"] },
+        "status": { "type": "string", "enum": ["pending", "running", "completed", "failed", "skipped"] },
         "startedAt": { "type": "string", "format": "date-time" },
         "finishedAt": { "type": "string", "format": "date-time" },
         "output": {
           "type": "string",
           "description": "产物文件相对路径，例如 specs/.pending/scene.yaml（完成时）或 specs/scene.yaml（提交后）"
         },
-        "error": { "type": "string" }
+        "error": { "type": "string" },
+        "reason": {
+          "type": "string",
+          "description": "status=skipped 时填，说明跳过原因（例如老 case 无 mechanics 而 migrateLegacy 自动置 skipped）"
+        }
       }
     }
   }

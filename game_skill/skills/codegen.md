@@ -53,11 +53,28 @@ has been blocked by CORS policy
 
 - `docs/game-prd.md` 已通过 `check_game_prd.js`
 - GamePRD front-matter 含 `runtime` 和 `engine-plan.runtime`（两者一致）
-- **Phase 3 `completed`，`specs/{scene,rule,data,assets,event-graph,implementation-contract}.yaml` 存在**（始终必做，不会 skip）
+- **Phase 3 `completed`，`specs/{mechanics,scene,rule,data,assets,event-graph,implementation-contract}.yaml` 存在**（始终必做，不会 skip）
 
 ---
 
 ## 流程
+
+### Step 0：玩法语义闸先于写代码
+
+Codegen 不是第二个玩法设计阶段。进入任何引擎模板前，必须先确认
+`specs/mechanics.yaml` 已经是可执行的 primitive DAG：
+
+```bash
+node ${SKILL_DIR}/scripts/check_mechanics.js cases/${PROJECT}
+```
+
+退出码非 0 时，**不得开始写 game/**，也不得靠代码“修”一个结构性不成立的
+mechanics。正确处理是回到 Phase 3.0 修 `mechanics.yaml`：
+
+- `grid-board + 四周/外圈传送带` 必须是 `parametric-track.shape=rect-loop`，不是 `ring`
+- `ray-cast.coord-system=grid` 必须由上游 agent 提供 `gridPosition`
+- 至少一个 `simulation-scenarios` 能到达 `expected-outcome: win`
+- 每个 hard-rule 都映射到 primitive 字段或 invariant
 
 ### Step 1：解析 runtime / run-mode 并加载引擎资源
 
@@ -85,7 +102,7 @@ RUNTIME=$(grep "^runtime:" docs/game-prd.md | head -1 | awk '{print $2}')
 - `${SKILL_DIR}/references/common/fx-presets.yaml`（特效预设库）
 - `${SKILL_DIR}/references/common/game-systems.md` **仅读索引部分**（从文件开头到「## 1. 状态机系统」之前）——包含契约速查表、依赖图、模块组合指南。**不要全量读取**，完整模块实现在 Step 4.1 按需读取。
 - `docs/game-prd.md`
-- `specs/rule.yaml`、`specs/scene.yaml`、`specs/data.yaml`、`specs/assets.yaml`、`specs/event-graph.yaml`、`specs/implementation-contract.yaml`
+- `specs/mechanics.yaml`、`specs/rule.yaml`、`specs/scene.yaml`、`specs/data.yaml`、`specs/assets.yaml`、`specs/event-graph.yaml`、`specs/implementation-contract.yaml`
 - `references/common/verify-hooks.md`
 
 若模板自带 `src/`，也要一并读取相关文件。
@@ -101,7 +118,7 @@ RUNTIME=$(grep "^runtime:" docs/game-prd.md | head -1 | awk '{print $2}')
 
 #### 3.0 Implementation Contract 是 codegen 的第一输入
 
-先读取 `specs/implementation-contract.yaml`。它是 Phase 3 对实现层的唯一硬契约，优先级高于 LLM 对 `assets.yaml`/`scene.yaml` 的自由解释：
+先读取 `specs/mechanics.yaml` 与 `specs/implementation-contract.yaml`。前者是玩法 primitive DAG，后者是素材/启动/生命周期契约；两者共同高于 LLM 对 `assets.yaml`/`scene.yaml` 的自由解释：
 
 - `boot` 决定首屏、ready condition、开始动作、场景转场链路
 - `asset-bindings` 决定每个素材绑定到什么 UI/游戏元素、是否文字承载、是否必须真实渲染、是否允许 fallback
@@ -109,6 +126,8 @@ RUNTIME=$(grep "^runtime:" docs/game-prd.md | head -1 | awk '{print $2}')
 - `verification` 决定 report 可引用的证据来源
 
 **禁止**绕过 contract：不得只生成 manifest/registry 后不在业务代码消费 required local-file；不得把 `allow-fallback:false` 的素材静默降级为程序化绘制；不得让 report 自行解释运行时错误。
+
+**禁止**绕过 mechanics：不得无视 `mechanics.yaml` 自写另一套运动/攻击/胜负逻辑；每个 primitive node 都必须在代码里有对应实现点。
 
 从 GamePRD front-matter 读 `color-scheme` 段（由 Phase 2 从 brief 关键词自动推断）：
 
@@ -150,6 +169,8 @@ RUNTIME=$(grep "^runtime:" docs/game-prd.md | head -1 | awk '{print $2}')
 | `icon_*/board-icons/*` | HUD 图标、装饰 | ❌ 全屏背景 |
 
 **核心原则**：不透明的按钮/面板图片不得用作「需要在其上显示文字/内容」的元素背景（如卡片背景），否则内容会被完全遮挡。卡片类 UI 应优先用 `type: graphics-generated`（程序化绘制圆角矩形 + 浅色填充）。
+
+**色块/目标块特殊规则**：如果 PRD 或 assets/contract 明确说某实体是"色块 / 方块 / 目标块 / color block"，并且玩法判定依赖 `color` 字段，则该实体的视觉语义是 `visual-primitive: color-block`。此时默认必须用 `type: generated` / `graphics-generated` 绘制纯色格子、描边、耐久角标，**禁止**绑定金币、地牢 tile、角色、图标等具象 local-file 素材。只有用户明确要求"纹理方块 / 宝石 / 图标块"时，才允许给色块绑定 local-file，并且必须在 `assets.yaml.selection-report` 里说明原因。
 
 如果发现 `assets.yaml` 或 `implementation-contract.yaml` 中存在语义不匹配条目，**不得在 codegen 阶段悄悄修正 specs**。正确处理是返回 failed，让 Phase 3 修正 `assets.yaml` 并重新生成 contract；否则会出现 specs 与代码不一致。
 
@@ -252,7 +273,7 @@ codegen 翻译 `rule.yaml.effect-on-*.visual` 的每一条字符串为一次 `fx
 import { exposeTestHooks } from '../_common/test-hook.js';  // 5 引擎通用
 exposeTestHooks({
   state,  // 挂到 window.gameState
-  hooks: { clickStartButton, clickRetryButton, ... },  // 挂到 window.gameTest.*
+  hooks: { clickStartButton, clickRetryButton, ... },  // 挂到 window.gameTest.*；只能辅助测试，不能替代真实 UI 输入
   simulators: { simulateCorrectMatch, simulateWrongMatch },  // 兼容旧风格断言
 });
 ```
@@ -560,7 +581,7 @@ codegen 完成后自查：
    preload() {
      const BASE = "../../../assets/library_2d";
      // 角色精灵表
-     this.load.spritesheet("player", `${BASE}/tiles/dungeon/tile_0097.png`, { frameWidth: 16, frameHeight: 16 });
+     this.load.spritesheet("player", `${BASE}/tiles/dungeon/tile_0030.png`, { frameWidth: 16, frameHeight: 16 });
      // 地牢瓦片
      this.load.image("floor", `${BASE}/tiles/dungeon/tile_0000.png`);
      // 音效
@@ -573,7 +594,7 @@ codegen 完成后自查：
    import { Assets, Sprite } from "pixi.js";
    const BASE = "../../../assets/library_2d";
    const textures = await Assets.load([
-     { alias: "player", src: `${BASE}/tiles/dungeon/tile_0097.png` },
+     { alias: "player", src: `${BASE}/tiles/dungeon/tile_0030.png` },
      { alias: "floor", src: `${BASE}/tiles/dungeon/tile_0000.png` },
    ]);
    const playerSprite = Sprite.from("player");
@@ -591,7 +612,7 @@ codegen 完成后自查：
    }
    const BASE = "../../../assets/library_2d";
    const [playerImg, floorImg] = await Promise.all([
-     loadImage(`${BASE}/tiles/dungeon/tile_0097.png`),
+     loadImage(`${BASE}/tiles/dungeon/tile_0030.png`),
      loadImage(`${BASE}/tiles/dungeon/tile_0000.png`),
    ]);
    // 渲染时使用 ctx.drawImage(playerImg, x, y, w, h)
@@ -599,7 +620,7 @@ codegen 完成后自查：
 
    **DOM**：用 `<img>` 标签或 CSS `background-image`
    ```html
-   <img src="../../../assets/library_2d/tiles/dungeon/tile_0097.png" alt="player">
+   <img src="../../../assets/library_2d/tiles/dungeon/tile_0030.png" alt="player">
    ```
 
 3. **在渲染/实体创建时使用已加载素材**，替换语义适配通过的程序化占位图形。文字承载型卡片、输入框、透明 HUD 等没有合适贴图时，优先保留 `graphics-generated`，不要用不透明按钮图强行铺底。
@@ -681,9 +702,22 @@ node game_skill/skills/scripts/check_asset_usage.js   cases/{slug}/
 |---|---|
 | dom-ui | 单向 state→render，禁止事件处理直接改 DOM；轻量项目默认 `run-mode=file` |
 | canvas | `update(state, dt)` 与 `draw(ctx, state)` 严格分离；简单项目默认 `run-mode=file` |
-| phaser3 | 默认 `run-mode=local-http`；CDN pin `phaser@3`；`window.game` 暴露 |
+| phaser3 | 默认 `run-mode=local-http`；CDN pin `phaser@3`；`window.game` 暴露；Container 交互必须 `setSize` 或显式 hitArea |
 | pixijs | 默认 `run-mode=local-http`；`await app.init()`；`app.canvas` 非 `app.view` |
 | three | 默认 `run-mode=local-http`；**必须** importmap pin `three@0.160` 且位于 head 中 `<script type="module">` 之前；`window.app = { renderer, camera, active }` 暴露；只能用 ESM `import * as THREE from "three"`，禁 `require("three")` 与 `three@latest`；每帧不要 new 几何体/材质；至少一盏光（HemisphereLight + DirectionalLight）；相机离开原点（如 `camera.position.set(0, 4, 8)`）避免卡在物体里 |
+
+### Step 6.1：玩法原语落地规则
+
+这些规则来自 mechanics 层，不是可选建议：
+
+- `parametric-track.shape=rect-loop`：画棋盘四周的直角闭环。Canvas 禁用 `ctx.arc()` 画轨道；DOM/Phaser/Pixi 禁用圆形 path 代替外圈。
+- `parametric-track + grid-projection`：每个运动 agent 必须维护 `gridPosition`，并随 `t/segmentId` 更新。
+- `ray-cast.coord-system=grid`：射线从 `source.gridPosition + direction` 开始逐格扫描；禁止只根据 `segmentId` 从整行/整列固定起点扫。
+- `predicate-match(fields:[color])`：ray-cast 只返回第一个阻挡候选，颜色匹配在 predicate 层做；禁止先全局找同色块再攻击。
+- `resource-consume`：扣除 `agent-field` 与 `target-field` 后再发事件，不能只改视觉。
+- DOM UI：只初始化静态 shell 一次，tick 中做 keyed update；禁止在 `setInterval` / `requestAnimationFrame` 中整页 `innerHTML = ...`，否则会闪烁和丢事件绑定。
+- Phaser/Pixi：首屏必须真实可见，StartScene/入口要有标题或开始按钮，点击后进入 playing；不能只创建空 canvas 等待测试 hook。
+- Phaser：任何 `Container` 绑定 `pointerdown` 前必须 `setSize(w,h)` 或显式 `setInteractive(hitArea, callback)`。禁止对由 `createXxx()` 返回的 Container 在调用方直接 `setInteractive({ useHandCursor: true })`，因为真实点击会出现 hitAreaCallback 错误或无响应。
 
 ### Step 7：hard-rule 落点校验
 
@@ -726,11 +760,13 @@ node game_skill/skills/scripts/check_asset_usage.js   cases/{slug}/
 #### 8.1 工程侧硬门槛
 
 ```bash
+node ${SKILL_DIR}/scripts/check_mechanics.js cases/${PROJECT}
 node ${SKILL_DIR}/scripts/check_project.js cases/${PROJECT}/game/ --log ${LOG_FILE}
 ```
 
-退出码必须为 0。包含引擎专属静态检查：
+两条退出码都必须为 0。包含玩法结构检查与引擎专属静态检查：
 - phaser3：代码中必须有 `window.game`
+- phaser3：Container 交互对象必须有 `setSize` 或显式 hitArea
 - pixijs：必须有 `window.app`、`await app.init()`、禁 `app.view`
 - phaser3/pixijs/canvas/three：必须暴露 `window.gameTest` 或 `simulateCorrectMatch`
 - 交互类玩法：必须出现 `isProcessing` 或等效异步锁字段
@@ -753,7 +789,7 @@ node ${SKILL_DIR}/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG
 - `check_asset_selection`: `images: []` + 风格是 pixel-retro/cartoon-bright → FAIL；通常是 expander 误读 `no-external-assets` 约束导致
 - `check_asset_usage`: manifest 里 20+ 个 image id，但 `scenes/main.js` 里 0 次 `add.image`/`new Sprite`/`drawImage` → FAIL；通常是 codegen 只搭了 preload 管线没做业务消费
 
-**check_project + check_game_boots 全部通过后才能标 codegen completed。**
+**check_mechanics + check_project + check_game_boots 全部通过后才能标 codegen completed。**
 未通过 → 进入修复循环（≤3 轮）。
 
 #### 8.4 补充自检（非脚本，人工 review）
@@ -821,6 +857,7 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"fix-applied","phase":"codegen"
 - [ ] JS 文件 `node --check` 全通过
 - [ ] 所有 hard-rule 在代码里有对应注释
 - [ ] 所有 `must-have-features` 有对应实现或显式降级说明
+- [ ] **`check_mechanics.js` 退出 0**（玩法 primitive DAG 可执行，至少一个 win scenario 可达）
 - [ ] **`check_project.js` 退出 0**（含引擎专属静态检查、implementation-contract、asset-selection、asset-usage）
 - [ ] **`check_game_boots.js` 退出 0**（游戏能启动 + 能开始一局）
 - [ ] `state.json` `codegen.status = "completed"`

@@ -86,7 +86,7 @@ function buildContext(caseDir) {
   ctx.state = readSafely(() => readState(join(caseDir, ".game/state.json")));
   ctx.prd = readSafely(() => readFileSync(join(caseDir, "docs/game-prd.md"), "utf-8"));
   ctx.specs = {};
-  for (const k of ["scene", "rule", "data", "assets", "event-graph", "implementation-contract"]) {
+  for (const k of ["mechanics", "scene", "rule", "data", "assets", "event-graph", "implementation-contract"]) {
     ctx.specs[k] = readSafely(() => readFileSync(join(caseDir, `specs/${k}.yaml`), "utf-8"));
   }
   const gameDir = join(caseDir, "game");
@@ -126,7 +126,7 @@ function checkStructure(ctx) {
   const rules = [];
   const required = [
     "docs/brief.md", "docs/game-prd.md",
-    "specs/scene.yaml", "specs/rule.yaml", "specs/data.yaml",
+    "specs/mechanics.yaml", "specs/scene.yaml", "specs/rule.yaml", "specs/data.yaml",
     "specs/assets.yaml", "specs/event-graph.yaml", "specs/implementation-contract.yaml",
     "game/index.html",
     ".game/state.json",
@@ -153,7 +153,7 @@ function checkStructure(ctx) {
 function checkState(ctx) {
   const rules = [];
   const s = ctx.state;
-  const requiredSubtasks = ["scene", "rule", "data", "assets", "event-graph", "implementation-contract"];
+  const requiredSubtasks = ["mechanics", "scene", "rule", "data", "assets", "event-graph", "implementation-contract"];
   rules.push(rule("state.schemaVersion", "error", s?.schemaVersion === 1,
     "state.schemaVersion 必须 === 1"));
   rules.push(rule("state.project", "error", typeof s?.project === "string" && s.project.length > 0,
@@ -163,7 +163,11 @@ function checkState(ctx) {
       requiredSubtasks.every(
         k => typeof s.phases.expand.subtasks[k]?.status === "string"
       ),
-    "expand.subtasks 必须覆盖 scene/rule/data/assets/event-graph/implementation-contract 六项"));
+    "expand.subtasks 必须覆盖 mechanics/scene/rule/data/assets/event-graph/implementation-contract 七项"));
+  const mechanicsStatus = s?.phases?.expand?.subtasks?.mechanics?.status;
+  rules.push(rule("state.phases.expand.subtasks.mechanics.completed", "error",
+    mechanicsStatus === "completed",
+    `mechanics subtask 必须 completed，当前为 ${mechanicsStatus ?? "<missing>"}（legacy skipped 不允许进入新链路）`));
   rules.push(rule("state.no-migration-flag", "warning",
     !s?._migrated,
     "state.json 仍在 legacy 兼容读模式，应重新 writeState 持久化到 v1"));

@@ -24,6 +24,7 @@ const stage = stageIdx >= 0 ? args[stageIdx + 1] : "codegen";
 const log = createLogger(parseLogArg(process.argv));
 
 const contractPath = join(caseDir, "specs/implementation-contract.yaml");
+const mechanicsPath = join(caseDir, "specs/mechanics.yaml");
 const scenePath = join(caseDir, "specs/scene.yaml");
 const assetsPath = join(caseDir, "specs/assets.yaml");
 const gameDir = join(caseDir, "game");
@@ -209,6 +210,7 @@ function checkGeneratedCode(c, assets, root) {
     checkRequiredAssetConsumption(c, businessSrc);
   }
   checkTracePushPoints(businessSrc);  // T3
+  checkPrimitiveImplementationCoverage(allSrc); // mechanics -> code 1:1
 
   if (engine === "phaser3" || engine === "phaser") {
     if (/\.load\.start\s*\(/.test(businessSrc)) {
@@ -216,6 +218,43 @@ function checkGeneratedCode(c, assets, root) {
     } else {
       ok("[contract.lifecycle.phaser] 业务代码未发现 scene.load.start() 反模式");
     }
+  }
+}
+
+function checkPrimitiveImplementationCoverage(sourceBlob) {
+  if (!existsSync(mechanicsPath)) {
+    fail("[mechanics] specs/mechanics.yaml 不存在，无法校验 @primitive 代码覆盖率");
+    return;
+  }
+  let mech;
+  try {
+    mech = yaml.load(readFileSync(mechanicsPath, "utf-8")) ?? {};
+  } catch (e) {
+    fail(`[mechanics] mechanics.yaml 解析失败: ${e.message}`);
+    return;
+  }
+  const nodes = Array.isArray(mech.mechanics) ? mech.mechanics : [];
+  if (nodes.length === 0) {
+    fail("[mechanics] mechanics.yaml 缺少 mechanics[] 节点");
+    return;
+  }
+  const missing = [];
+  for (const node of nodes) {
+    const id = node.node;
+    const primitive = node.primitive;
+    if (!id || !primitive) {
+      missing.push(`${id || "<missing-node>"}:${primitive || "<missing-primitive>"}`);
+      continue;
+    }
+    const re = new RegExp(
+      `@primitive\\(\\s*${escapeReg(primitive)}\\s*\\)\\s*:\\s*(?:node-id\\s*=\\s*)?${escapeReg(id)}\\b`,
+    );
+    if (!re.test(sourceBlob)) missing.push(`${id} (${primitive})`);
+  }
+  if (missing.length) {
+    fail(`[mechanics] ${missing.length}/${nodes.length} 个 mechanics node 缺少 @primitive 实现注释: ${missing.slice(0, 8).join(", ")}`);
+  } else {
+    ok(`[mechanics] 所有 ${nodes.length} 个 mechanics node 均有 @primitive 实现注释`);
   }
 }
 

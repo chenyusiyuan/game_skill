@@ -17,7 +17,7 @@ import { state } from "./state.js";
   // 示例（根据 assets.yaml 替换为实际素材路径）：
   // const BASE = "../../../assets/library_2d";
   // await Assets.load([
-  //   { alias: "player", src: `${BASE}/tiles/dungeon/tile_0097.png` },
+  //   { alias: "player", src: `${BASE}/tiles/dungeon/tile_0030.png` },
   //   { alias: "floor", src: `${BASE}/tiles/dungeon/tile_0000.png` },
   // ]);
   // const playerSprite = Sprite.from("player");

@@ -27,7 +27,9 @@ import { dirname } from "path";
 export const STATE_SCHEMA_VERSION = 1;
 
 const PHASE_NAMES = ["understand", "prd", "expand", "codegen", "verify"];
-const EXPAND_SUBTASKS = ["scene", "rule", "data", "assets", "event-graph", "implementation-contract"];
+// mechanics 是 Phase 3.0 产物（primitive DAG），排在其余 expanders 之前。
+// 它与 rule/event-graph 的关系：rule 和 event-graph 必须引用 mechanics.yaml 的 node id。
+const EXPAND_SUBTASKS = ["mechanics", "scene", "rule", "data", "assets", "event-graph", "implementation-contract"];
 
 /**
  * 读取 state.json。文件不存在返回 null；存在但 schema 旧则转换到 v1 内存结构。
@@ -155,11 +157,14 @@ export function markSubtask(state, subtaskName, status, { output, error } = {}) 
  */
 export function commitExpand(state) {
   const subs = state.phases?.expand?.subtasks ?? {};
-  const missing = EXPAND_SUBTASKS.filter(k => subs[k]?.status !== "completed");
+  const ok = s => s === "completed" || s === "skipped";
+  const missing = EXPAND_SUBTASKS.filter(k => !ok(subs[k]?.status));
   if (missing.length > 0) {
     throw new Error(`commitExpand: subtasks not completed: ${missing.join(", ")}`);
   }
-  const outputs = EXPAND_SUBTASKS.map(k => `specs/${k}.yaml`);
+  const outputs = EXPAND_SUBTASKS
+    .filter(k => subs[k]?.status === "completed")
+    .map(k => `specs/${k}.yaml`);
   const next = markPhase(state, "expand", "completed");
   next.phases.expand.outputs = outputs;
   return next;
@@ -215,9 +220,23 @@ function migrateLegacy(raw) {
       ...(src.finishedAt ? { finishedAt: src.finishedAt } : {}),
     };
   }
-  phases.expand.subtasks = phases.expand.subtasks ?? Object.fromEntries(
-    EXPAND_SUBTASKS.map(k => [k, { status: phases.expand.status === "completed" ? "completed" : "pending" }])
-  );
+  // 老 case 通常没有 mechanics subtask。如果 expand 已 completed，把 mechanics 标为 skipped
+  // （保持 commitExpand 通过），表示历史产物不具备原语基线；新 case 必须 completed。
+  if (!phases.expand.subtasks) {
+    phases.expand.subtasks = Object.fromEntries(
+      EXPAND_SUBTASKS.map(k => {
+        const status = phases.expand.status === "completed"
+          ? (k === "mechanics" ? "skipped" : "completed")
+          : "pending";
+        return [k, { status }];
+      })
+    );
+  } else if (!phases.expand.subtasks.mechanics) {
+    // 已有 subtasks 但缺 mechanics（新增 primitive 链路后的老 state）
+    phases.expand.subtasks.mechanics = {
+      status: phases.expand.status === "completed" ? "skipped" : "pending",
+    };
+  }
   return {
     schemaVersion: STATE_SCHEMA_VERSION,
     project,

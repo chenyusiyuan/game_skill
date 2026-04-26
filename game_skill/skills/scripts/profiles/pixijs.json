@@ -1,164 +1,167 @@
 {
   "case_id": "pixijs",
-  "description": "单词消消乐 - 面向小学生的英语配对游戏",
+  "description": "Pixel Flow 传送带清板益智游戏 - 验收测试",
   "game_html_relative": "game/index.html",
   "boot_timeout_ms": 15000,
-  "prd_hash": "c5c49fe322d28dfb3426fcd7c194f40b01778824",
+  "prd_hash": "7cc65ef5a58fefdba5d12de5cce83a8b3db308ca",
   "prd_path": "cases/pixijs/docs/game-prd.md",
   "assertions": [
     {
-      "id": "match-success",
-      "check_id": "match-success",
+      "id": "dispatch-pig",
+      "check_id": "dispatch-pig",
       "kind": "interaction",
-      "description": "配对成功",
+      "description": "派出小猪",
       "setup": [
+        { "action": "wait", "ms": 300 },
+        { "action": "click", "selector": "canvas" },
+        { "action": "wait", "ms": 100 },
         { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.simulateCorrectMatch()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
         { "action": "wait", "ms": 800 }
-      ],
-      "expect": {
-        "selector": "window.gameState.correctMatches",
-        "op": "gte",
-        "value": 1
-      }
+      ]
     },
     {
-      "id": "match-fail",
-      "check_id": "match-fail",
+      "id": "attack-matching",
+      "check_id": "attack-matching",
       "kind": "interaction",
-      "description": "配对失败",
+      "description": "颜色匹配攻击",
       "setup": [
+        { "action": "wait", "ms": 300 },
+        { "action": "click", "selector": "canvas" },
+        { "action": "wait", "ms": 100 },
         { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.simulateWrongMatch()" },
-        { "action": "wait", "ms": 800 }
-      ],
-      "expect": {
-        "selector": "window.gameState.combo",
-        "op": "eq",
-        "value": 0
-      }
-    },
-    {
-      "id": "time-warning",
-      "check_id": "time-warning",
-      "kind": "state",
-      "description": "时间警告",
-      "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameState.timeLeft = 8" },
-        { "action": "wait", "ms": 200 }
-      ],
-      "expect": {
-        "selector": "window.gameState.timeLeft",
-        "op": "lt",
-        "value": 10
-      }
-    },
-    {
-      "id": "lose-state",
-      "check_id": "lose-state",
-      "kind": "state",
-      "description": "失败状态",
-      "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameState.timeLeft = 0" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": {
-        "selector": "window.gameState.phase",
-        "op": "eq",
-        "value": "lose"
-      }
-    },
-    {
-      "id": "win-state",
-      "check_id": "win-state",
-      "kind": "interaction",
-      "description": "胜利状态",
-      "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "for (let i = 0; i < 4; i++) { window.simulateCorrectMatch(); }" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
         { "action": "wait", "ms": 3000 }
-      ],
-      "expect": {
-        "selector": "window.gameState.phase",
-        "op": "eq",
-        "value": "win"
-      }
+      ]
     },
     {
-      "id": "level-progression",
-      "check_id": "level-progression",
+      "id": "no-penetration",
+      "check_id": "no-penetration",
       "kind": "interaction",
-      "description": "关卡递进",
+      "description": "禁止穿透攻击",
       "setup": [
+        { "action": "wait", "ms": 300 },
+        { "action": "click", "selector": "canvas" },
+        { "action": "wait", "ms": 100 },
         { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "for (let i = 0; i < 4; i++) { window.simulateCorrectMatch(); }" },
-        { "action": "wait", "ms": 3000 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton && window.gameState.currentLevel === 1 && (window.gameState.currentLevel = 2)" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": {
-        "selector": "window.gameState.currentLevel",
-        "op": "eq",
-        "value": 2
-      }
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "wait", "ms": 3000 }
+      ]
     },
     {
-      "id": "combo-system",
-      "check_id": "combo-system",
+      "id": "slot-recycle",
+      "check_id": "slot-recycle",
       "kind": "interaction",
-      "description": "连击系统",
+      "description": "等待槽回收",
       "setup": [
+        { "action": "wait", "ms": 300 },
+        { "action": "click", "selector": "canvas" },
+        { "action": "wait", "ms": 100 },
         { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": {
-        "selector": "window.gameState.combo",
-        "op": "gte",
-        "value": 3
-      }
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "wait", "ms": 8000 }
+      ]
+    },
+    {
+      "id": "win-condition",
+      "check_id": "win-condition",
+      "kind": "interaction",
+      "description": "胜利条件",
+      "setup": [
+        { "action": "wait", "ms": 300 },
+        { "action": "click", "selector": "canvas" },
+        { "action": "wait", "ms": 100 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "for (let i = 0; i < 8; i++) { window.gameTest.dispatchPig(0); }" },
+        { "action": "wait", "ms": 15000 }
+      ]
+    },
+    {
+      "id": "lose-condition",
+      "check_id": "lose-condition",
+      "kind": "interaction",
+      "description": "失败条件",
+      "setup": [
+        { "action": "wait", "ms": 300 },
+        { "action": "click", "selector": "canvas" },
+        { "action": "wait", "ms": 100 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 }
+      ]
+    },
+    {
+      "id": "conveyor-capacity",
+      "check_id": "conveyor-capacity",
+      "kind": "interaction",
+      "description": "传送带容量",
+      "setup": [
+        { "action": "wait", "ms": 300 },
+        { "action": "click", "selector": "canvas" },
+        { "action": "wait", "ms": 100 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "for (let i = 0; i < 5; i++) { window.gameTest.dispatchPig(0); }" },
+        { "action": "wait", "ms": 1000 }
+      ]
     }
   ],
   "hard_rule_assertions": [
     {
-      "id": "hard-rule-time-limit",
-      "hard_rule_id": "time-limit",
+      "id": "hard-rule-no-global-autoaim",
+      "hard_rule_id": "no-global-autoaim",
       "kind": "hard-rule",
-      "description": "时间限制",
+      "description": "禁止全屏自动索敌",
       "setup": [
+        { "action": "wait", "ms": 300 },
         { "action": "eval", "code": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": {
-        "selector": "window.gameState.timeLeft",
-        "op": "gt",
-        "value": 0
-      }
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "wait", "ms": 3000 }
+      ]
     },
     {
-      "id": "hard-rule-no-keyboard",
-      "hard_rule_id": "no-keyboard",
+      "id": "hard-rule-no-multi-target",
+      "hard_rule_id": "no-multi-target",
       "kind": "hard-rule",
-      "description": "纯点击操作",
-      "setup": [],
-      "expect": {
-        "selector": "window.gameTest",
-        "op": "truthy",
-        "value": true
-      }
+      "description": "禁止一次攻击多个同色块",
+      "setup": [
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "hard-rule-no-penetration",
+      "hard_rule_id": "no-penetration",
+      "kind": "hard-rule",
+      "description": "禁止穿透攻击",
+      "setup": [
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "hard-rule-no-row-clear",
+      "hard_rule_id": "no-row-clear",
+      "kind": "hard-rule",
+      "description": "禁止整行整列清除",
+      "setup": [
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "wait", "ms": 3000 }
+      ]
     }
   ]
 }

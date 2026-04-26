@@ -1,0 +1,220 @@
+{
+  "case_id": "pixel-conveyor-canvas-002",
+  "description": "pixel-conveyor-canvas-002 - 从 PRD @check 自动生成的驱动脚本骨架，需人工补真实 setup",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "prd_hash": "b5d7eca425db4523b254048d6b40d38ca00fe3f2",
+  "prd_path": "cases/pixel-conveyor-canvas-002/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "attack-by-position",
+      "check_id": "attack-by-position",
+      "kind": "interaction",
+      "description": "按位置攻击",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"Playwright 派出小猪，等待其经过边中心\"",
+      "_prd_expect": "\"只攻击正对方向的第一个同色块，不攻击其他位置的同色块\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "no-penetration",
+      "check_id": "no-penetration",
+      "kind": "interaction",
+      "description": "禁止穿透",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"Playwright 设置棋盘: 外层异色块 + 内层同色块\"",
+      "_prd_expect": "\"小猪攻击外层异色块失败后继续前进, 不会穿透攻击内层同色块\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "recycle-works",
+      "check_id": "recycle-works",
+      "kind": "interaction",
+      "description": "回收机制",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"Playwright 派出弹药未耗尽的小猪，等待绕圈完成\"",
+      "_prd_expect": "\"小猪回收到等待槽，弹药量保留\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "win-condition",
+      "check_id": "win-condition",
+      "kind": "interaction",
+      "description": "胜利条件",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"Playwright 清空所有目标块\"",
+      "_prd_expect": "\"window.gameState.phase === 'win'，显示胜利结算\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "lose-condition",
+      "check_id": "lose-condition",
+      "kind": "interaction",
+      "description": "失败条件",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"Playwright 耗尽所有小猪但棋盘未清空\"",
+      "_prd_expect": "\"window.gameState.phase === 'lose'，显示失败结算\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    }
+  ],
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-no-global-autoaim",
+      "hard_rule_id": "no-global-autoaim",
+      "kind": "hard-rule",
+      "description": "禁止全屏自动索敌",
+      "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "hard-rule-no-multi-target",
+      "hard_rule_id": "no-multi-target",
+      "kind": "hard-rule",
+      "description": "禁止一次攻击多块",
+      "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "hard-rule-no-penetration",
+      "hard_rule_id": "no-penetration",
+      "kind": "hard-rule",
+      "description": "禁止穿透异色块",
+      "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "hard-rule-no-match3-tower-defense",
+      "hard_rule_id": "no-match3-tower-defense",
+      "kind": "hard-rule",
+      "description": "禁止做成三消或塔防",
+      "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    }
+  ]
+}

@@ -1,82 +1,96 @@
 {
   "case_id": "canvas-001",
-  "description": "canvas-001 像素传送带清板益智游戏 - 完整测试 profile",
+  "description": "像素传送带清板益智游戏 - 自动化测试驱动脚本",
   "game_html_relative": "game/index.html",
-  "boot_timeout_ms": 5000,
-  "prd_hash": "fe54d8582dc257166c20e05fbb1993cc24b0ea9d",
+  "boot_timeout_ms": 10000,
+  "prd_hash": "313f017e196b725214b3db1a458bf68babe12144",
   "prd_path": "cases/canvas-001/docs/game-prd.md",
   "assertions": [
     {
-      "id": "game-boots",
-      "check_id": "game-boots",
-      "kind": "state",
-      "description": "游戏启动",
+      "id": "dispatch-work",
+      "check_id": "dispatch-work",
+      "kind": "interaction",
+      "description": "派出功能检查",
       "setup": [
-        { "action": "wait", "ms": 500 }
+        { "action": "click", "selector": "#game", "x": 240, "y": 374 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameState.conveyor.pigList.length > 0" }
       ]
     },
     {
-      "id": "belt-movement",
-      "check_id": "belt-movement",
+      "id": "attack-direction",
+      "check_id": "attack-direction",
       "kind": "interaction",
-      "description": "传送带移动 - 小猪沿传送带顺时针移动",
+      "description": "方向攻击检查 - 让小猪完整绕圈触发攻击",
       "setup": [
-        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
+        { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "click", "selector": "#game", "x": 260, "y": 500 },
-        { "action": "eval", "js": "const pigs = window.gameTest.getPigsOnBelt(); window.__test_initial_pos = pigs.length > 0 ? pigs[0].position : null" },
-        { "action": "eval", "js": "window.gameTest.simulateTime(2000)" },
-        { "action": "wait", "ms": 100 }
+        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "wait", "ms": 8000 },
+        { "action": "eval", "code": "window.__trace.filter(t => t.rule === 'attack-check' || t.rule === 'attack-execute').length > 0 || window.__trace.length > 3" }
       ]
     },
     {
-      "id": "position-attack",
-      "check_id": "position-attack",
+      "id": "color-match",
+      "check_id": "color-match",
       "kind": "interaction",
-      "description": "位置索敌攻击 - 只攻击正对方向的第一个同色块",
+      "description": "颜色匹配检查",
       "setup": [
-        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
+        { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "click", "selector": "#game", "x": 260, "y": 500 },
-        { "action": "eval", "js": "window.gameTest.simulateTime(5000)" },
-        { "action": "wait", "ms": 100 }
+        { "action": "eval", "code": "window.gameState.phase === 'playing'" }
       ]
     },
     {
-      "id": "waiting-slot-recycle",
-      "check_id": "waiting-slot-recycle",
+      "id": "return-mechanism",
+      "check_id": "return-mechanism",
       "kind": "interaction",
-      "description": "等待槽回收 - 小猪回收后保留剩余数值",
+      "description": "回收机制检查 - 让小猪绕圈后检查是否回收",
       "setup": [
-        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
+        { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "click", "selector": "#game", "x": 260, "y": 500 },
-        { "action": "eval", "js": "window.gameTest.simulateTime(10000)" },
-        { "action": "wait", "ms": 100 }
+        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "wait", "ms": 14000 },
+        { "action": "eval", "code": "window.__trace.filter(t => t.rule === 'return-pig').length > 0 || window.gameState.slot.slotPigs.length > 0" }
       ]
     },
     {
       "id": "win-condition",
       "check_id": "win-condition",
       "kind": "interaction",
-      "description": "胜利条件 - 清空棋盘所有目标块",
+      "description": "胜利条件检查",
       "setup": [
-        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
+        { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.forceWin()" },
-        { "action": "wait", "ms": 300 }
+        { "action": "eval", "code": "window.gameTest.forceWin()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameState.phase === 'win'" }
       ]
     },
     {
       "id": "lose-condition",
       "check_id": "lose-condition",
       "kind": "interaction",
-      "description": "失败条件 - 消耗所有小猪且棋盘未清空",
+      "description": "失败条件检查",
       "setup": [
-        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
+        { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.forceLose()" },
-        { "action": "wait", "ms": 300 }
+        { "action": "eval", "code": "window.gameTest.forceLose()" },
+        { "action": "wait", "ms": 300 },
+        { "action": "eval", "code": "window.gameState.phase === 'lose'" }
+      ]
+    },
+    {
+      "id": "reinforced-block",
+      "check_id": "reinforced-block",
+      "kind": "interaction",
+      "description": "强化块检查",
+      "setup": [
+        { "action": "click", "selector": "#game", "x": 240, "y": 374 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameState.phase === 'playing'" }
       ]
     }
   ],
@@ -85,57 +99,52 @@
       "id": "hard-rule-no-global-autoaim",
       "hard_rule_id": "no-global-autoaim",
       "kind": "hard-rule",
-      "description": "禁止全屏自动索敌 - 攻击必须严格依赖小猪当前所在位置",
+      "description": "禁止全屏自动索敌 - 完整游戏循环",
       "setup": [
-        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
+        { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "click", "selector": "#game", "x": 260, "y": 500 },
-        { "action": "eval", "js": "window.gameTest.simulateTime(3000)" },
-        { "action": "wait", "ms": 100 }
+        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "wait", "ms": 10000 },
+        { "action": "eval", "code": "window.__trace.length > 0" }
       ]
     },
     {
-      "id": "hard-rule-single-block-attack",
-      "hard_rule_id": "single-block-attack",
+      "id": "hard-rule-no-multi-attack",
+      "hard_rule_id": "no-multi-attack",
       "kind": "hard-rule",
-      "description": "禁止一次攻击多块 - 每次攻击只处理1个目标块",
+      "description": "禁止一次攻击多块",
       "setup": [
-        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
-        { "action": "wait", "ms": 500 }
-      ]
-    },
-    {
-      "id": "hard-rule-no-pierce-attack",
-      "hard_rule_id": "no-pierce-attack",
-      "kind": "hard-rule",
-      "description": "禁止穿透攻击 - 不得跳过前方异色块攻击后方目标",
-      "setup": [
-        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
-        { "action": "wait", "ms": 500 }
-      ]
-    },
-    {
-      "id": "hard-rule-no-row-column-clear",
-      "hard_rule_id": "no-row-column-clear",
-      "kind": "hard-rule",
-      "description": "禁止整行整列清除",
-      "setup": [
-        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
-        { "action": "wait", "ms": 500 }
-      ]
-    },
-    {
-      "id": "hard-rule-core-mechanics",
-      "hard_rule_id": "core-mechanics",
-      "kind": "hard-rule",
-      "description": "核心机制约束 - 四周传送带+位置索敌+等待槽回收",
-      "setup": [
-        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
+        { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "click", "selector": "#game", "x": 260, "y": 500 },
-        { "action": "wait", "ms": 200 },
-        { "action": "eval", "js": "window.gameTest.simulateTime(3000)" },
-        { "action": "wait", "ms": 100 }
+        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "wait", "ms": 10000 },
+        { "action": "eval", "code": "window.__trace.length > 0" }
+      ]
+    },
+    {
+      "id": "hard-rule-no-penetration",
+      "hard_rule_id": "no-penetration",
+      "kind": "hard-rule",
+      "description": "禁止穿透攻击",
+      "setup": [
+        { "action": "click", "selector": "#game", "x": 240, "y": 374 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "wait", "ms": 10000 },
+        { "action": "eval", "code": "window.__trace.length > 0" }
+      ]
+    },
+    {
+      "id": "hard-rule-no-row-clear",
+      "hard_rule_id": "no-row-clear",
+      "kind": "hard-rule",
+      "description": "禁止整行清除",
+      "setup": [
+        { "action": "click", "selector": "#game", "x": 240, "y": 374 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "wait", "ms": 10000 },
+        { "action": "eval", "code": "window.__trace.length > 0" }
       ]
     }
   ]

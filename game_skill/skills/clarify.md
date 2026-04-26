@@ -1,6 +1,6 @@
 ---
 name: game-phase-1-clarify
-description: "Phase 1 子步骤：需求澄清。当 brief 扫描出必填字段缺口、功能优先级不清或用户预期档位不清时，提 1-3 个高价值问题让用户回答，将答案写回 brief.md 的 ClarifiedBrief 段。"
+description: "Phase 1 子步骤：需求澄清。当 brief 扫描出必填字段缺口、功能优先级不清或用户预期档位不清时，提 1-3 个高价值问题让用户回答，将答案写回 brief.md 的 ClarifiedBrief 段。具体功能机制歧义不在本阶段追问，后置到 spec-clarify。"
 ---
 
 # Phase 1.x: Clarify（按需触发）
@@ -15,7 +15,7 @@ brief 扫描发现以下任一情况时触发：
 - **强约束与 runtime 能力矛盾**
 - **3D / 2D 维度模糊**（query 出现"立体/空间"但未明确 3D/Three.js）
 
-目标是用**最少的提问**补齐关键信息，而不是穷举用户意图。
+目标是用**最少的提问**补齐产品边界，而不是穷举用户意图。具体功能机制（触发时机、目标选择、作用范围、资源消耗时点、移动/碰撞粒度等）不在 Phase 1 追问，统一等 GamePRD 写完后进入 `spec-clarify.md`。
 
 ---
 
@@ -56,6 +56,7 @@ brief 扫描发现以下任一情况时触发：
 低优先级（通常 Phase 2 可以自己决定，不问）：
 - 纯表现性细节（字体、次要配色、装饰动画）— 由 color-scheme 自动推断
 - 具体分数公式（给个默认值）
+- 具体功能机制细节（如攻击/碰撞触发粒度、索敌范围、回收时机、技能结算顺序）— 后置到 `spec-clarify.md`
 - 技术细节（runtime 具体版本、包管理器）
 - 视觉风格 — **已移至 `semantic-clarify.md`**，仅在结构清晰、仍有提问额度且风格会影响素材选择时，按需推荐 Top-3 色板供用户选择
 
@@ -158,6 +159,7 @@ brief 扫描发现以下任一情况时触发：
 - ❌ 默认把用户点名的系统当作「nice-to-have」
 - ❌ 在交付档位不清时直接按最小 MVP 处理
 - ❌ 问 runtime 具体版本——engine guide 会处理
+- ❌ 在 Phase 1 追问 trigger / condition / effect / target-selection / timing 这类机制细节——后置到 `spec-clarify.md`
 - ❌ 问对方已经说清楚的东西
 - ❌ 一次提超过 3 个问题
 - ❌ 连环追问细节（用户会烦）

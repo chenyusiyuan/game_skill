@@ -15,18 +15,45 @@ description: "Phase 5: 校验。分层预算：冒烟 ≤2 轮、工程侧 ≤3 
 
 其中“产品层”除玩法闭环外，还要检查 `must-have-features` 是否兑现或显式降级。
 
+## 单一入口
+
+正式交付只能由统一入口生成 `eval/report.json`：
+
+```bash
+node ${SKILL_DIR}/scripts/verify_all.js cases/${PROJECT} --profile ${PROJECT} --log ${LOG_FILE}
+```
+
+`verify_all.js` 顺序运行 mechanics / boot / project / playthrough / compliance，并把真实退出码写进 report。任一脚本失败时 report.status 必须是 `failed`。主 agent、子 agent 或人工修复循环都不得手写绿色 `eval/report.json`。
+
 ## 分层预算
 
 | 层 | 脚本 | 预算 | 理由 |
 |---|---|---|---|
+| 玩法语义 | `check_mechanics.js` | Phase 3/4 前置 | primitive DAG 可执行，至少一个 win scenario 可达 |
 | 冒烟 | `check_game_boots.js` | ≤ 2 轮 | 最低门槛：游戏能起、无 console error、gameState 暴露 |
 | 工程侧 | `check_project.js` | ≤ 3 轮 | 启动错、语法错、资源错，以及 contract / asset-selection / asset-usage gate |
 | 产品侧 | `check_playthrough.js` | ≤ 10 轮 | 玩法 bug 修复更慢 |
 | 合规审计 | `check_skill_compliance.js` | ≤ 2 轮 | spec ↔ code 绑定率 / state schema / 场景闭环，机械校验 |
 
-执行顺序固定：**冒烟 → 工程 → 产品 → 合规**。`check_implementation_contract.js` / `check_asset_selection.js` / `check_asset_usage.js` 由工程侧脚本链式执行；只有定位单层失败时才单独运行。
+执行顺序固定：**玩法语义 → 冒烟 → 工程 → 产品 → 合规**。`check_implementation_contract.js` / `check_asset_selection.js` / `check_asset_usage.js` 由工程侧脚本链式执行；只有定位单层失败时才单独运行。
 
 ## 流程
+
+### Step 0：玩法语义
+
+```bash
+node ${SKILL_DIR}/scripts/check_mechanics.js cases/${PROJECT}
+```
+
+通过标准：
+
+- `mechanics.yaml` 只使用已登记 primitive
+- `grid-board + grid-projection track` 使用 `rect-loop`，不是 `ring`
+- `ray-cast.coord-system=grid` 的上游 source 有 `gridPosition`
+- hard-rule 全部映射到 invariant/field/nodes
+- 至少一个 simulation scenario 到达 `win`
+
+这一步失败时，优先回 Phase 3 修 mechanics / rule / event-graph；不要先改 case 代码。
 
 ### Step 1：冒烟
 
@@ -137,19 +164,20 @@ cp game_skill/skills/scripts/profiles/${PROJECT}.skeleton.json game_skill/skills
 3. **如果存在未覆盖的 @check 条目**：
    - 列出缺失清单
    - 为每条缺失的 @check 补写 assertion 到 profile.json
-   - assertion 必须包含 `setup`（操作步骤：点击、等待等）和 `expect`（状态断言）
+   - assertion 必须包含 `setup`（操作步骤：点击、等待等）；正式 profile 禁止写 `expect`
    - **核心交互类 @check 必须有真实的 setup 操作**，不能只做静态状态检查
    - **⚠ eval 直接赋值 gameState 不算"真实交互"**。`setup` 中只包含 `window.gameState.score += 10` / `window.gameState.phase = 'win'` 等直接赋值操作的，本质是"自己出题自己答"，无法验证游戏交互链路（如事件绑定、isProcessing 锁、粒子/动画是否报错等）
-   - **真实交互**指以下任一：
+   - **真实交互**指以下任一；`window.gameTest.*` 只能辅助，不能替代：
      - `{ "action": "click", "selector": "..." }` —— 通过 Playwright 点击真实 UI 元素
-     - `{ "action": "eval", "js": "..." }` 中调用游戏暴露的 API 函数（如 `simulateCorrectMatch()`、`window.gameTest.clickStartButton()`、`window.game.scene.start('PlayScene')` 等）
+     - `{ "action": "click", "x": 120, "y": 420 }` —— 通过 Playwright 点击 canvas/舞台坐标
+     - `{ "action": "press", "key": "ArrowLeft" }` / `{ "action": "fill", "selector": "...", "value": "..." }`
 
 4. **核心交互 assertion 的最低标准**：
    - 配对/匹配类游戏：至少一条"正确配对"断言 + 至少一条"错误配对"断言
    - 点击类游戏：至少一条"点击后状态变化"断言
    - 计时类游戏：至少一条"时间惩罚/奖励"断言
    - 通关类游戏：至少一条"通关流程"断言（从开始到 win/lose）
-   - **所有引擎**：至少一条 assertion 的 setup 包含 `click` 操作或调用游戏 API 函数
+   - **所有引擎**：至少一条 assertion 的 setup 包含真实 `click` 操作；每条交互类 assertion 自身也必须包含真实 click/press/fill，不能只调游戏 API 函数
 
 5. 补写示例——对于单词配对游戏，以下 assertion 模式是必需的：
 
@@ -231,7 +259,7 @@ node ${SKILL_DIR}/scripts/check_skill_compliance.js cases/${PROJECT} --log ${LOG
 
 ### Step 4：三层指标采集
 
-通过后生成 `eval/report.json`：
+通过后由 `verify_all.js` 生成 `eval/report.json`：
 
 ```json
 {
@@ -288,7 +316,7 @@ node ${SKILL_DIR}/scripts/check_skill_compliance.js cases/${PROJECT} --log ${LOG
 }
 ```
 
-报告生成原则：`eval/report.json` 只能汇总 verifier/check 脚本的结构化结果。不得写“素材 404 是测试服务器限制”“视觉上已 fallback 所以通过”这类 LLM 自我解释；如果 check 有错误，report 必须保留错误并判失败。
+报告生成原则：`eval/report.json` 只能由 `verify_all.js` 汇总 verifier/check 脚本的真实结果。不得写“素材 404 是测试服务器限制”“视觉上已 fallback 所以通过”这类 LLM 自我解释；如果 check 有错误，report 必须保留错误并判失败。
 
 ### Step 5：生成 delivery.md
 
@@ -323,7 +351,7 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"fix-applied","phase":"verify",
 - 产品侧 10 轮未过：失败并停下
 - 合规审计 2 轮未过：失败并停下
 - `check_playthrough.js` 退出 3（Playwright 缺失）→ 停下报用户，不做"人工走查代替"
-- `check_playthrough.js` 退出 4（Profile 覆盖率不足）→ **不进入修复循环**，停下补写 profile assertions 后重跑（不算在 10 轮内）；**不允许用 `--skip-coverage` 绕过**
+- `check_playthrough.js` 退出 4（Profile 覆盖率不足或交互类 assertion 缺真实输入）→ **不进入修复循环**，停下补写 profile assertions 后重跑（不算在 10 轮内）；**不允许用 `--skip-coverage` 绕过**
 
 ---
 
@@ -339,6 +367,7 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"fix-applied","phase":"verify",
 ## 输出清单
 
 - [ ] `check_project.js` 退出 0
+- [ ] `check_mechanics.js` 退出 0
 - [ ] `check_playthrough.js --profile {case-id}` 退出 0
 - [ ] `eval/report.json` 三层指标齐全，含 `run_mode`
 - [ ] `must-have-features` 的兑现情况已写入 report/delivery

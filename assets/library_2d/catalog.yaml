@@ -345,7 +345,7 @@ packs:
     path: sprites/puzzle/
     source: kenney_puzzle-pack-1
     description: "益智游戏：彩色球、宝石形元素(6色×4形)、按钮、指针、挡板"
-    suitable-styles: [cartoon-bright, minimal-modern]
+    suitable-styles: [cartoon-bright, minimal-modern, pixel-retro]
     suitable-genres: [board-grid, quiz-rule, edu-practice]
     preview: sprites/puzzle/_preview.png
     sample: sprites/puzzle/_sample.png
