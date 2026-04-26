@@ -47,6 +47,22 @@ engine-plan:                              # Phase 2.x strategy 回写
 mvp-scope: []                             # Phase 2.x strategy 回写：当前版本收敛的功能点
 risk-note: []                             # Phase 2.x strategy 回写：已识别的风险
 
+# LLM 必须在 Phase 2 按 "asset-strategy 决策脚手架" 填写。下游所有 asset check 脚本都读这段动态决定行为。
+asset-strategy:
+  mode: library-first                     # library-first | generated-only | none
+  rationale: >                            # ≥ 80 chars；解释：玩家分辨什么？纯生成视觉能否支撑玩法？核心实体是谁？
+    颜色差异决定攻击判定，像素风格决定沉浸感；核心单位必须用素材库以保证辨识度。
+    hud / 背景可 generated，但要与核心素材风格匹配。
+  visual-core-entities:                   # 必须有清晰视觉表达的 @entity/@ui id；每个 id 必须在 PRD 定义
+    - pig
+    - block
+  visual-peripheral:                      # 允许 generated/inline-svg 的外围元素
+    - hud-timer
+    - scene-background
+  style-coherence:
+    level: strict                         # strict (pack ≥ 85%) | flexible (pack ≥ 50%) | n/a (跳过)
+    note: "核心实体同一 pack；背景独立生成但需配色一致"
+
 artifacts:
   scene-spec: specs/scene.yaml            # Phase 3 产出
   rule-spec: specs/rule.yaml              # Phase 3 产出

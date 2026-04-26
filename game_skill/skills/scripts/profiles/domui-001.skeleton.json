@@ -1,19 +1,19 @@
 {
-  "case_id": "canvas-001",
-  "description": "canvas-001 - 从 PRD @check 自动生成的驱动脚本骨架，需人工补真实 setup",
+  "case_id": "domui-001",
+  "description": "domui-001 - 从 PRD @check 自动生成的驱动脚本骨架，需人工补真实 setup",
   "game_html_relative": "game/index.html",
   "boot_timeout_ms": 5000,
-  "prd_hash": "fe54d8582dc257166c20e05fbb1993cc24b0ea9d",
-  "prd_path": "cases/canvas-001/docs/game-prd.md",
+  "prd_hash": "b742fad3f6dadf4106ad0ea389368de54f524f8b",
+  "prd_path": "cases/domui-001/docs/game-prd.md",
   "assertions": [
     {
-      "id": "belt-movement",
-      "check_id": "belt-movement",
+      "id": "core-loop-playable",
+      "check_id": "core-loop-playable",
       "kind": "interaction",
-      "description": "传送带移动",
+      "description": "主循环可玩",
       "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
-      "_prd_method": "\"派出一只小猪，观察其沿传送带顺时针移动\"",
-      "_prd_expect": "\"小猪沿外圈持续移动，每帧位置更新正确\"",
+      "_prd_method": "\"Playwright 点击开始 → 派出小猪 → 观察移动和攻击 → 进入结果页\"",
+      "_prd_expect": "\"window.gameState.phase 最终进入 win 或 lose\"",
       "setup": [
         {
           "action": "wait",
@@ -31,13 +31,37 @@
       ]
     },
     {
-      "id": "position-attack",
-      "check_id": "position-attack",
+      "id": "single-target-only",
+      "check_id": "single-target-only",
       "kind": "interaction",
-      "description": "位置索敌攻击",
+      "description": "单目标攻击验证",
       "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
-      "_prd_method": "\"派出红色小猪，当其在棋盘上边时，观察只攻击正对列的第一个红色块\"",
-      "_prd_expect": "\"攻击方向正确，只攻击第一个同色块，不穿透异色块\"",
+      "_prd_method": "\"Playwright 设置棋盘: 3个同色块排成一行; 派出1只同色数值=1的小猪; 观察攻击结果\"",
+      "_prd_expect": "\"只有正对方向的1个块被消除，其他2个块保留\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "position-based-attack",
+      "check_id": "position-based-attack",
+      "kind": "interaction",
+      "description": "基于位置攻击验证",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"Playwright 设置棋盘: 不同颜色块在不同位置; 派出小猪; 验证攻击只针对当前方向第一个块\"",
+      "_prd_expect": "\"小猪只在颜色匹配时攻击，不跳过前方异色块\"",
       "setup": [
         {
           "action": "wait",
@@ -58,10 +82,10 @@
       "id": "waiting-slot-recycle",
       "check_id": "waiting-slot-recycle",
       "kind": "interaction",
-      "description": "等待槽回收",
+      "description": "等待槽回收验证",
       "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
-      "_prd_method": "\"派出数值为2的小猪，攻击一次后观察其是否回到等待槽\"",
-      "_prd_expect": "\"小猪回收后保留剩余数值(1)，可再次派出\"",
+      "_prd_method": "\"Playwright 派出数值=2的小猪；观察攻击1次后返回等待槽\"",
+      "_prd_expect": "\"等待槽中出现该小猪，数值=1\"",
       "setup": [
         {
           "action": "wait",
@@ -79,13 +103,13 @@
       ]
     },
     {
-      "id": "win-condition",
-      "check_id": "win-condition",
+      "id": "win-lose-condition",
+      "check_id": "win-lose-condition",
       "kind": "interaction",
-      "description": "胜利条件",
+      "description": "胜负条件验证",
       "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
-      "_prd_method": "\"清空棋盘所有目标块\"",
-      "_prd_expect": "\"显示胜利画面，state.phase = win\"",
+      "_prd_method": "\"Playwright 清空棋盘 → 验证胜利；耗尽小猪且棋盘未清 → 验证失败\"",
+      "_prd_expect": "\"正确触发胜利/失败状态\"",
       "setup": [
         {
           "action": "wait",
@@ -103,13 +127,13 @@
       ]
     },
     {
-      "id": "lose-condition",
-      "check_id": "lose-condition",
+      "id": "level-progression",
+      "check_id": "level-progression",
       "kind": "interaction",
-      "description": "失败条件",
+      "description": "关卡递进验证",
       "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
-      "_prd_method": "\"消耗所有小猪且棋盘未清空\"",
-      "_prd_expect": "\"显示失败画面，state.phase = lose\"",
+      "_prd_method": "\"Playwright 完成关卡1 → 进入关卡2 → 验证颜色数和棋盘变化\"",
+      "_prd_expect": "\"关卡2颜色数=3，棋盘目标块变化\"",
       "setup": [
         {
           "action": "wait",
@@ -151,8 +175,8 @@
       ]
     },
     {
-      "id": "hard-rule-single-block-attack",
-      "hard_rule_id": "single-block-attack",
+      "id": "hard-rule-single-target-attack",
+      "hard_rule_id": "single-target-attack",
       "kind": "hard-rule",
       "description": "禁止一次攻击多块",
       "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
@@ -173,8 +197,8 @@
       ]
     },
     {
-      "id": "hard-rule-no-pierce-attack",
-      "hard_rule_id": "no-pierce-attack",
+      "id": "hard-rule-no-penetration",
+      "hard_rule_id": "no-penetration",
       "kind": "hard-rule",
       "description": "禁止穿透攻击",
       "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
@@ -195,8 +219,8 @@
       ]
     },
     {
-      "id": "hard-rule-no-row-column-clear",
-      "hard_rule_id": "no-row-column-clear",
+      "id": "hard-rule-no-row-clear",
+      "hard_rule_id": "no-row-clear",
       "kind": "hard-rule",
       "description": "禁止整行整列清除",
       "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
@@ -217,10 +241,10 @@
       ]
     },
     {
-      "id": "hard-rule-core-mechanics",
-      "hard_rule_id": "core-mechanics",
+      "id": "hard-rule-no-match3-tower-defense",
+      "hard_rule_id": "no-match3-tower-defense",
       "kind": "hard-rule",
-      "description": "核心机制约束",
+      "description": "禁止做成三消/塔防",
       "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
       "setup": [
         {

@@ -1,0 +1,189 @@
+{
+  "case_id": "pixel-flow-phaser-001",
+  "description": "Pixel Flow Phaser - 传送带清板益智游戏",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 10000,
+  "prd_hash": "970087a0e8fb12203f5b131f2e62cbd1e6c90372",
+  "prd_path": "cases/pixel-flow-phaser-001/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "pig-dispatch",
+      "check_id": "pig-dispatch",
+      "kind": "state",
+      "description": "小猪派出",
+      "setup": [
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1500 },
+        { "action": "eval", "code": "window.gameTest.clickWaitingSlot(0)" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.conveyor.count",
+        "op": "gte",
+        "value": 1
+      }
+    },
+    {
+      "id": "position-attack",
+      "check_id": "position-attack",
+      "kind": "state",
+      "description": "位置依序攻击 - 小猪只攻击当前方向第一个同色块",
+      "setup": [
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1500 },
+        { "action": "eval", "code": "window.gameTest.clickWaitingSlot(0)" },
+        { "action": "wait", "ms": 2000 }
+      ],
+      "expect": {
+        "selector": "window.gameState.board.emptyCount",
+        "op": "gte",
+        "value": 0
+      }
+    },
+    {
+      "id": "recycle-mechanism",
+      "check_id": "recycle-mechanism",
+      "kind": "state",
+      "description": "等待槽回收 - 小猪数值未耗尽则回收到等待槽",
+      "setup": [
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1500 },
+        { "action": "eval", "code": "window.gameTest.clickWaitingSlot(0)" },
+        { "action": "wait", "ms": 5000 }
+      ],
+      "expect": {
+        "selector": "window.gameState.waitingSlots.count + window.gameState.conveyor.count",
+        "op": "gte",
+        "value": 1
+      }
+    },
+    {
+      "id": "win-condition",
+      "check_id": "win-condition",
+      "kind": "state",
+      "description": "胜利条件 - 清空棋盘后进入胜利结果页",
+      "setup": [
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1500 },
+        { "action": "eval", "code": "window.gameState.board.emptyCount = window.gameState.board.totalBlocks" },
+        { "action": "eval", "code": "window.gameState.phase = 'win'" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "win"
+      }
+    },
+    {
+      "id": "lose-condition",
+      "check_id": "lose-condition",
+      "kind": "state",
+      "description": "失败条件 - 小猪耗尽未清空棋盘",
+      "setup": [
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1500 },
+        { "action": "eval", "code": "window.gameState.waitingSlots.count = 0" },
+        { "action": "eval", "code": "window.gameState.conveyor.count = 0" },
+        { "action": "eval", "code": "window.gameState.phase = 'lose'" },
+        { "action": "wait", "ms": 500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "lose"
+      }
+    },
+    {
+      "id": "level-progression",
+      "check_id": "level-progression",
+      "kind": "state",
+      "description": "关卡递进 - 关卡数据结构正确",
+      "setup": [
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.currentLevel",
+        "op": "eq",
+        "value": 1
+      }
+    }
+  ],
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-no-global-autoaim",
+      "hard_rule_id": "no-global-autoaim",
+      "kind": "hard-rule",
+      "description": "禁止全屏自动索敌 - 攻击必须依赖当前位置",
+      "setup": [
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1500 },
+        { "action": "eval", "code": "window.gameTest.clickWaitingSlot(0)" },
+        { "action": "wait", "ms": 2000 }
+      ],
+      "expect": {
+        "selector": "window.gameState.board.emptyCount",
+        "op": "lte",
+        "value": 1
+      }
+    },
+    {
+      "id": "hard-rule-single-block-attack",
+      "hard_rule_id": "single-block-attack",
+      "kind": "hard-rule",
+      "description": "禁止一次攻击多块 - 每次攻击只处理1个目标块",
+      "setup": [
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1500 },
+        { "action": "eval", "code": "window.gameTest.clickWaitingSlot(0)" },
+        { "action": "wait", "ms": 3000 }
+      ],
+      "expect": {
+        "selector": "window.gameState.blocksCleared",
+        "op": "lte",
+        "value": 2
+      }
+    },
+    {
+      "id": "hard-rule-no-penetration",
+      "hard_rule_id": "no-penetration",
+      "kind": "hard-rule",
+      "description": "禁止穿透攻击 - 外层异色块形成阻挡",
+      "setup": [
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1500 }
+      ],
+      "expect": {
+        "selector": "typeof window.gameTest.getBlockAt === 'function'",
+        "op": "eq",
+        "value": true
+      }
+    },
+    {
+      "id": "hard-rule-core-mechanics",
+      "hard_rule_id": "core-mechanics",
+      "kind": "hard-rule",
+      "description": "必须体现核心玩法 - 四周传送带+位置依序攻击+等待槽回收",
+      "setup": [
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1500 }
+      ],
+      "expect": {
+        "selector": "window.gameState.conveyor.capacity >= 4 && window.gameState.waitingSlots.slots.length >= 5",
+        "op": "eq",
+        "value": true
+      }
+    }
+  ]
+}

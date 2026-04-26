@@ -1,148 +1,142 @@
 {
   "case_id": "canvas-001",
-  "description": "canvas-001 单词消消乐 - 完整测试 profile",
+  "description": "canvas-001 像素传送带清板益智游戏 - 完整测试 profile",
   "game_html_relative": "game/index.html",
   "boot_timeout_ms": 5000,
-  "prd_hash": "543511789bb9fe0e9e0bab1c987988da5464769e",
+  "prd_hash": "fe54d8582dc257166c20e05fbb1993cc24b0ea9d",
   "prd_path": "cases/canvas-001/docs/game-prd.md",
   "assertions": [
     {
-      "id": "playable-loop",
-      "check_id": "playable-loop",
-      "kind": "interaction",
-      "description": "主循环可玩",
+      "id": "game-boots",
+      "check_id": "game-boots",
+      "kind": "state",
+      "description": "游戏启动",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
         { "action": "wait", "ms": 500 }
-      ],
-      "expect": {
-        "selector": "window.gameState.phase === 'playing' && window.gameState.cards.length > 0",
-        "op": "truthy",
-        "value": true
-      }
+      ]
     },
     {
-      "id": "match-logic",
-      "check_id": "match-logic",
-      "description": "配对逻辑正确",
+      "id": "belt-movement",
+      "check_id": "belt-movement",
       "kind": "interaction",
+      "description": "传送带移动 - 小猪沿传送带顺时针移动",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 800 }
-      ],
-      "expect": {
-        "selector": "window.gameState.score >= 10 && window.gameState.matchedPairs >= 1",
-        "op": "truthy",
-        "value": true
-      }
+        { "action": "click", "selector": "#game", "x": 260, "y": 500 },
+        { "action": "eval", "js": "const pigs = window.gameTest.getPigsOnBelt(); window.__test_initial_pos = pigs.length > 0 ? pigs[0].position : null" },
+        { "action": "eval", "js": "window.gameTest.simulateTime(2000)" },
+        { "action": "wait", "ms": 100 }
+      ]
     },
     {
-      "id": "match-fail-logic",
-      "check_id": "match-fail-logic",
-      "description": "配对失败逻辑",
+      "id": "position-attack",
+      "check_id": "position-attack",
       "kind": "interaction",
+      "description": "位置索敌攻击 - 只攻击正对方向的第一个同色块",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.simulateWrongMatch()" },
-        { "action": "wait", "ms": 1000 }
-      ],
-      "expect": {
-        "selector": "window.gameState.combo === 0",
-        "op": "truthy",
-        "value": true
-      }
+        { "action": "click", "selector": "#game", "x": 260, "y": 500 },
+        { "action": "eval", "js": "window.gameTest.simulateTime(5000)" },
+        { "action": "wait", "ms": 100 }
+      ]
     },
     {
-      "id": "same-side-exclusive",
-      "check_id": "same-side-exclusive",
-      "description": "同侧互斥选择",
+      "id": "waiting-slot-recycle",
+      "check_id": "waiting-slot-recycle",
       "kind": "interaction",
+      "description": "等待槽回收 - 小猪回收后保留剩余数值",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "(function() { const cards = window.gameState.cards.filter(c => c.side === 'en' && !c.matched); if (cards.length >= 2) { window.gameTest.clickCard(cards[0].id); window.gameTest.clickCard(cards[1].id); } })()" },
+        { "action": "click", "selector": "#game", "x": 260, "y": 500 },
+        { "action": "eval", "js": "window.gameTest.simulateTime(10000)" },
+        { "action": "wait", "ms": 100 }
+      ]
+    },
+    {
+      "id": "win-condition",
+      "check_id": "win-condition",
+      "kind": "interaction",
+      "description": "胜利条件 - 清空棋盘所有目标块",
+      "setup": [
+        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "window.gameTest.forceWin()" },
         { "action": "wait", "ms": 300 }
-      ],
-      "expect": {
-        "selector": "window.gameState.selectedCards.filter(c => c.side === 'en').length <= 1",
-        "op": "truthy",
-        "value": true
-      }
+      ]
     },
     {
-      "id": "time-limit",
-      "check_id": "time-limit",
-      "description": "时间限制生效",
-      "kind": "state",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameState.timeLeft = 0.01" },
-        { "action": "wait", "ms": 300 }
-      ],
-      "expect": {
-        "selector": "window.gameState.phase === 'lose'",
-        "op": "truthy",
-        "value": true
-      }
-    },
-    {
-      "id": "level-complete",
-      "check_id": "level-complete",
-      "description": "关卡完成",
-      "kind": "state",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameState.matchedPairs = window.gameState.totalPairs; window.gameState.cards.forEach(c => c.matched = true); levelComplete()" },
-        { "action": "wait", "ms": 600 }
-      ],
-      "expect": {
-        "selector": "window.gameState.phase === 'win'",
-        "op": "truthy",
-        "value": true
-      }
-    },
-    {
-      "id": "combo-system",
-      "check_id": "combo-system",
-      "description": "连击系统",
+      "id": "lose-condition",
+      "check_id": "lose-condition",
       "kind": "interaction",
+      "description": "失败条件 - 消耗所有小猪且棋盘未清空",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 600 },
-        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 600 },
-        { "action": "eval", "js": "window.gameTest.simulateCorrectMatch()" },
-        { "action": "wait", "ms": 600 }
-      ],
-      "expect": {
-        "selector": "window.gameState.combo >= 3",
-        "op": "truthy",
-        "value": true
-      }
+        { "action": "eval", "js": "window.gameTest.forceLose()" },
+        { "action": "wait", "ms": 300 }
+      ]
     }
   ],
   "hard_rule_assertions": [
     {
-      "id": "hard-rule-click-interaction",
-      "hard_rule_id": "click-interaction",
+      "id": "hard-rule-no-global-autoaim",
+      "hard_rule_id": "no-global-autoaim",
       "kind": "hard-rule",
-      "description": "点击交互 - 游戏仅支持点击交互",
+      "description": "禁止全屏自动索敌 - 攻击必须严格依赖小猪当前所在位置",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#game", "x": 260, "y": 500 },
+        { "action": "eval", "js": "window.gameTest.simulateTime(3000)" },
+        { "action": "wait", "ms": 100 }
+      ]
+    },
+    {
+      "id": "hard-rule-single-block-attack",
+      "hard_rule_id": "single-block-attack",
+      "kind": "hard-rule",
+      "description": "禁止一次攻击多块 - 每次攻击只处理1个目标块",
+      "setup": [
+        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
         { "action": "wait", "ms": 500 }
-      ],
-      "expect": {
-        "selector": "typeof window.gameTest.clickCard === 'function'",
-        "op": "truthy",
-        "value": true
-      }
+      ]
+    },
+    {
+      "id": "hard-rule-no-pierce-attack",
+      "hard_rule_id": "no-pierce-attack",
+      "kind": "hard-rule",
+      "description": "禁止穿透攻击 - 不得跳过前方异色块攻击后方目标",
+      "setup": [
+        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
+        { "action": "wait", "ms": 500 }
+      ]
+    },
+    {
+      "id": "hard-rule-no-row-column-clear",
+      "hard_rule_id": "no-row-column-clear",
+      "kind": "hard-rule",
+      "description": "禁止整行整列清除",
+      "setup": [
+        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
+        { "action": "wait", "ms": 500 }
+      ]
+    },
+    {
+      "id": "hard-rule-core-mechanics",
+      "hard_rule_id": "core-mechanics",
+      "kind": "hard-rule",
+      "description": "核心机制约束 - 四周传送带+位置索敌+等待槽回收",
+      "setup": [
+        { "action": "click", "selector": "#game", "x": 360, "y": 264 },
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#game", "x": 260, "y": 500 },
+        { "action": "wait", "ms": 200 },
+        { "action": "eval", "js": "window.gameTest.simulateTime(3000)" },
+        { "action": "wait", "ms": 100 }
+      ]
     }
   ]
 }

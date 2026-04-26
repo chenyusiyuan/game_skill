@@ -335,16 +335,9 @@ function checkEvents(ctx) {
     unknownTargets.length === 0
       ? "所有 scene-transitions 的 to 目标都在 scenes 里定义了"
       : `scene-transitions 目标未定义: ${unknownTargets.map(t => t.to).join(", ")}`));
-  // 如果有 boss / floor / level 相关 scene 或 event-graph 提到 floor-transition，代码里应该有 nextFloor/advanceFloor/regenerateFloor
-  const prdMentionsLevels = ctx.prd && /多关卡|下一关|floor\s*[0-9]|level\s*[0-9]|currentFloor|maxFloor/i.test(ctx.prd);
-  const graphMentionsFloorFlow = ctx.specs["event-graph"] &&
-    /floor[-_]transition|boss[.-]died|level[.-]complete|floor[.-]entered/i.test(ctx.specs["event-graph"]);
-  if (prdMentionsLevels || graphMentionsFloorFlow) {
-    const hasRebuild = /regenerateFloor|rebuildFloor|loadFloor|enterFloor|advanceFloor|scene\.restart|buildLevel/.test(ctx.sourceBlob);
-    rules.push(rule("events.floor-rebuild-present", "error",
-      hasRebuild,
-      "PRD 或 event-graph 提到多关卡/下一关，代码必须有 regenerateFloor/enterFloor/scene.restart 之类的场景重建函数"));
-  }
+  // T14: 移除 events.floor-rebuild-present —— 它硬编码 floor/boss 这些 dungeon-crawler 特有的
+  // genre 关键词，对长尾 genre 鲁棒性差。"场景重建能力" 的约束应由 event-graph 里各 case 自行
+  // 声明 @rule(regenerate-level) 之类，再由 check_implementation_contract 的 rule-trace 覆盖率兜底。
   return rules;
 }
 

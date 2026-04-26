@@ -119,6 +119,60 @@ const candidates = pool.filter(e => e["best-fit"].includes(genreToCnLabel(genre)
 
 每条 risk-note 一句话。
 
+### Step 4.5：asset-strategy 决策（LLM 必须按 checklist 判断）
+
+不允许系统套用默认值——LLM 按下面 5 个问题思考后，把答案**写进 `asset-strategy.rationale`**（≥80 chars），并决定 mode 和字段。
+
+**Checklist（依次回答）：**
+
+1. **玩家在这个游戏里要分辨什么？**（颜色 / 形状 / 数字 / 文字 / 空间位置 / 动作）
+2. **如果视觉换成纯色方块 + 数字 + 文字，玩法还能成立吗？**
+   - 能成立 → 倾向 `generated-only`
+   - 不能成立（色板冲突、辨识度不够、沉浸感丢失） → `library-first`
+   - 完全无视觉玩法（纯文字解谜/对话） → `none`
+3. **哪些 @entity / @ui 会被玩家点击 / 移动 / 攻击 / 匹配 / 消除？** → 写入 `visual-core-entities`
+4. **哪些只是背景 / 装饰 / HUD 数字 / 分隔符？** → 写入 `visual-peripheral`
+5. **如果核心用库素材、外围用生成图，玩家会觉得割裂吗？**
+   - 会（如像素风核心 + 扁平 SVG 背景） → `style-coherence.level: strict`
+   - 不会（2D 对象 + 纯色背景没违和） → `flexible`
+   - 纯文字/无视觉 → `n/a`
+
+**写进 front-matter：**
+
+```yaml
+asset-strategy:
+  mode: library-first
+  rationale: >
+    颜色匹配是核心判定条件，玩家必须快速分辨 4 种颜色；
+    纯色方块+数字可以实现，但会丢失像素风格沉浸感；
+    核心小猪和目标块用库素材，HUD 和背景允许生成。
+  visual-core-entities: [pig, block]       # 必须对应 PRD 里的 @entity/@ui id
+  visual-peripheral: [hud-timer, scene-background]
+  style-coherence:
+    level: strict
+    note: "核心实体必须同一 pack；背景独立生成但配色要跟色板"
+```
+
+**关键约束（check_game_prd 会校验）：**
+- `rationale` 长度 ≥ 80 chars，否则判 AS003
+- `mode=library-first` 但 `visual-core-entities=[]` → AS006
+- `mode=none` 但 `visual-core-entities` 非空 → AS006
+- `visual-core-entities` / `visual-peripheral` 里的 id 必须在 PRD 中定义 @entity/@ui → AS007
+
+**下游行为分档（自动生效，不需手动指定）：**
+
+| mode | check_asset_selection | check_asset_usage | check_impl_contract |
+|---|---|---|---|
+| `library-first` | 完整 gate（30%/pack 一致性/binding-to） | required 100% 消费 | asset-bindings 完整 |
+| `generated-only` | 跳 30% 阈值；`visual-core-entities` 绑的 generated 也算 must-render | 同 | 同 |
+| `none` | **整个 bypass** | **bypass** | **bypass asset-bindings** |
+
+| style-coherence.level | pack-coherence 阈值 |
+|---|---|
+| `strict` | 85% |
+| `flexible` | 50% |
+| `n/a` | 跳过 |
+
 ### Step 5：回写 front-matter
 
 ```yaml

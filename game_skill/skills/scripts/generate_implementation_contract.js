@@ -17,6 +17,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { basename, dirname, join, resolve } from "path";
 import yaml from "js-yaml";
+import { readAssetStrategy } from "./_asset_strategy.js";
 
 const args = process.argv.slice(2);
 const caseDir = resolve(args[0] ?? ".");
@@ -35,21 +36,23 @@ const assetsPath = firstExisting(
   join(specsDir, ".pending/assets.yaml")
 );
 const prdPath = join(caseDir, "docs/game-prd.md");
+const strategy = readAssetStrategy(caseDir);
+const assetless = strategy.mode === "none";
 
-if (!scenePath || !assetsPath) {
-  console.error("✗ 需要先存在 specs/scene.yaml 和 specs/assets.yaml（或 specs/.pending/ 对应文件）");
+if (!scenePath || (!assetsPath && !assetless)) {
+  console.error("✗ 需要先存在 specs/scene.yaml 和 specs/assets.yaml（或 specs/.pending/ 对应文件）；asset-strategy.mode=none 可省略 assets.yaml");
   process.exit(1);
 }
 
 const sceneRaw = readFileSync(scenePath, "utf-8");
-const assetsRaw = readFileSync(assetsPath, "utf-8");
+const assetsRaw = assetsPath ? readFileSync(assetsPath, "utf-8") : "";
 const prdRaw = existsSync(prdPath) ? readFileSync(prdPath, "utf-8") : "";
 
 let sceneSpec;
 let assetsSpec;
 try {
   sceneSpec = yaml.load(sceneRaw) ?? {};
-  assetsSpec = yaml.load(assetsRaw) ?? {};
+  assetsSpec = assetsRaw ? (yaml.load(assetsRaw) ?? {}) : {};
 } catch (e) {
   console.error(`✗ specs yaml 解析失败: ${e.message}`);
   process.exit(1);
@@ -58,7 +61,7 @@ try {
 const runtime = inferRuntime({ assetsRaw, assetsSpec, prdRaw });
 const runMode = defaultRunMode(runtime);
 const boot = normalizeBoot(sceneSpec["boot-contract"] ?? {});
-const bindings = collectAssetBindings(assetsSpec);
+const bindings = assetless ? [] : collectAssetBindings(assetsSpec, strategy);
 
 const contract = {
   "contract-version": 1,
@@ -70,12 +73,14 @@ const contract = {
   "asset-bindings": bindings,
   "engine-lifecycle": lifecycleFor(runtime),
   verification: {
-    "required-runtime-evidence": [
-      "gameState-exposed",
-      "no-project-asset-http-errors",
-      "required-local-assets-loaded",
-      "required-local-assets-consumed",
-    ],
+    "required-runtime-evidence": assetless
+      ? ["gameState-exposed"]
+      : [
+          "gameState-exposed",
+          "no-project-asset-http-errors",
+          "required-local-assets-loaded",
+          "required-local-assets-consumed",
+        ],
     "required-test-hooks": ["clickStartButton"],
     "report-policy": "verifier-json-only",
   },
@@ -117,8 +122,10 @@ function normalizeBoot(raw) {
   };
 }
 
-function collectAssetBindings(spec) {
+function collectAssetBindings(spec, strategy) {
   const out = [];
+  // generated-only 模式下，生成类型也可以 must-render=true（只要 binding-to 指向 core-entity）
+  const allowGeneratedMustRender = strategy?.mode === "generated-only";
   for (const section of ["images", "spritesheets", "audio", "fonts"]) {
     const list = Array.isArray(spec[section]) ? spec[section] : [];
     for (const item of list) {
@@ -130,6 +137,14 @@ function collectAssetBindings(spec) {
       const kind = inferAssetKind({ id, usage: item.usage, source, section, type });
       const isOptionalState = /hover|悬停|outline|empty|备用|fallback|backup/i.test(`${id} ${item.usage ?? ""}`);
       const isDecorativeRole = ["particle", "hud-indicator", "decorative"].includes(role);
+      const bindingTo = item["binding-to"] ?? null;
+      const hasRealBinding = bindingTo && bindingTo !== "decor";
+      // library-first: 只有 local-file + 真 binding 才 must-render
+      // generated-only: generated/local-file 都可以 must-render（只要有真 binding）
+      const typeAllowed = allowGeneratedMustRender
+        ? (type === "local-file" || type === "graphics-generated" || type === "inline-svg")
+        : (type === "local-file");
+      const mustRender = typeAllowed && section !== "fonts" && !isOptionalState && hasRealBinding;
       out.push({
         id: String(id),
         section,
@@ -137,10 +152,11 @@ function collectAssetBindings(spec) {
         "asset-kind": kind,
         type,
         source: source || type,
+        "binding-to": bindingTo,
         "render-as": inferRenderAs(section, type, role),
         "text-bearing": isTextBearing(role),
-        "must-render": type === "local-file" && section !== "fonts" && !isOptionalState,
-        "allow-fallback": type !== "local-file" || isDecorativeRole || isOptionalState,
+        "must-render": mustRender,
+        "allow-fallback": !mustRender,
         consumer: inferConsumer(section, type),
       });
     }

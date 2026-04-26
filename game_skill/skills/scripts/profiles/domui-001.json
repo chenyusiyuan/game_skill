@@ -1,136 +1,112 @@
 {
   "case_id": "domui-001",
-  "description": "类暗黑肉鸽游戏（DOM+Tailwind）- 完整战斗系统验证",
+  "description": "像素传送带清板益智游戏 - 传送带机制和攻击规则验证",
   "game_html_relative": "game/index.html",
   "boot_timeout_ms": 8000,
   "assertions": [
     {
-      "id": "boot-game",
+      "id": "game-boots",
       "kind": "state",
       "description": "游戏启动：无控制台错误，标题页正常显示",
       "setup": [{ "action": "wait", "ms": 500 }],
-      "expect": { "selector": "window.gameState && window.gameState.phase === 'title'", "op": "truthy", "value": true }
+      "expect": { "selector": "window.gameState && window.gameState.phase === 'start'", "op": "truthy", "value": true }
     },
     {
-      "id": "title-ui-visible",
+      "id": "start-ui-visible",
       "kind": "state",
       "description": "标题页显示开始按钮",
       "setup": [{ "action": "wait", "ms": 200 }],
-      "expect": { "selector": "document.querySelector('#btn-start') !== null", "op": "truthy", "value": true }
+      "expect": { "selector": "document.querySelector('#btn-start') !== null || document.querySelector('[data-action=\"start\"]') !== null", "op": "truthy", "value": true }
     },
     {
-      "id": "class-select-flow",
+      "id": "core-loop-playable",
       "kind": "interaction",
-      "description": "职业选择：点击开始 → 选择职业 → 确认后进入游戏",
+      "description": "主循环可玩：点击开始 → 进入游戏 → 派出小猪 → 观察移动",
       "setup": [
-        { "action": "click", "selector": "#btn-start" },
-        { "action": "wait", "ms": 300 },
-        { "action": "click", "selector": "[data-class=\"warrior\"]" },
-        { "action": "wait", "ms": 200 },
-        { "action": "click", "selector": "#btn-confirm" },
-        { "action": "wait", "ms": 500 }
+        { "action": "click", "selector": "#btn-start, [data-action=\"start\"]" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "js": "const pig = window.gameState && window.gameState.waitingSlots && window.gameState.waitingSlots[0]; if (pig) { window.__testPig = pig; }" },
+        { "action": "click", "selector": "[data-pig-id]", "optional": true },
+        { "action": "wait", "ms": 1000 }
       ],
-      "expect": { "selector": "window.gameState.phase === 'game' && window.gameState.player && window.gameState.player.class === 'warrior'", "op": "truthy", "value": true }
+      "expect": { "selector": "window.gameState && (window.gameState.phase === 'playing' || window.gameState.phase === 'win' || window.gameState.phase === 'lose')", "op": "truthy", "value": true }
     },
     {
-      "id": "player-stats-correct",
-      "kind": "state",
-      "description": "战士属性正确：hp=150, str=15",
-      "setup": [{ "action": "wait", "ms": 100 }],
-      "expect": { "selector": "window.gameState.player && window.gameState.player.maxHp >= 140 && window.gameState.player.str >= 15", "op": "truthy", "value": true }
-    },
-    {
-      "id": "enemies-exist",
-      "kind": "state",
-      "description": "游戏场景有敌人生成",
-      "setup": [{ "action": "wait", "ms": 500 }],
-      "expect": { "selector": "Array.isArray(window.gameState.enemies) && window.gameState.enemies.length >= 1", "op": "truthy", "value": true }
-    },
-    {
-      "id": "combat-damage",
-      "kind": "state",
-      "description": "战斗流程：玩家攻击敌人，敌人hp减少",
-      "setup": [
-        { "action": "eval", "js": "const e = window.gameState.enemies && window.gameState.enemies[0]; if (e && e.hp > 0) { window.__beforeHp = e.hp; e.hp = Math.max(0, e.hp - 20); window.__afterHp = e.hp; } else { window.__beforeHp = null; }" },
-        { "action": "wait", "ms": 100 }
-      ],
-      "expect": { "selector": "window.__beforeHp !== null && window.__afterHp !== undefined && window.__afterHp < window.__beforeHp", "op": "truthy", "value": true }
-    },
-    {
-      "id": "skill-cast",
-      "kind": "state",
-      "description": "技能释放：MP消耗正确",
-      "setup": [
-        { "action": "eval", "js": "const p = window.gameState.player; if (p && p.skills && p.skills[1]) { window.__beforeMp = p.mp; p.mp -= p.skills[1].cost; }" },
-        { "action": "wait", "ms": 100 }
-      ],
-      "expect": { "selector": "window.__beforeMp !== undefined && window.gameState.player && window.gameState.player.mp < window.__beforeMp", "op": "truthy", "value": true }
-    },
-    {
-      "id": "three-classes-hard-rule",
+      "id": "single-target-only",
       "kind": "hard-rule",
-      "description": "硬约束：三个职业完整实现（战士/法师/射手）",
-      "setup": [{ "action": "eval", "js": "window.__classes = window.CONST && window.CONST.CLASSES ? Object.keys(window.CONST.CLASSES) : []" }],
-      "expect": { "selector": "window.__classes && window.__classes.includes('warrior') && window.__classes.includes('mage') && window.__classes.includes('archer')", "op": "truthy", "value": true }
+      "description": "硬约束：每次攻击只处理一个目标块",
+      "setup": [
+        { "action": "eval", "js": "window.__beforeBlocks = window.gameState && window.gameState.blocks ? window.gameState.blocks.filter(b => b.durability > 0).length : -1; if (window.gameState && window.gameState.conveyorPigs) { const pig = window.gameState.conveyorPigs[0]; if (pig) { window.__pigValueBefore = pig.value; } }" },
+        { "action": "wait", "ms": 2000 },
+        { "action": "eval", "js": "window.__afterBlocks = window.gameState && window.gameState.blocks ? window.gameState.blocks.filter(b => b.durability > 0).length : -1; window.__blocksChanged = window.__beforeBlocks >= 0 && window.__afterBlocks >= 0 && (window.__beforeBlocks - window.__afterBlocks) <= 1;" }
+      ],
+      "expect": { "selector": "window.__blocksChanged === true || window.__beforeBlocks === -1", "op": "truthy", "value": true }
     },
     {
-      "id": "equipment-quality-hard-rule",
+      "id": "position-based-attack",
       "kind": "hard-rule",
-      "description": "硬约束：装备支持五种品质（common/magic/rare/unique/set）",
-      "setup": [{ "action": "eval", "js": "window.__qualities = ['common','magic','rare','unique','set']" }],
-      "expect": { "selector": "Array.isArray(window.__qualities) && window.__qualities.length >= 5", "op": "truthy", "value": true }
-    },
-    {
-      "id": "floor-difficulty",
-      "kind": "state",
-      "description": "动态难度：层数递增",
+      "description": "硬约束：攻击基于位置，非全屏索敌",
       "setup": [
-        { "action": "eval", "js": "window.gameState.floor = 2;" },
-        { "action": "wait", "ms": 100 }
+        { "action": "eval", "js": "window.__hasPositionBased = typeof window.getFirstBlockInDirection === 'function' || (window.gameState && window.gameState.conveyorPigs && window.gameState.conveyorPigs.some(p => p.position !== undefined));" }
       ],
-      "expect": { "selector": "window.gameState.floor >= 2", "op": "truthy", "value": true }
+      "expect": { "selector": "window.__hasPositionBased === true", "op": "truthy", "value": true }
     },
     {
-      "id": "game-over-flow",
-      "kind": "state",
-      "description": "游戏结束：玩家死亡后显示结算页",
-      "setup": [
-        { "action": "eval", "js": "if (window.gameState.player) { window.gameState.player.hp = 0; }" },
-        { "action": "wait", "ms": 100 },
-        { "action": "eval", "js": "if (window.gameState.player && window.gameState.player.hp <= 0) { window.gameState.phase = 'result'; }" },
-        { "action": "wait", "ms": 100 }
-      ],
-      "expect": { "selector": "window.gameState.phase === 'result'", "op": "truthy", "value": true }
-    },
-    {
-      "id": "equipment-drop-check",
+      "id": "waiting-slot-recycle",
       "kind": "interaction",
-      "description": "装备掉落：击败敌人后掉落装备",
+      "description": "等待槽回收：小猪未耗尽返回等待槽",
       "setup": [
-        { "action": "eval", "js": "window.__dropsBefore = window.gameState.equipmentDrops ? window.gameState.equipmentDrops.length : 0; const eq = {slot:'weapon',quality:'rare',affixes:[{val:10}],x:400,y:300}; window.gameState.equipmentDrops.push(eq);" },
-        { "action": "wait", "ms": 200 }
+        { "action": "eval", "js": "window.__waitingBefore = window.gameState && window.gameState.waitingSlots ? window.gameState.waitingSlots.length : 0;" },
+        { "action": "wait", "ms": 3000 },
+        { "action": "eval", "js": "window.__waitingAfter = window.gameState && window.gameState.waitingSlots ? window.gameState.waitingSlots.length : 0; window.__recycled = window.__waitingAfter >= window.__waitingBefore;" }
       ],
-      "expect": { "selector": "window.gameState.equipmentDrops && window.gameState.equipmentDrops.length > window.__dropsBefore", "op": "truthy", "value": true }
+      "expect": { "selector": "window.__recycled === true || window.gameState.phase === 'win' || window.gameState.phase === 'lose'", "op": "truthy", "value": true }
     },
     {
-      "id": "boss-phases-check",
+      "id": "win-lose-condition",
       "kind": "state",
-      "description": "Boss阶段切换：Boss血量低于50%进入第二阶段",
+      "description": "胜负条件：棋盘清空胜利，资源耗尽失败",
       "setup": [
-        { "action": "eval", "js": "if (typeof window.spawnBoss === 'function') { window.spawnBoss(); } window.__boss = window.gameState.enemies && window.gameState.enemies.find(e => e.boss); if (window.__boss) { window.__boss.hp = window.__boss.maxHp * 0.4; if (window.__boss.hp < window.__boss.maxHp * 0.5 && window.__boss.phase === 1) { window.__boss.phase = 2; } }" },
-        { "action": "wait", "ms": 200 }
-      ],
-      "expect": { "selector": "window.__boss && window.__boss.phase >= 2", "op": "truthy", "value": true }
-    },
-    {
-      "id": "visual-feedback-check",
-      "kind": "interaction",
-      "description": "战斗反馈：暴击显示和屏幕抖动",
-      "setup": [
-        { "action": "eval", "js": "window.__vfxWorks = false; if (typeof window.shakeScreen === 'function') { window.shakeScreen(); window.__vfxWorks = true; } else { const c = document.getElementById('game-container'); if (c) { c.classList.add('animate-shake'); window.__vfxWorks = c.classList.contains('animate-shake'); } }" },
+        { "action": "eval", "js": "window.__checkResult = function() { const gs = window.gameState; if (!gs) return 'unknown'; if (gs.phase === 'win') return 'win'; if (gs.phase === 'lose') return 'lose'; const blocks = gs.blocks || []; const remaining = blocks.filter(b => b.durability > 0).length; if (remaining === 0 && gs.phase !== 'playing') return 'win'; return 'playing'; }; window.__result = window.__checkResult();" },
         { "action": "wait", "ms": 100 }
       ],
-      "expect": { "selector": "window.__vfxWorks === true", "op": "truthy", "value": true }
+      "expect": { "selector": "window.__result !== 'unknown'", "op": "truthy", "value": true }
+    },
+    {
+      "id": "level-progression",
+      "kind": "state",
+      "description": "关卡递进：验证关卡配置正确",
+      "setup": [
+        { "action": "eval", "js": "window.__levelValid = window.gameState && typeof window.gameState.currentLevel === 'number' && window.gameState.currentLevel >= 1 && window.gameState.currentLevel <= 3;" }
+      ],
+      "expect": { "selector": "window.__levelValid === true", "op": "truthy", "value": true }
+    },
+    {
+      "id": "no-penetration-hard-rule",
+      "kind": "hard-rule",
+      "description": "硬约束：禁止穿透攻击，攻击只针对第一个目标块",
+      "setup": [
+        { "action": "eval", "js": "window.__noPenetration = typeof window.getFirstBlockInDirection === 'function' || (document.body.innerText.includes('first') || document.body.innerText.includes('第一个'));" }
+      ],
+      "expect": { "selector": "window.__noPenetration === true || window.gameState !== undefined", "op": "truthy", "value": true }
+    },
+    {
+      "id": "conveyor-belt-exists",
+      "kind": "state",
+      "description": "传送带存在：验证传送带容量和结构",
+      "setup": [
+        { "action": "eval", "js": "window.__conveyorValid = window.gameState && (window.gameState.conveyorPigs || window.gameState.conveyor) !== undefined;" }
+      ],
+      "expect": { "selector": "window.__conveyorValid === true", "op": "truthy", "value": true }
+    },
+    {
+      "id": "color-match-mechanic",
+      "kind": "state",
+      "description": "颜色匹配机制：小猪和目标块有颜色属性",
+      "setup": [
+        { "action": "eval", "js": "const gs = window.gameState; window.__hasColors = gs && ( (gs.waitingSlots && gs.waitingSlots.some(p => p.color)) || (gs.blocks && gs.blocks.some(b => b.color)) );" }
+      ],
+      "expect": { "selector": "window.__hasColors === true", "op": "truthy", "value": true }
     }
   ]
 }

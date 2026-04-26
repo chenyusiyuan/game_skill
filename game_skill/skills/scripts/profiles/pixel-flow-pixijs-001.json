@@ -1,0 +1,188 @@
+{
+  "case_id": "pixel-flow-pixijs-001",
+  "description": "Pixel Flow 传送带清板益智游戏 - Playwright 自动化测试 Profile",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 10000,
+  "prd_hash": "b412420bf1677b5a11035a0d34c4e7b3b751595d",
+  "prd_path": "cases/pixel-flow-pixijs-001/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "boot-success",
+      "check_id": "boot-success",
+      "kind": "boot",
+      "description": "游戏启动检查",
+      "setup": [
+        { "action": "wait", "ms": 1000 },
+        { "action": "click", "x": 400, "y": 350, "_note": "点击开始按钮区域 (canvas坐标)" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "!!window.app && !!window.gameState" }
+      ]
+    },
+    {
+      "id": "main-loop-runnable",
+      "check_id": "main-loop-runnable",
+      "kind": "interaction",
+      "description": "主循环可运行",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameState.phase === 'playing'" }
+      ]
+    },
+    {
+      "id": "click-dispatch",
+      "check_id": "click-dispatch",
+      "kind": "interaction",
+      "description": "点击派出小猪",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameState.conveyor.pigs.length > 0" }
+      ]
+    },
+    {
+      "id": "position-based-attack",
+      "check_id": "position-based-attack",
+      "kind": "interaction",
+      "description": "按位置攻击验证",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "wait", "ms": 3000 },
+        { "action": "eval", "code": "window.__trace && window.__trace.some(t => t.rule === 'attack-hit')" }
+      ]
+    },
+    {
+      "id": "slot-recycle",
+      "check_id": "slot-recycle",
+      "kind": "interaction",
+      "description": "等待槽回收验证",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "wait", "ms": 5000 },
+        { "action": "eval", "code": "window.__trace && window.__trace.some(t => t.rule === 'slot-recycle')" }
+      ]
+    },
+    {
+      "id": "win-condition",
+      "check_id": "win-condition",
+      "kind": "interaction",
+      "description": "胜利条件验证",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.forceWin()" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameState.phase === 'win'" }
+      ]
+    },
+    {
+      "id": "lose-condition",
+      "check_id": "lose-condition",
+      "kind": "interaction",
+      "description": "失败条件验证",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.forceLose()" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameState.phase === 'lose'" }
+      ]
+    },
+    {
+      "id": "level-progression",
+      "check_id": "level-progression",
+      "kind": "interaction",
+      "description": "关卡递进验证",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameState.level === 1" },
+        { "action": "eval", "code": "window.gameTest.forceWin()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickNextButton()" },
+        { "action": "wait", "ms": 1000 },
+        { "action": "eval", "code": "window.gameState.level === 2" }
+      ]
+    }
+  ],
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-no-global-autoaim",
+      "hard_rule_id": "no-global-autoaim",
+      "kind": "hard-rule",
+      "description": "禁止全屏自动索敌 - 攻击只能命中当前位置方向第一个目标",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "wait", "ms": 3000 },
+        { "action": "eval", "code": "(() => { const attacks = (window.__trace || []).filter(t => t.rule === 'attack-hit'); return attacks.every(a => a.after && a.after.targetCount === 1); })()" }
+      ]
+    },
+    {
+      "id": "hard-rule-single-target-per-attack",
+      "hard_rule_id": "single-target-per-attack",
+      "kind": "hard-rule",
+      "description": "禁止一次攻击多个同色块",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "wait", "ms": 3000 },
+        { "action": "eval", "code": "(() => { const attacks = (window.__trace || []).filter(t => t.rule === 'attack-hit'); return attacks.every(a => !a.after || a.after.targetsHit <= 1); })()" }
+      ]
+    },
+    {
+      "id": "hard-rule-no-penetration-attack",
+      "hard_rule_id": "no-penetration-attack",
+      "kind": "hard-rule",
+      "description": "禁止穿透前方异色块攻击后方目标",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "wait", "ms": 3000 },
+        { "action": "eval", "code": "(() => { const attacks = (window.__trace || []).filter(t => t.rule === 'attack-hit'); return attacks.every(a => !a.after || a.after.penetration === false); })()" }
+      ]
+    },
+    {
+      "id": "hard-rule-no-row-column-clear",
+      "hard_rule_id": "no-row-column-clear",
+      "kind": "hard-rule",
+      "description": "禁止整行整列清除",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "wait", "ms": 3000 },
+        { "action": "eval", "code": "(() => { const attacks = (window.__trace || []).filter(t => t.rule === 'attack-hit'); return attacks.every(a => !a.after || a.after.clearType !== 'row' && a.after.clearType !== 'column'); })()" }
+      ]
+    },
+    {
+      "id": "hard-rule-core-mechanics-required",
+      "hard_rule_id": "core-mechanics-required",
+      "kind": "hard-rule",
+      "description": "必须体现核心玩法 - 四周传送带+按位置攻击+等待槽回收",
+      "setup": [
+        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "wait", "ms": 5000 },
+        { "action": "eval", "code": "window.gameTest.forceWin()" },
+        { "action": "wait", "ms": 500 },
+        { "action": "eval", "code": "!!window.gameState.blocks && !!window.gameState.slot.pigs" }
+      ]
+    }
+  ]
+}

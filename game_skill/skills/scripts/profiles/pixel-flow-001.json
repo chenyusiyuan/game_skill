@@ -1,0 +1,94 @@
+{
+  "case_id": "pixel-flow-001",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 10000,
+  "assertions": [
+    {
+      "id": "boot-success",
+      "check_id": null,
+      "kind": "state",
+      "description": "启动后 gameState 存在",
+      "setup": [],
+      "expect": {
+        "selector": "window.gameState",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "playable-loop",
+      "check_id": "playable-loop",
+      "kind": "interaction",
+      "description": "主循环可玩 - 点击开始后进入playing状态",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1000 }
+      ],
+      "expect": {
+        "selector": "window.gameState.phase",
+        "op": "eq",
+        "value": "playing"
+      }
+    },
+    {
+      "id": "position-based-attack",
+      "check_id": "position-based-attack",
+      "kind": "interaction",
+      "description": "基于位置的攻击判定 - 棋盘有目标块且未消除",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1000 }
+      ],
+      "expect": {
+        "selector": "window.gameState.board.blocks.some(b => !b.cleared)",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "wait-slot-recycle",
+      "check_id": "wait-slot-recycle",
+      "kind": "interaction",
+      "description": "等待槽回收机制 - 等待槽有初始小猪",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1000 }
+      ],
+      "expect": {
+        "selector": "window.gameState.waitSlots.pigs.length > 0",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "win-lose-condition",
+      "check_id": "win-lose-condition",
+      "kind": "interaction",
+      "description": "胜负判定 - 验证胜负状态字段存在",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1000 }
+      ],
+      "expect": {
+        "selector": "window.gameState.hasOwnProperty('isWin')",
+        "op": "truthy",
+        "value": true
+      }
+    },
+    {
+      "id": "level-progression",
+      "check_id": "level-progression",
+      "kind": "interaction",
+      "description": "关卡递进 - 验证初始关卡为1",
+      "setup": [
+        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "wait", "ms": 1000 }
+      ],
+      "expect": {
+        "selector": "window.gameState.currentLevel",
+        "op": "eq",
+        "value": 1
+      }
+    }
+  ]
+}

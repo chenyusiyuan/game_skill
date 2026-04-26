@@ -15,6 +15,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "fs";
 import { basename, join, relative, resolve } from "path";
 import yaml from "js-yaml";
 import { createLogger, parseLogArg } from "./_logger.js";
+import { readAssetStrategy } from "./_asset_strategy.js";
 
 const args = process.argv.slice(2);
 const caseDir = resolve(args[0] ?? ".");
@@ -35,15 +36,22 @@ function ok(msg) { console.log(`  ✓ ${msg}`); }
 
 console.log(`Implementation contract 校验: ${caseDir} [stage=${stage}]`);
 
+// asset-strategy: mode=none → 允许没有 assets.yaml，并跳过 asset-bindings 系列检查
+const strategy = readAssetStrategy(caseDir);
+const bypassAssets = strategy.mode === "none";
+if (bypassAssets) {
+  ok(`asset-strategy.mode=none：跳过 asset-bindings 校验`);
+}
+
 const contract = readYaml(contractPath, "implementation-contract");
 const sceneSpec = readYaml(scenePath, "scene");
-const assetsSpec = readYaml(assetsPath, "assets");
+const assetsSpec = (bypassAssets && !existsSync(assetsPath)) ? {} : readYaml(assetsPath, "assets");
 
-if (!contract || !sceneSpec || !assetsSpec) finish();
+if (!contract || !sceneSpec || (!bypassAssets && !assetsSpec)) finish();
 
 checkContractShape(contract);
 checkBootContract(contract, sceneSpec);
-checkAssetBindings(contract, assetsSpec);
+if (!bypassAssets) checkAssetBindings(contract, assetsSpec);
 
 if (stage !== "expand" && existsSync(gameDir)) {
   checkGeneratedCode(contract, assetsSpec, gameDir);
@@ -113,6 +121,24 @@ function checkBootContract(c, scene) {
     .filter((to) => to && !sceneIds.has(to));
   if (unknownTargets.length) fail(`boot.scene-transitions.to 目标未定义: ${unknownTargets.join(", ")}`);
   else ok("boot.scene-transitions 目标完整");
+
+  // T15/L1: 每个 scene 必须声明 layout 数值段
+  // viewport/board-bbox/hud-bbox/safe-area 四个子段必须有值（数字、比例或已知预设枚举）
+  // 目的：让 codegen 不再"拍脑袋铺满顶部"，所有布局先落在 spec，再由代码承接
+  const REQUIRED_LAYOUT_KEYS = ["viewport", "board-bbox", "hud-bbox", "safe-area"];
+  for (const s of scene.scenes ?? []) {
+    const layout = s.layout;
+    if (!layout || typeof layout !== "object") {
+      fail(`[scene.${s.id}] 缺少 layout 段（必须声明 ${REQUIRED_LAYOUT_KEYS.join(" / ")}）`);
+      continue;
+    }
+    const missing = REQUIRED_LAYOUT_KEYS.filter((k) => layout[k] === undefined || layout[k] === null || layout[k] === "");
+    if (missing.length) {
+      fail(`[scene.${s.id}.layout] 缺少字段: ${missing.join(", ")}（数值 bbox、比例 "50%" 或预设 "full" / "centered" 都可以）`);
+    } else {
+      ok(`[scene.${s.id}.layout] 四段齐全`);
+    }
+  }
 }
 
 function checkAssetBindings(c, assets) {
@@ -176,8 +202,13 @@ function checkGeneratedCode(c, assets, root) {
     .map((b) => b.text)
     .join("\n");
 
-  checkManifest(c, assets, root);
-  checkRequiredAssetConsumption(c, businessSrc);
+  if (bypassAssets) {
+    ok("[asset] asset-strategy.mode=none：跳过 manifest / required asset 消费校验");
+  } else {
+    checkManifest(c, assets, root);
+    checkRequiredAssetConsumption(c, businessSrc);
+  }
+  checkTracePushPoints(businessSrc);  // T3
 
   if (engine === "phaser3" || engine === "phaser") {
     if (/\.load\.start\s*\(/.test(businessSrc)) {
@@ -188,7 +219,55 @@ function checkGeneratedCode(c, assets, root) {
   }
 }
 
+// T3: 扫 event-graph.yaml 里声明的每条 rule-id，业务代码必须有对应 push
+// 证据：出现 `rule: "<rule-id>"` 或 `rule:'<rule-id>'` 这种字面量即算
+function checkTracePushPoints(businessSrc) {
+  const egPath = join(caseDir, "specs/event-graph.yaml");
+  if (!existsSync(egPath)) {
+    warn("[trace] 缺 specs/event-graph.yaml，跳过 trace push 校验");
+    return;
+  }
+  let ruleIds = [];
+  try {
+    const raw = readFileSync(egPath, "utf-8");
+    const body = raw.split(/^rule-traces:/m)[1];
+    if (body) {
+      ruleIds = [...body.matchAll(/^\s*-\s*rule-id:\s*([\w-]+)/gm)].map((m) => m[1]);
+    }
+  } catch {}
+  if (ruleIds.length === 0) {
+    warn("[trace] event-graph.yaml 无 rule-traces 段（需跑 extract_game_prd --emit-rule-traces）");
+    return;
+  }
+  // 先检查业务代码是否有 window.__trace 初始化或 push
+  const hasTraceInit = /window\.__trace\s*=|window\.__trace\.push\s*\(/.test(businessSrc);
+  if (!hasTraceInit) {
+    fail(`[trace] 业务代码未见 window.__trace.push 调用；codegen 必须在每条 @rule 触发点 push`);
+    return;
+  }
+  // 每条 rule-id 必须有对应 push
+  const missing = [];
+  for (const id of ruleIds) {
+    const pat = new RegExp(`rule\\s*:\\s*["'\`]${escapeReg(id)}["'\`]`);
+    if (!pat.test(businessSrc)) missing.push(id);
+  }
+  if (missing.length > 0) {
+    const shown = missing.slice(0, 8).join(", ");
+    const more = missing.length > 8 ? ` ...+${missing.length - 8}` : "";
+    fail(`[trace] ${missing.length}/${ruleIds.length} 个 @rule 在业务代码中缺少 window.__trace.push({rule:...}) 调用: ${shown}${more}`);
+  } else {
+    ok(`[trace] 所有 ${ruleIds.length} 个 @rule 都有 trace push 调用`);
+  }
+}
+
 function checkManifest(c, assets, root) {
+  const requiredIds = collectAssets(assets)
+    .filter((a) => a.type === "local-file" && a.section !== "fonts")
+    .map((a) => a.id);
+  if (requiredIds.length === 0) {
+    ok("无 local-file image/spritesheet/audio，跳过 manifest 覆盖检查");
+    return;
+  }
   const manifestPath = firstExisting(
     join(root, "src/assets.manifest.json"),
     join(root, "assets.manifest.json")
@@ -209,9 +288,6 @@ function checkManifest(c, assets, root) {
     ...(manifest.spritesheets ?? []).map((x) => x.id),
     ...(manifest.audio ?? []).map((x) => x.id),
   ]);
-  const requiredIds = collectAssets(assets)
-    .filter((a) => a.type === "local-file" && a.section !== "fonts")
-    .map((a) => a.id);
   const missing = requiredIds.filter((id) => !manifestIds.has(id));
   if (missing.length) fail(`manifest 缺少 local-file asset id: ${missing.join(", ")}`);
   else ok("manifest 覆盖所有 local-file image/spritesheet/audio");
@@ -219,7 +295,6 @@ function checkManifest(c, assets, root) {
 
 function checkRequiredAssetConsumption(c, businessSrc) {
   const bindings = (c["asset-bindings"] ?? []).filter((b) =>
-    b.type === "local-file" &&
     b["must-render"] === true &&
     ["images", "spritesheets", "audio"].includes(b.section)
   );
@@ -232,16 +307,26 @@ function checkRequiredAssetConsumption(c, businessSrc) {
     // 不要求 id 和消费调用在同一行——因为常见模式是 helper 封装：
     //   调用处: createImageButton('btn-start-primary', ...)   ← id 在这
     //   helper: registry.getTexture(imageId)                   ← 消费在这
-    const consumerPat = b.section === "audio"
-      ? /getAudio\s*\(|playSound\s*\(|sound\.add\s*\(|sound\.play\s*\(/
-      : /getTexture\s*\(|new\s+Sprite\s*\(|\.add\.image\s*\(|\.add\.sprite\s*\(|drawImage\s*\(|Sprite\.from\s*\(/;
+    const consumerPat = consumerPatternFor(b);
     if (!consumerPat.test(businessSrc)) missing.push(b.id);
   }
   if (missing.length) {
-    fail(`required local-file 未在业务代码中形成消费证据: ${missing.slice(0, 12).join(", ")}`);
+    fail(`required asset 未在业务代码中形成消费证据: ${missing.slice(0, 12).join(", ")}`);
   } else {
-    ok(`required local-file 消费证据完整 (${bindings.length}/${bindings.length})`);
+    ok(`required asset 消费证据完整 (${bindings.length}/${bindings.length})`);
   }
+}
+
+function consumerPatternFor(binding) {
+  if (binding.section === "audio") {
+    return binding.type === "synthesized"
+      ? /AudioContext\s*\(|OscillatorNode|createOscillator\s*\(|beep\s*\(|playTone\s*\(/
+      : /getAudio\s*\(|playSound\s*\(|sound\.add\s*\(|sound\.play\s*\(/;
+  }
+  if (binding.type === "graphics-generated" || binding.type === "inline-svg") {
+    return /fillRect\s*\(|strokeRect\s*\(|roundRect\s*\(|arc\s*\(|beginPath\s*\(|ctx\.fill\s*\(|ctx\.stroke\s*\(|new\s+Graphics\s*\(|\.add\.graphics\s*\(|\.fillRect\s*\(|\.fillCircle\s*\(|\.rect\s*\(|\.circle\s*\(|\.fill\s*\(|\.stroke\s*\(|<svg\b|createElementNS\s*\([^)]*svg/;
+  }
+  return /getTexture\s*\(|new\s+Sprite\s*\(|\.add\.image\s*\(|\.add\.sprite\s*\(|drawImage\s*\(|Sprite\.from\s*\(/;
 }
 
 function collectAssets(spec) {

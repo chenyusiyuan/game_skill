@@ -1,130 +1,148 @@
 {
   "case_id": "phaser-001",
-  "description": "Phaser Diablo-like Roguelike - 像素风类暗黑肉鸽游戏",
+  "description": "Pixel Flow - 像素传送带清板益智游戏",
   "game_html_relative": "game/index.html",
   "boot_timeout_ms": 5000,
+  "prd_hash": "79231f54f520c645a90249b11127ee911e414fcb",
   "assertions": [
     {
       "id": "game-boots",
+      "check_id": "game-boots",
       "kind": "state",
       "description": "游戏启动正常",
-      "setup": [],
-      "expect": { "selector": "window.game !== undefined && window.gameState !== undefined", "op": "truthy", "value": true }
+      "setup": []
     },
     {
-      "id": "class-selection",
-      "kind": "state",
-      "description": "职业选择 - 选择职业后进入游戏",
+      "id": "main-loop-playable",
+      "check_id": "main-loop-playable",
+      "kind": "interaction",
+      "description": "主循环可玩 - 小猪沿传送带移动并攻击",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "x": 180, "y": 530 },
+        { "action": "wait", "ms": 1500 }
+      ]
+    },
+    {
+      "id": "color-match-attack",
+      "check_id": "color-match-attack",
+      "kind": "interaction",
+      "description": "颜色匹配攻击 - 红色小猪只攻击红色目标块",
+      "setup": [
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "x": 180, "y": 530 },
+        { "action": "wait", "ms": 2000 }
+      ]
+    },
+    {
+      "id": "no-pierce-attack",
+      "check_id": "no-pierce-attack",
+      "kind": "interaction",
+      "description": "禁止穿透攻击 - 红色小猪遇到蓝色阻挡块时不攻击",
+      "setup": [
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "x": 180, "y": 530 },
+        { "action": "wait", "ms": 2000 }
+      ]
+    },
+    {
+      "id": "slot-recycle",
+      "check_id": "slot-recycle",
+      "kind": "interaction",
+      "description": "等待槽回收 - 小猪绕行一周后回收到等待槽",
+      "setup": [
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "x": 180, "y": 530 },
+        { "action": "wait", "ms": 5000 }
+      ]
+    },
+    {
+      "id": "win-condition",
+      "check_id": "win-condition",
+      "kind": "interaction",
+      "description": "胜利条件 - 清空所有目标块进入结果页",
+      "setup": [
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "x": 180, "y": 530 },
+        { "action": "wait", "ms": 500 }
+      ]
+    },
+    {
+      "id": "lose-condition",
+      "check_id": "lose-condition",
+      "kind": "interaction",
+      "description": "失败条件 - 资源耗尽但棋盘未清空",
+      "setup": [
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "x": 180, "y": 530 },
+        { "action": "wait", "ms": 500 }
+      ]
+    },
+    {
+      "id": "3-levels-progression",
+      "check_id": "3-levels-progression",
+      "kind": "interaction",
+      "description": "3关递进 - 关卡难度递进",
+      "setup": [
+        { "action": "click", "x": 400, "y": 350 },
         { "action": "wait", "ms": 800 }
-      ],
-      "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "playing" }
-    },
+      ]
+    }
+  ],
+  "hard_rule_assertions": [
     {
-      "id": "player-initialized",
-      "kind": "state",
-      "description": "玩家已初始化",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 800 }
-      ],
-      "expect": { "selector": "window.gameState.player !== null && window.gameState.player.class !== undefined", "op": "truthy", "value": true }
-    },
-    {
-      "id": "combat-works",
-      "kind": "state",
-      "description": "战斗可用 - 敌人可生成",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.spawnEnemy('skeleton', 300, 300, false)" },
-        { "action": "wait", "ms": 300 }
-      ],
-      "expect": { "selector": "window.gameTest.getEnemies().length > 0", "op": "truthy", "value": true }
-    },
-    {
-      "id": "skill-usage",
-      "kind": "state",
-      "description": "技能释放 - 玩家有技能",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": { "selector": "window.gameState.player !== null && window.gameState.player.skills && window.gameState.player.skills.length > 0", "op": "truthy", "value": true }
-    },
-    {
-      "id": "equipment-tiers",
+      "id": "hard-rule-no-global-autoaim",
+      "hard_rule_id": "no-global-autoaim",
       "kind": "hard-rule",
-      "description": "装备品质系统存在",
+      "description": "禁止全屏自动索敌 - 攻击依赖小猪当前位置",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": { "selector": "window.gameState.equipmentCollected !== undefined", "op": "truthy", "value": true }
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "x": 180, "y": 530 },
+        { "action": "wait", "ms": 3000 }
+      ]
     },
     {
-      "id": "equipment-drop",
-      "kind": "state",
-      "description": "装备掉落 - 击杀敌人可掉落装备",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.spawnEnemy('skeleton', 300, 300, false)" },
-        { "action": "wait", "ms": 200 },
-        { "action": "eval", "js": "const enemies = window.gameTest.getEnemies(); if (enemies.length > 0) { window.gameTest.killEnemy(enemies[0].id) }" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": { "selector": "window.gameState.killCount >= 0", "op": "truthy", "value": true }
-    },
-    {
-      "id": "boss-phase",
-      "kind": "state",
-      "description": "Boss阶段 - Boss血量控制",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.setBossHp(0.3)" },
-        { "action": "wait", "ms": 300 }
-      ],
-      "expect": { "selector": "window.gameState.phase === 'playing'", "op": "truthy", "value": true }
-    },
-    {
-      "id": "floor-progression",
-      "kind": "state",
-      "description": "楼层推进 - 当前楼层有效",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": { "selector": "window.gameState.currentFloor >= 1 && window.gameState.currentFloor <= 5", "op": "truthy", "value": true }
-    },
-    {
-      "id": "visual-style",
-      "kind": "state",
-      "description": "视觉风格 - 游戏画布存在",
-      "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": { "selector": "document.querySelector('canvas') !== null", "op": "truthy", "value": true }
-    },
-    {
-      "id": "damage-formula",
+      "id": "hard-rule-no-multi-hit",
+      "hard_rule_id": "no-multi-hit",
       "kind": "hard-rule",
-      "description": "伤害公式 - 玩家有攻击力属性",
+      "description": "禁止一次攻击多个目标 - 每次攻击只处理1个目标块",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
-        { "action": "wait", "ms": 500 }
-      ],
-      "expect": { "selector": "window.gameState.player !== null && window.gameState.player.atk > 0", "op": "truthy", "value": true }
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "x": 180, "y": 530 },
+        { "action": "wait", "ms": 3000 }
+      ]
     },
     {
-      "id": "three-classes",
+      "id": "hard-rule-no-pierce",
+      "hard_rule_id": "no-pierce",
       "kind": "hard-rule",
-      "description": "三职业体系 - 开始场景存在",
-      "setup": [],
-      "expect": { "selector": "window.game.scene.getScene('StartScene') !== undefined", "op": "truthy", "value": true }
+      "description": "禁止穿透攻击 - 小猪不能跳过异色块攻击后方同色块",
+      "setup": [
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "x": 180, "y": 530 },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "hard-rule-conveyor-loop",
+      "hard_rule_id": "conveyor-loop",
+      "kind": "hard-rule",
+      "description": "必须严格体现四周传送带 - 小猪沿棋盘外围环形轨道移动",
+      "setup": [
+        { "action": "click", "x": 400, "y": 350 },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "x": 180, "y": 530 },
+        { "action": "wait", "ms": 1500 }
+      ]
     }
   ]
 }

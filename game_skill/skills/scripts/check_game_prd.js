@@ -381,6 +381,74 @@ if (project) {
   }
 }
 
+// 4.3.4 asset-strategy 段完整性校验（LLM 在 Phase 2 必须填写，不再由系统默认）
+const assetStrategy = fmYaml?.["asset-strategy"];
+const VALID_MODES = ["library-first", "generated-only", "none"];
+const VALID_COHERENCE = ["strict", "flexible", "n/a"];
+if (!assetStrategy || typeof assetStrategy !== "object" || Array.isArray(assetStrategy)) {
+  err("AS001", "front-matter 缺少 asset-strategy 段",
+      "Phase 2 必须让 LLM 按 prd.md 里的 checklist 写出 mode + rationale + visual-core-entities + style-coherence");
+} else {
+  const mode = scalarString(assetStrategy.mode);
+  const rationale = scalarString(assetStrategy.rationale);
+  const coreEnts = assetStrategy["visual-core-entities"];
+  const periph = assetStrategy["visual-peripheral"];
+  const coherence = assetStrategy["style-coherence"];
+
+  if (!mode || !VALID_MODES.includes(mode)) {
+    err("AS002", `asset-strategy.mode 非法: ${mode}`,
+        `合法值: ${VALID_MODES.join(" | ")}`);
+  }
+  // rationale 长度硬性要求 ≥ 80 chars，防 LLM 写一句话糊弄
+  if (!rationale || rationale.length < 80) {
+    err("AS003", `asset-strategy.rationale 长度不足（${rationale ? rationale.length : 0} chars < 80）`,
+        "必须解释：玩家要分辨什么？纯生成视觉能否支撑玩法？核心实体是哪些？");
+  }
+  // core-entities 非数组 → 必挂；数组内容在后面做交叉校验
+  if (!Array.isArray(coreEnts)) {
+    err("AS004", "asset-strategy.visual-core-entities 必须是数组",
+        "列出必须有清晰视觉表达的 @entity/@ui id，例: [pig, block]");
+  }
+  if (periph !== undefined && !Array.isArray(periph)) {
+    err("AS004", "asset-strategy.visual-peripheral 必须是数组（或省略）", "");
+  }
+  if (coherence) {
+    const level = scalarString(coherence.level);
+    if (!level || !VALID_COHERENCE.includes(level)) {
+      err("AS005", `asset-strategy.style-coherence.level 非法: ${level}`,
+          `合法值: ${VALID_COHERENCE.join(" | ")}`);
+    }
+  } else {
+    err("AS005", "asset-strategy 缺少 style-coherence 段", "至少写 style-coherence: { level: flexible }");
+  }
+  // 交叉校验 mode ↔ core-entities
+  if (mode === "none" && Array.isArray(coreEnts) && coreEnts.length > 0) {
+    err("AS006", "mode=none 但 visual-core-entities 非空：矛盾",
+        "纯文字/无视觉玩法，core-entities 应为 []");
+  }
+  if (mode === "library-first" && Array.isArray(coreEnts) && coreEnts.length === 0) {
+    err("AS006", "mode=library-first 但 visual-core-entities 为空：矛盾",
+        "library-first 意味着至少有核心视觉实体，请填入 @entity/@ui id");
+  }
+  // core-entities / peripheral 里的 id 必须在 @entity / @ui 集合里找得到（交叉引用）
+  // tags 在这一步已经被扫完
+  const entityUiIds = new Set(
+    tags.filter(t => t.type === "entity" || t.type === "ui").map(t => t.id)
+  );
+  for (const id of (coreEnts ?? [])) {
+    if (!entityUiIds.has(String(id))) {
+      err("AS007", `asset-strategy.visual-core-entities 引用 ${id}，但 PRD 中没有 @entity(${id}) 或 @ui(${id})`,
+          "只能引用 PRD 已定义的 id；检查拼写或先声明对应 @entity/@ui");
+    }
+  }
+  for (const id of (periph ?? [])) {
+    if (!entityUiIds.has(String(id))) {
+      warn("AS007", `asset-strategy.visual-peripheral 引用 ${id}，但 PRD 中没有 @entity(${id}) 或 @ui(${id})`,
+           "外围素材的 id 一般也应对应已声明实体，否则下游无法绑定");
+    }
+  }
+}
+
 // 4.4 engine-plan 回写一致性（Phase 2.x strategy 回写后）
 const enginePlanMatch = fmText.match(/^engine-plan:\s*\n((?:\s+.+\n)+)/m);
 if (enginePlanMatch) {
@@ -456,10 +524,18 @@ for (const t of tags.filter((t) => t.type === "rule")) {
     }
   }
 
-  // 6.1.3 长度 warning，建议拆 rule
+  // 6.1.3 长度限制（T11：warning → error）
   if (eff.length > 120) {
-    warn("RL003", `@rule(${t.id}).effect 长度 ${eff.length} 字符（> 120），建议拆成多条 @rule`,
-         "用 priority 或中间字段把长 effect 切成两步");
+    err("RL003", `@rule(${t.id}).effect 长度 ${eff.length} 字符（> 120）`,
+        "用 priority 或中间字段把长 effect 切成两步；长 effect 会让 rule-trace 抽取不准，同时诱导模型把多个玩法挤进一条 rule");
+  }
+
+  // 6.1.4 @rule.effect 必须至少出现 1 处 <entity>.<field> 形式的读写动作（T1）
+  // 纯文字描述（如 "攻击目标块"）无法机械抽 trace，判 error
+  const hasEntityAction = /\b[a-zA-Z_][\w]*\.[a-zA-Z_][\w]*\b/.test(eff);
+  if (!hasEntityAction) {
+    err("RL005", `@rule(${t.id}).effect 缺少 <entity>.<field> 读写动作`,
+        "至少写一条形如 pig.ammo -= 1 / block.hp = 0 / state.score += 10 的操作，纯文字描述无法抽 rule-trace");
   }
 }
 
@@ -550,8 +626,8 @@ for (const t of tags.filter(x => x.type === "rule")) {
     const fields = resolveAliasFields(subject);
     if (fields === null) continue;   // 未声明实体/别名，跳过
     if (!fields.has(field)) {
-      warn("RL004", `@rule(${t.id}).effect 引用 ${subject}.${field}，但该字段未在对应 @entity.fields 中声明`,
-           `在 @entity(${subject}) 或其类型别名指向的 entity 的 fields 中补充 ${field}，或检查拼写`);
+      err("RL004", `@rule(${t.id}).effect 引用 ${subject}.${field}，但该字段未在对应 @entity.fields 中声明`,
+          `在 @entity(${subject}) 或其类型别名指向的 entity 的 fields 中补充 ${field}，或检查拼写；未声明字段会让 codegen 自由发挥，出现小数索引、类型不匹配等下游 bug`);
     }
   }
 }

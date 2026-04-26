@@ -4,14 +4,18 @@
  *
  * 用法: node check_playthrough.js <game-dir> --profile <case-id>
  *
- * 退出码:
- *   0 = 全部 assertion 通过
- *   1 = 至少 1 条 state assertion 失败
- *   2 = 至少 1 条 hard-rule assertion 失败
- *   3 = 环境问题（Playwright 未装 / Chromium 缺失）
- *   4 = Profile 覆盖率不足（PRD 中有 @check 未被 profile assertion 覆盖）
+ * T4/T5/T7 改写后的判定模型：
+ *   profile 只负责"驱动脚本"（setup），不允许承担答卷（expect 已废弃）。
+ *   真相来源 = (a) window.__trace 覆盖 PRD 的 @rule
+ *             (b) 全程无 console.error / pageerror
+ *             (c) profile 至少 1 条 action: click（真 DOM click 或 canvas 坐标）
  *
- * 依赖: playwright（若未装，退出码 3，提示用户先装）
+ * 退出码:
+ *   0 = 全部关键检查通过
+ *   1 = trace 覆盖不足 / 有 console.error / profile 形状不合规
+ *   2 = hard-rule setup 失败
+ *   3 = 环境问题（Playwright 未装）
+ *   4 = Profile 覆盖率不足（PRD 中有 @check 未被 profile 覆盖）
  */
 
 import { readFileSync, existsSync } from "fs";
@@ -20,6 +24,7 @@ import { fileURLToPath } from "url";
 import { createHash } from "crypto";
 import { resolveLaunchTarget } from "./_run_mode.js";
 import { createLogger, parseLogArg } from "./_logger.js";
+import { guardProfileSha } from "./_profile_guard.js";
 
 const _logPath = parseLogArg(process.argv);
 const log = createLogger(_logPath);
@@ -48,7 +53,37 @@ if (!existsSync(htmlPath)) {
   process.exit(1);
 }
 
+// T6: profile SHA 写锁 —— Phase 5 入口校验正式 profile 自 freeze 以来未被篡改
+guardProfileSha({ caseDir: resolve(gameDir, ".."), profilePath });
+
 const profile = JSON.parse(readFileSync(profilePath, "utf-8"));
+const profileAssertions = Array.isArray(profile.assertions) ? profile.assertions : [];
+const hardRuleAssertions = Array.isArray(profile.hard_rule_assertions) ? profile.hard_rule_assertions : [];
+const allAssertions = [...profileAssertions, ...hardRuleAssertions];
+const profileShapeErrors = [];
+
+// T5: profile 只能是驱动脚本；expect 会让 profile 重新变成"自带答案"。
+const hasExpectField = allAssertions.some((a) => a.expect !== undefined);
+if (hasExpectField) {
+  profileShapeErrors.push(`[PROFILE] profile 包含 expect 段；新链路中 profile 只能写 setup，产品判定由 window.__trace + runtime errors 承担`);
+}
+
+// T7: profile 必须至少 1 条 action: click，否则判 profile 不合规（T7）
+// 防止模型把所有 setup 都改成 eval 绕过真实 UI 交互
+function hasRealClick(profile) {
+  const assertions = [
+    ...(Array.isArray(profile.assertions) ? profile.assertions : []),
+    ...(Array.isArray(profile.hard_rule_assertions) ? profile.hard_rule_assertions : []),
+  ];
+  for (const a of assertions) {
+    for (const s of a.setup ?? []) {
+      if (s.action === "click" && s.selector) return true;
+      if (s.action === "click" && Number.isFinite(s.x) && Number.isFinite(s.y)) return true;
+    }
+  }
+  return false;
+}
+const clickOk = hasRealClick(profile);
 
 // === Pre-flight: PRD @check coverage validation ===
 if (!skipCoverageCheck) {
@@ -67,11 +102,11 @@ if (!skipCoverageCheck) {
     }
 
     if (prdChecks.length > 0) {
-      const assertionIds = profile.assertions.map(a => a.id.toLowerCase());
-      const assertionDescs = profile.assertions.map(a => a.description.toLowerCase());
+      const assertionIds = profileAssertions.map(a => a.id.toLowerCase());
+      const assertionDescs = profileAssertions.map(a => a.description.toLowerCase());
       // 新：显式反向绑定集合
       const assertionCheckIds = new Set(
-        profile.assertions
+        profileAssertions
           .map(a => (a.check_id ?? "").toString().toLowerCase())
           .filter(Boolean)
       );
@@ -80,7 +115,6 @@ if (!skipCoverageCheck) {
       for (const check of prdChecks) {
         const checkId = check.id.toLowerCase();
         const checkTitle = check.title.toLowerCase();
-        // 优先显式反向绑定；否则回退到 substring 匹配（兼容旧 profile）
         const covered =
           assertionCheckIds.has(checkId) ||
           assertionIds.some(id => id.includes(checkId) || checkId.includes(id)) ||
@@ -90,14 +124,10 @@ if (!skipCoverageCheck) {
         }
       }
 
-      // 新：PRD hash 漂移检查
       if (profile.prd_hash) {
         const currentHash = createHash("sha1").update(prdContent).digest("hex");
         if (currentHash !== profile.prd_hash) {
-          console.warn(
-            `⚠ profile.prd_hash (${profile.prd_hash.slice(0, 12)}...) 与当前 PRD 不一致 (${currentHash.slice(0, 12)}...)`
-          );
-          console.warn(`  PRD 已变更，profile 可能需要同步。用 extract_game_prd.js --profile-skeleton 重新生成骨架后合并。`);
+          console.warn(`⚠ profile.prd_hash 与当前 PRD 不一致（profile=${profile.prd_hash.slice(0,12)}... current=${currentHash.slice(0,12)}...）`);
           log.entry({
             type: "profile-drift",
             profile_id: profileId,
@@ -107,94 +137,20 @@ if (!skipCoverageCheck) {
         }
       }
 
-      // 新：每条 assertion 的 check_id 必须指向真实的 PRD check（若有 check_id 字段）
-      const validCheckIds = new Set(prdChecks.map(c => c.id.toLowerCase()));
-      const orphanAssertions = profile.assertions.filter(
-        a => a.check_id && !validCheckIds.has(a.check_id.toLowerCase())
-      );
-      if (orphanAssertions.length > 0) {
-        console.warn(`⚠ profile 中有 ${orphanAssertions.length} 条 assertion 的 check_id 指向不存在的 @check:`);
-        for (const a of orphanAssertions) {
-          console.warn(`    - ${a.id} → check_id: ${a.check_id}`);
-        }
-      }
-
-      // 检查交互类 assertion 质量
-      // 真实交互 = 包含 click 操作 或 eval 中调用游戏函数（非直接赋值 gameState）
-      const directAssignPattern = /window\.gameState\.\w+\s*[\+\-\*]?=/;
-      const gameApiFnPattern = /(?:simulateCorrectMatch|simulateWrongMatch|simulateCompleteLevel|selectCard|startGame|clickStartButton|clickRetryButton|clickNextLevelButton|window\.gameTest\.\w+|window\.game\.scene)/;
-
-      function isRealInteraction(assertion) {
-        if (!assertion.setup || assertion.setup.length === 0) return false;
-        return assertion.setup.some(s => {
-          if (s.action === "click") return true;
-          const js = s.js ?? s.code ?? "";
-          if (s.action === "eval" && js) {
-            // eval 中调用了游戏暴露的函数 → 算真实交互
-            if (gameApiFnPattern.test(js)) return true;
-          }
-          return false;
-        });
-      }
-
-      function isSelfGradingEval(assertion) {
-        if (!assertion.setup || assertion.setup.length === 0) return false;
-        const evalSteps = assertion.setup.filter(s => s.action === "eval");
-        if (evalSteps.length === 0) return false;
-        // 所有 eval 都只是直接赋值 gameState，没有调用任何游戏函数
-        return evalSteps.every(s => {
-          const js = s.js ?? s.code ?? "";
-          // 移除注释和字符串
-          const stripped = js.replace(/\/\/.*$/gm, "").replace(/'[^']*'/g, "").replace(/"[^"]*"/g, "");
-          // 检查是否只包含 gameState 赋值操作
-          const hasGameApiCall = gameApiFnPattern.test(stripped);
-          const hasDirectAssign = directAssignPattern.test(stripped);
-          return hasDirectAssign && !hasGameApiCall;
-        });
-      }
-
-      const hasRealInteraction = profile.assertions.some(a => isRealInteraction(a));
-      const selfGradingAssertions = profile.assertions.filter(a =>
-        a.kind === "interaction" && isSelfGradingEval(a)
-      );
-
-      console.log(`\n=== PRD @check 覆盖率检查 ===`);
-      console.log(`PRD product checks: ${prdChecks.length}`);
-      console.log(`Profile assertions:  ${profile.assertions.length}`);
-      console.log(`真实交互 assertions: ${hasRealInteraction ? "有" : "⚠ 无（所有 'interaction' 断言都是 eval 直接赋值 gameState，未测试真实交互链路）"}`);
-
-      if (selfGradingAssertions.length > 0) {
-        console.log(`\n⚠ 以下 assertion 的 setup 只通过 eval 直接修改 gameState 然后 expect 检查自己修改的值，无法验证真实游戏逻辑：`);
-        for (const a of selfGradingAssertions) {
-          console.log(`  ⚠ [${a.id}] ${a.description}`);
-        }
-        console.log(`  建议: 改用 click 操作真实 UI 元素，或调用游戏暴露的 API 函数（如 simulateCorrectMatch）`);
-      }
-
       if (missing.length > 0) {
         console.log(`\n⚠ 以下 PRD @check(layer: product) 条目在 profile 中没有对应 assertion:`);
         for (const c of missing) {
           console.log(`  ✗ @check(${c.id}) ${c.title}`);
         }
-        console.log(`\n请在 ${profilePath} 中补充对应的 assertions。`);
-        console.log(`提示: 核心交互 assertion 必须有 setup 操作步骤（click/eval），不能只做静态状态检查。\n`);
         process.exit(4);
       }
 
-      if (!hasRealInteraction) {
-        console.log(`\n⚠ Profile 中没有任何真实交互类 assertion。`);
-        console.log(`所有标记为 interaction 的 assertion 都只通过 eval 直接修改 gameState，`);
-        console.log(`这等同于"自己出题自己答"，无法检出交互链路 bug（如 isProcessing 不重置、事件绑定错误等）。`);
-        console.log(`请至少补充一条包含 click 操作或调用游戏 API 函数的 assertion。\n`);
-        process.exit(4);
-      }
-
-      console.log(`✓ 所有 PRD @check(layer: product) 条目均已覆盖\n`);
+      console.log(`✓ PRD @check 覆盖率: ${prdChecks.length}/${prdChecks.length}`);
     }
   }
 }
 
-// Dynamic import playwright (may fail if not installed)
+// Dynamic import playwright
 let chromium;
 try {
   ({ chromium } = await import("playwright"));
@@ -210,7 +166,7 @@ let launch;
 
 const consoleErrors = [];
 const assetHttpErrors = [];
-page.on("pageerror", (e) => consoleErrors.push(e.message));
+page.on("pageerror", (e) => consoleErrors.push("pageerror: " + e.message));
 page.on("response", (response) => {
   const url = response.url();
   if (response.status() >= 400 && /\/assets\/library_(?:2d|3d)\//.test(url)) {
@@ -221,12 +177,11 @@ page.on("console", (msg) => {
   if (msg.type() === "error") {
     const text = msg.text();
     const url = msg.location()?.url ?? "";
-    // 非项目素材的外部资源错误不阻断；项目素材 404 会由 response 监听硬失败。
     if ((text.includes("404") || text.includes("Failed to load resource")) &&
         !/\/assets\/library_(?:2d|3d)\//.test(url)) {
       return;
     }
-    consoleErrors.push(text);
+    consoleErrors.push("console: " + text);
   }
 });
 
@@ -241,14 +196,6 @@ try {
   process.exit(3);
 }
 
-if (consoleErrors.length > 0) {
-  console.error("✗ 页面加载时有 console error:");
-  for (const e of consoleErrors) console.error(`  ${e}`);
-  await launch.close();
-  await browser.close();
-  process.exit(1);
-}
-
 let stateFails = 0;
 let hardFails = 0;
 const results = [];
@@ -258,35 +205,38 @@ async function loadFreshPage() {
   await page.waitForFunction(() => window.gameState !== undefined, { timeout: 3000 }).catch(() => {});
 }
 
-async function evalExpr(expr) {
-  if (!expr) throw new Error("assertion expect 缺少 selector/eval 表达式");
-  return await page.evaluate(`(() => (${expr}))()`);
-}
-
-function compare(actual, op, expected) {
-  switch (op) {
-    case "eq": return actual === expected;
-    case "equals": return actual === expected;
-    case "neq": return actual !== expected;
-    case "gte": return actual >= expected;
-    case "lte": return actual <= expected;
-    case "gt": return actual > expected;
-    case "lt": return actual < expected;
-    case "in": return Array.isArray(expected) && expected.includes(actual);
-    case "truthy": return !!actual;
-    case "falsy": return !actual;
-    default: throw new Error(`unknown op: ${op}`);
+// P1-2/P1-3: 新链路必须接入 trace 基线。
+const caseDir = resolve(gameDir, "..");
+const eventGraphPath = join(caseDir, "specs/event-graph.yaml");
+let expectedRuleIds = [];
+try {
+  const raw = readFileSync(eventGraphPath, "utf-8");
+  const body = raw.split(/^rule-traces:/m)[1];
+  if (body) {
+    expectedRuleIds = [...body.matchAll(/^\s*-\s*rule-id:\s*([\w-]+)/gm)].map((m) => m[1]);
   }
-}
+} catch {}
+const hasTraceBaseline = expectedRuleIds.length > 0;
 
-for (let assertionIndex = 0; assertionIndex < profile.assertions.length; assertionIndex++) {
-  const a = profile.assertions[assertionIndex];
+// 运行 profile 驱动脚本（每条 assertion 跑一遍 setup）
+for (let idx = 0; idx < allAssertions.length; idx++) {
+  const a = allAssertions[idx];
   const label = `[${a.id}] ${a.description}`;
   try {
-    if (assertionIndex > 0) await loadFreshPage();
+    if (idx > 0) await loadFreshPage();
     for (const step of a.setup ?? []) {
       if (step.action === "click") {
-        await page.click(step.selector, { timeout: 2000 });
+        if (step.selector) {
+          const options = { timeout: 2000 };
+          if (Number.isFinite(step.x) && Number.isFinite(step.y)) {
+            options.position = { x: step.x, y: step.y };
+          }
+          await page.click(step.selector, options);
+        } else if (Number.isFinite(step.x) && Number.isFinite(step.y)) {
+          await page.mouse.click(step.x, step.y);
+        } else {
+          throw new Error("click step 需要 selector 或 x/y 坐标");
+        }
       } else if (step.action === "wait") {
         await page.waitForTimeout(step.ms ?? 100);
       } else if (step.action === "eval") {
@@ -297,44 +247,64 @@ for (let assertionIndex = 0; assertionIndex < profile.assertions.length; asserti
         await page.keyboard.press(step.key);
       }
     }
-    const actual = await evalExpr(a.expect.selector ?? a.expect.eval);
-    const pass = compare(actual, a.expect.op, a.expect.value);
-    results.push({ id: a.id, kind: a.kind, pass, actual, expected: a.expect.value });
-    if (pass) {
-      console.log(`  ✓ ${label}`);
-    } else {
-      console.log(`  ✗ ${label}`);
-      console.log(`    actual=${JSON.stringify(actual)}  expected ${a.expect.op} ${JSON.stringify(a.expect.value)}`);
-      if (a.kind === "hard-rule") hardFails++;
-      else stateFails++;
-    }
+    console.log(`  ✓ [setup] ${label} 已驱动`);
+    results.push({ id: a.id, kind: a.kind, pass: true });
   } catch (e) {
-    console.log(`  ✗ ${label} — error: ${e.message}`);
+    console.log(`  ✗ ${label} — setup error: ${e.message}`);
+    results.push({ id: a.id, kind: a.kind, pass: false, error: e.message });
     if (a.kind === "hard-rule") hardFails++;
     else stateFails++;
   }
 }
 
-// 检查 playthrough 期间的 console errors
+// ── T4 核心：trace 覆盖率判定 ──
+const trace = await page.evaluate(() => Array.isArray(window.__trace) ? window.__trace : null);
+
+let traceCoverage = null;
+const traceErrors = [];
+if (!hasTraceBaseline) {
+  traceErrors.push(`[TRACE] specs/event-graph.yaml 缺少 rule-traces 段；新链路必须先跑 extract_game_prd.js --emit-rule-traces`);
+} else if (trace === null) {
+  traceErrors.push(`[TRACE] window.__trace 未定义；codegen 必须在每条 @rule 触发处 push({rule, before, after, t})`);
+} else {
+  const hit = new Set(trace.map((t) => t?.rule).filter(Boolean));
+  const covered = expectedRuleIds.filter((r) => hit.has(r));
+  traceCoverage = { total: expectedRuleIds.length, covered: covered.length, ratio: covered.length / expectedRuleIds.length, missing: expectedRuleIds.filter((r) => !hit.has(r)) };
+  const pct = (traceCoverage.ratio * 100).toFixed(0);
+  console.log(`  ${traceCoverage.ratio >= 0.8 ? "✓" : "✗"} [TRACE] @rule 覆盖率 ${traceCoverage.covered}/${traceCoverage.total} (${pct}%)`);
+  if (traceCoverage.ratio < 0.8) {
+    traceErrors.push(`[TRACE] @rule 覆盖率 ${pct}% < 80%（缺: ${traceCoverage.missing.slice(0, 8).join(", ")}${traceCoverage.missing.length > 8 ? "..." : ""}）`);
+  }
+}
+
+// T7: 真 DOM click 检查
+if (!clickOk) {
+  traceErrors.push(`[PROFILE] profile 中没有任何真实 action: click 步骤——必须至少 1 条 selector click 或 x/y 坐标 click，否则无法暴露 hitArea/按钮错位类 bug`);
+} else {
+  console.log(`  ✓ [PROFILE] 至少 1 条 action: click`);
+}
+
+traceErrors.push(...profileShapeErrors);
+
+// console error 计入 exit code（不只是 log）
 if (consoleErrors.length > 0) {
-  console.log(`\n⚠ Playthrough 期间出现 ${consoleErrors.length} 个 console error:`);
-  for (const e of consoleErrors) console.log(`  ${e}`);
-  console.log(`这些运行时错误可能影响游戏的真实可玩性。\n`);
+  console.log(`\n✗ playthrough 期间 ${consoleErrors.length} 条 console error/pageerror:`);
+  for (const e of consoleErrors.slice(0, 8)) console.log(`    ${e.slice(0, 140)}`);
+  traceErrors.push(`[RUNTIME] ${consoleErrors.length} 条 console error，游戏运行期有异常`);
 }
 if (assetHttpErrors.length > 0) {
-  console.log(`\n✗ Playthrough 期间出现 ${assetHttpErrors.length} 个项目素材 HTTP 错误:`);
-  for (const e of assetHttpErrors.slice(0, 10)) console.log(`  ${e}`);
-  stateFails++;
+  console.log(`\n✗ playthrough 期间 ${assetHttpErrors.length} 条素材 HTTP 错误:`);
+  for (const e of assetHttpErrors.slice(0, 5)) console.log(`    ${e}`);
+  traceErrors.push(`[ASSET] ${assetHttpErrors.length} 条素材 4xx/5xx`);
 }
 
 await launch.close();
 await browser.close();
 
-console.log(`\n结果: ${results.length - stateFails - hardFails}/${results.length} passed`);
-if (hardFails > 0) console.log(`  hard-rule 失败: ${hardFails}`);
-if (stateFails > 0) console.log(`  state 失败: ${stateFails}`);
+console.log(`\n结果: setup ${allAssertions.length} 条 / hard-rule fail ${hardFails} / state fail ${stateFails} / trace+click 问题 ${traceErrors.length}`);
 
-const exitCode = hardFails > 0 ? 2 : stateFails > 0 ? 1 : 0;
+const exitCode = traceErrors.length > 0 ? 1 : (hardFails > 0 ? 2 : (stateFails > 0 ? 1 : 0));
+
 log.entry({
   type: "check-run",
   phase: "verify",
@@ -342,15 +312,21 @@ log.entry({
   script: "check_playthrough.js",
   exit_code: exitCode,
   assertions_total: results.length,
-  assertions_passed: results.length - stateFails - hardFails,
+  assertions_passed: results.filter((r) => r.pass).length,
   hard_rule_fails: hardFails,
   state_fails: stateFails,
-  failures: results.filter(r => !r.pass).map(r => ({
-    id: r.id, kind: r.kind, actual: r.actual, expected: r.expected,
-  })),
-  console_errors: consoleErrors,
+  trace_coverage: traceCoverage,
+  real_click: clickOk,
+  console_errors: consoleErrors.length,
+  asset_http_errors: assetHttpErrors.length,
+  trace_errors: traceErrors,
 });
 
+if (traceErrors.length > 0) {
+  console.log("\n✗ 关键信号未通过:");
+  for (const e of traceErrors) console.log("  " + e);
+  process.exit(1);
+}
 if (hardFails > 0) process.exit(2);
 if (stateFails > 0) process.exit(1);
 process.exit(0);

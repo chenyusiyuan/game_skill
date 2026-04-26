@@ -206,7 +206,13 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"user-fix","round":1,"descripti
      N=1; while [ -d "cases/${BASE}-$(printf '%03d' $N)" ]; do N=$((N+1)); done
      PROJECT="${BASE}-$(printf '%03d' $N)"
      ```
-5. **如果 Gaps 中有 2+ 必填字段无法推断，或功能优先级/交付档位不清** → 用 `AskUserQuestion` 工具（读 clarify.md 的问题模板）；每轮最多 3 问
+5. **Clarify 必问（不可跳过）** → 用 `AskUserQuestion` 工具（读 clarify.md 的问题模板）；每轮最多 3 问。**触发条件**（只要命中任一就必问）：
+   - **short-query**：用户原始 query < 200 chars
+   - **必填字段推断弱**：`genre / must-have-features / 核心 @rule / 胜负条件 / 内容范围` 这 5 项里 ≥ 1 项无法从 query 高置信度推断
+   - **长规格/多系统但优先级不明**：用户给了大段需求但没点明 must-have
+   - **Gaps 中有 2+ 必填字段无法推断**
+
+   上面任一命中 → 至少发起 1 次 AskUserQuestion。**所有问题必须提供"让我决定（按推荐执行）"选项**，用户选"让我决定"仍记为已澄清（brief.md 的 `ClarifiedBrief` 段留档），但不允许整轮跳过 AskUserQuestion。
 6. **语义澄清（读 semantic-clarify.md）**：在缺口补齐后判断是否需要深挖。只在低信息量或高分叉 query 触发，不能因为"没写风格"单独触发；典型触发包括短 query 且 must-have / core-loop / 胜负条件 / 内容范围 / 难度机制推断弱、大型参考对象导致方向分叉、多个系统无优先级但仍有提问额度、或结构清晰且风格会显著影响素材选择。按优先级生成问题：P0 结构缺口 > P1 核心设计参数 > P1 风格选择（Top-3 色板 + 自描述，仅结构清晰且有空位时）。所有问题（含 clarify）合并为一次 AskUserQuestion，总计 ≤ 3 问；每个问题必须有"让我决定"选项，用户选择后按推荐/默认策略回填，不再追问。回答写入 brief 的 `style-preference` / `theme-keywords` / `content-scope` / `difficulty-mode` 等字段
 7. **所有 Gaps 补齐后，必须让 brief 明确写出 `delivery-target` 和 `must-have-features`**。若用户没明确说：
    - 短 query 默认 `playable-mvp`
@@ -262,9 +268,16 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"user-fix","round":1,"descripti
      cases/${PROJECT}/docs/game-prd.md \
      --profile-skeleton ${SKEL}
    ```
-   skeleton 内容：每条 `@check(layer: product)` 和 `@constraint(kind:hard-rule)` 变成一条 assertion stub，含 `check_id` / `hard_rule_id` 反向绑定和 `prd_hash`。Phase 5 只需要补 `setup` / `expect` 的真实判定，最终落地为 `profiles/${PROJECT}.json`。
-   > skeleton 文件永远是 `.skeleton.json` 后缀，不会覆盖手工调好的 `${PROJECT}.json`。Phase 5 合并时用 `diff` 比对两者。
-8. 若 `support-level: 暂不支持` → 停下报告用户
+   skeleton 内容：每条 `@check(layer: product)` 和 `@constraint(kind:hard-rule)` 变成一条 setup-only assertion stub，含 `check_id` / `hard_rule_id` 反向绑定和 `prd_hash`。Phase 5 补真实 `setup`，最终落地为 `profiles/${PROJECT}.json`。
+   > skeleton 文件永远是 `.skeleton.json` 后缀，不会覆盖手工调好的 `${PROJECT}.json`。Phase 5 合并时用 `diff` 比对两者。正式 profile 禁止写 `expect`，产品判定由 `window.__trace` + runtime errors 承担。
+8. **自动产生 guardrails.md**（Phase 4/5 必读，对抗 /compact 丢玩法约束）：
+   ```bash
+   node game_skill/skills/scripts/extract_guardrails.js \
+     cases/${PROJECT}/docs/game-prd.md \
+     cases/${PROJECT}/.game/guardrails.md
+   ```
+   内容：从 PRD 机械抽 must-have-features + @constraint(kind:hard-rule) + 核心 @rule 列表；纯原文摘录，不用 genre 模板。
+9. 若 `support-level: 暂不支持` → 停下报告用户
 
 ---
 
@@ -348,6 +361,7 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"user-fix","round":1,"descripti
 
 **输出**：`cases/${PROJECT}/game/index.html`（必需）+ 可选 `cases/${PROJECT}/game/src/`
 
+0. **进场前硬性要求**：先 `Read cases/${PROJECT}/.game/guardrails.md`（Phase 2 末尾自动产出），把 hard-rules + must-have-features 原文落进 TodoWrite；对抗 /compact 丢约束。
 1. 读 GamePRD front-matter 的 `runtime`，再从 `_index.json.engines[]` 找到对应 engine 条目；`guide`、`template`、`default-run-mode`、`version-pin` 都以该条目为准
 2. Read `game_skill/skills/codegen.md` + `_index.json` 中该 engine 的 `guide` + `template` 目录（至少 `index.html`，若有 `src/` 也一并读取）
 3. **复制 template 整个目录**：
@@ -391,17 +405,29 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"user-fix","round":1,"descripti
 
 **输出**：`cases/${PROJECT}/eval/report.json` + `cases/${PROJECT}/docs/delivery.md`
 
-1. 冒烟（≤2 轮）：`node game_skill/skills/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG_FILE}`
-2. 工程侧（≤3 轮）：`node game_skill/skills/scripts/check_project.js cases/${PROJECT}/game/ --log ${LOG_FILE}`
-3. 产品侧（≤10 轮）：`node game_skill/skills/scripts/check_playthrough.js cases/${PROJECT}/game/ --profile ${PROJECT} --log ${LOG_FILE}`
+0. **进场前硬性要求**：先 `Read cases/${PROJECT}/.game/guardrails.md`，把 hard-rules / must-have-features 落进 TodoWrite；修复循环中每一轮开头回读一次。
+1. **补全并冻结正式 profile**（只做一次；冻结后 Phase 5 不可再改 profile）：
+   ```bash
+   PROFILE=game_skill/skills/scripts/profiles/${PROJECT}.json
+   # 若 PROFILE 不存在，先从 ${PROJECT}.skeleton.json 复制/合并，补真实 setup；禁止写 expect
+   node game_skill/skills/scripts/_profile_guard.js \
+     cases/${PROJECT} \
+     ${PROFILE} \
+     --freeze
+   ```
+   这一步把正式 profile 的 SHA256 写入 `.game/state.json.phases.verify.profileSha`。`check_playthrough.js` 每次启动都会校验同一个 `${PROJECT}.json`；缺基线退出 6，SHA 不一致退出 5，二者都不进入代码修复循环。
+2. 冒烟（≤2 轮）：`node game_skill/skills/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG_FILE}`
+3. 工程侧（≤3 轮）：`node game_skill/skills/scripts/check_project.js cases/${PROJECT}/game/ --log ${LOG_FILE}`
+4. 产品侧（≤10 轮）：`node game_skill/skills/scripts/check_playthrough.js cases/${PROJECT}/game/ --profile ${PROJECT} --log ${LOG_FILE}`
    - profile 在 `game_skill/skills/scripts/profiles/` 下，若缺少需先创建
    - **profile 必须覆盖 PRD 中所有 `@check(layer: product)` 条目**（脚本会自动校验，覆盖不足退出码 4）
-   - **profile 必须包含至少一条交互类 assertion**（带 click/eval setup 的），纯静态状态检查不够
-   - **退出码 4 不进入修复循环**：暂停，补全 profile assertions 后重新运行（不算在 10 轮内）
+   - **profile 必须包含至少一条真实 click**（`{ action: "click", selector: "..." }` 或 `{ action: "click", x, y }`），纯 `eval` 不够
+   - **profile 禁止写 `expect`**；它只负责驱动 UI，产品真相来自 `window.__trace` 覆盖率、runtime errors、asset HTTP errors
+   - **退出码 4/5/6 不进入修复循环**：暂停，补全/重新冻结 profile 后重新运行（不算在 10 轮内）
    - 创建/补充 profile 时，逐条对照 PRD 的 `@check` 列表：
      - 每个 `@check(layer: product)` 必须有对应 assertion
-     - 核心交互类 check 的 assertion 必须有真实的 setup 操作步骤（不能只查初始状态）
-4. 合规审计（≤2 轮）：`node game_skill/skills/scripts/check_skill_compliance.js cases/${PROJECT} --log ${LOG_FILE}`
+     - 核心交互类 check 的 assertion 必须有真实 click setup（不能只查初始状态，不能只调 `window.gameTest`）
+5. 合规审计（≤2 轮）：`node game_skill/skills/scripts/check_skill_compliance.js cases/${PROJECT} --log ${LOG_FILE}`
    - 兜底 spec ↔ code 绑定（implementation-contract、local-file 素材引用率、visual 动词覆盖、scene-transitions 闭环、state schema）
    - 退出码 0 = 合规（总分 ≥ 70 且无 error），否则进入修复循环
 
@@ -513,7 +539,14 @@ node game_skill/skills/scripts/check_skill_compliance.js cases/${PROJECT} --log 
    node game_skill/skills/scripts/extract_game_prd.js cases/${PROJECT}/docs/game-prd.md \
      --profile-skeleton game_skill/skills/scripts/profiles/${PROJECT}.skeleton.json
    ```
-4. 重置 expand 阶段：
+4. 重新合并/补全 `profiles/${PROJECT}.json`，并重新 freeze 正式 profile：
+   ```bash
+   node game_skill/skills/scripts/_profile_guard.js \
+     cases/${PROJECT} \
+     game_skill/skills/scripts/profiles/${PROJECT}.json \
+     --freeze
+   ```
+5. 重置 expand 阶段：
    ```bash
    node -e "
    import('./game_skill/skills/scripts/_state.js').then(m => {

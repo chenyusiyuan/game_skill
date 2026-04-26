@@ -1,0 +1,44 @@
+# 由 extract_game_prd.js --emit-rule-traces 机械生成。
+# 每条 @rule 在 codegen 的执行点必须 window.__trace.push({rule, before, after, t})
+# check_playthrough.js 用 trace 覆盖率判定玩法是否真的跑起来。
+# prd_hash: 79231f54f520c645a90249b11127ee911e414fcb
+# generated_at: 2026-04-26T04:35:03.763Z
+rule-traces:
+  - rule-id: conveyor-move
+    trigger: "\"每帧 update 且 game.state == playing\""
+    effect: "\"for each pig where pig.onBelt == true -> pig.conveyorPos += speed * dt\""
+    actions:
+      - { subject: pig, field: conveyorPos, op: inc, rhs: "speed * dt" }
+  - rule-id: attack-trigger
+    trigger: "\"pig.conveyorPos 为整数时\""
+    effect: "\"block = findFirstBlock(pig.conveyorPos, pig.color)\""
+    actions: []
+  - rule-id: attack-execute
+    trigger: "\"block != null 且 block.color == pig.color\""
+    effect: "\"block.hp -= 1 ; pig.ammo -= 1 ; if block.hp <= 0 -> block.cleared = true\""
+    actions:
+      - { subject: block, field: hp, op: dec, rhs: "1" }
+      - { subject: pig, field: ammo, op: dec, rhs: "1" }
+      - { subject: block, field: cleared, op: assign, rhs: "true" }
+  - rule-id: slot-recycle
+    trigger: "\"小猪绕行一周后 ammo > 0\""
+    effect: "\"pig.onBelt = false ; findEmptySlot() ; slot.pigId = pig.id\""
+    actions:
+      - { subject: pig, field: onBelt, op: assign, rhs: "false" }
+      - { subject: slot, field: pigId, op: assign, rhs: "pig.id" }
+  - rule-id: dispatch-pig
+    trigger: "\"玩家点击等待槽中的小猪\""
+    effect: "\"if conveyorCapacity > currentBeltPigs -> pig.onBelt = true ; pig.conveyorPos = 0\""
+    actions:
+      - { subject: pig, field: onBelt, op: assign, rhs: "true" }
+      - { subject: pig, field: conveyorPos, op: assign, rhs: "0" }
+  - rule-id: win-check
+    trigger: "\"每次攻击后\""
+    effect: "\"if state.blocksRemaining == 0 -> game.state = win\""
+    actions:
+      - { subject: game, field: state, op: assign, rhs: "win" }
+  - rule-id: lose-check
+    trigger: "\"每次小猪离场或回收后\""
+    effect: "\"if state.blocksRemaining > 0 AND allSlotsEmpty -> game.state = lose\""
+    actions:
+      - { subject: game, field: state, op: assign, rhs: "lose" }

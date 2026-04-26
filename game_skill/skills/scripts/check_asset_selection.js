@@ -29,6 +29,7 @@ import { basename, resolve, dirname, join } from "path";
 import { fileURLToPath } from "url";
 import yaml from "js-yaml";
 import { createLogger, parseLogArg } from "./_logger.js";
+import { readAssetStrategy, packCoherenceThreshold } from "./_asset_strategy.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const _logPath = parseLogArg(process.argv);
@@ -65,6 +66,16 @@ function ok(msg)   { console.log(`  ✓ ${msg}`); }
 
 console.log(`素材选择校验: ${assetsYamlPath}`);
 
+// asset-strategy 分档：mode=none → 整条 bypass；generated-only → 跳占比/pack 一致性
+const strategy = readAssetStrategy(caseDir);
+const MODE = strategy.mode;
+const coreEntityIds = new Set(strategy["visual-core-entities"] ?? []);
+console.log(`  · asset-strategy.mode = ${MODE}${strategy._isDefault ? " (默认，PRD 未声明)" : ""}`);
+if (MODE === "none") {
+  ok("mode=none：无需素材校验，整条 bypass");
+  finish();
+}
+
 // ── 0. 载入 catalog ─────────────────────────────────────────────
 if (!existsSync(catalogPath)) {
   fail(`catalog 不存在: ${catalogPath}`);
@@ -95,6 +106,22 @@ function packIdFromSource(source) {
     if (rel.startsWith(prefix)) return id;
   }
   return null;
+}
+
+function normalizeAssetType(item, section) {
+  const source = item?.source ?? "";
+  if (item?.type === "generated") return section === "audio" ? "synthesized" : "graphics-generated";
+  if (item?.type) return String(item.type);
+  if (typeof source === "string" && source.startsWith("assets/library_2d/")) return "local-file";
+  if (typeof source === "string" && source.startsWith("assets/library_3d/")) return "local-file";
+  if (source === "inline-svg") return "inline-svg";
+  if (source === "generated") return section === "audio" ? "synthesized" : "graphics-generated";
+  if (source === "synthesized") return "synthesized";
+  return "unknown";
+}
+
+function isLocalFileItem(item, section) {
+  return normalizeAssetType(item, section) === "local-file";
 }
 
 // ── 1. 载入 assets.yaml ─────────────────────────────────────────
@@ -152,7 +179,12 @@ else if (!genreEnum.has(genre)) {
 
 // ── 3. 遍历 images / audio / spritesheets / fonts 的 local-file 条目 ──
 const sections = ["images", "audio", "spritesheets", "fonts"];
+
+// T8: 从 PRD 抽所有 @entity / @ui 的 id，用于 binding-to 校验
+const prdEntityUiIds = loadPrdEntityUiIds(caseDir);
+
 const perSectionCount = {};
+const assetItems = [];
 for (const sec of sections) {
   perSectionCount[sec] = { total: 0, localFile: 0 };
   const list = spec[sec] ?? [];
@@ -160,16 +192,29 @@ for (const sec of sections) {
 
   for (const item of list) {
     const id = item.id ?? item.family ?? "(unnamed)";
+    const type = normalizeAssetType(item, sec);
+    const source = item.source ?? "";
+    const bindingTo = item["binding-to"];
     perSectionCount[sec].total++;
+    assetItems.push({ id: String(id), section: sec, type, source, bindingTo, raw: item });
+
+    if (bindingTo && bindingTo !== "decor" && prdEntityUiIds.size > 0 && !prdEntityUiIds.has(String(bindingTo))) {
+      fail(`[${sec}.${id}] binding-to="${bindingTo}" 在 PRD 的 @entity/@ui 里不存在；合法值（节选）: ${[...prdEntityUiIds].slice(0, 8).join(", ")}...`);
+    }
 
     // fonts 的 type 字段是 optional，source google-fonts 也算合法
-    if (item.type === "local-file" || (item.source && typeof item.source === "string" && (item.source.startsWith("assets/library_2d/") || item.source.startsWith("assets/library_3d/")))) {
+    if (isLocalFileItem(item, sec)) {
       perSectionCount[sec].localFile++;
       // a) 文件存在
       const abs = join(projectRoot, item.source);
       if (!existsSync(abs)) {
         fail(`[${sec}.${id}] 本地文件不存在: ${item.source}`);
         continue;
+      }
+      // T8: binding-to 必须存在且指向 PRD 中的 @entity/@ui id
+      // 装饰音效 / 字体除外（声明 binding-to: "decor" 可豁免）
+      if (!bindingTo) {
+        fail(`[${sec}.${id}] 缺少 binding-to 字段——每个 local-file 必须声明它绑定到哪个 @entity/@ui；纯装饰写 binding-to: decor`);
       }
       // 语义校验已移至 check_implementation_contract.js 的 validateSemanticBinding
       // 此处只做文件存在性 + pack style/genre 匹配
@@ -198,22 +243,38 @@ for (const sec of sections) {
   }
 }
 
-// ── 4. local-file 占比阈值（no-external-assets 约束不豁免此项）──────────
-// no-external-assets 语义：禁止远程 CDN/HTTP 运行时依赖，但不禁止仓库内相对路径的
-// project-local 素材（assets/library_2d、assets/library_3d）。因此 ratio 检查照常做。
-// 新流程：不再按 asset-style 区分阈值，统一使用基础阈值
-const th = { images: 0.30, audio: 0.30 };
-
-for (const sec of ["images", "audio"]) {
-  const c = perSectionCount[sec];
-  if (c.total === 0) continue;
-  const ratio = c.localFile / c.total;
-  const min = th[sec];
-  const pct = (ratio * 100).toFixed(1);
-  if (ratio < min) {
-    fail(`[${sec}] local-file 占比 ${pct}% < 阈值 ${(min*100).toFixed(0)}%，catalog 里有合适素材却没用`);
+// ── 4. core visual 覆盖与 local-file 阈值 ───────────────────────
+// 只把 visual-core-entities 绑定的视觉素材纳入严格判断；背景/HUD/装饰 generated
+// 不进入分母，避免误杀"核心用素材、外围程序化绘制"的健康方案。
+const coreVisualAssets = assetItems.filter((a) =>
+  ["images", "spritesheets"].includes(a.section) &&
+  a.bindingTo &&
+  a.bindingTo !== "decor" &&
+  coreEntityIds.has(String(a.bindingTo))
+);
+for (const coreId of coreEntityIds) {
+  const hits = coreVisualAssets.filter((a) => String(a.bindingTo) === String(coreId));
+  if (hits.length === 0) {
+    fail(`[core-binding] visual-core-entities 中的 "${coreId}" 没有任何非 decor 视觉 asset 绑定；核心实体必须至少有一个 local-file / generated / inline-svg 表达`);
   } else {
-    ok(`[${sec}] local-file 占比 ${pct}% ≥ ${(min*100).toFixed(0)}%`);
+    ok(`[core-binding] ${coreId} 有 ${hits.length} 个核心视觉 asset 绑定`);
+  }
+}
+
+if (MODE === "generated-only") {
+  ok(`mode=generated-only：允许核心视觉使用 generated/inline-svg，跳过 local-file 阈值`);
+} else if (MODE === "library-first") {
+  if (coreVisualAssets.length === 0) {
+    fail(`[core-local-file] library-first 需要至少一个绑定到 visual-core-entities 的视觉 asset`);
+  } else {
+    const coreLocal = coreVisualAssets.filter((a) => a.type === "local-file").length;
+    const ratio = coreLocal / coreVisualAssets.length;
+    const pct = (ratio * 100).toFixed(1);
+    if (ratio < 0.30) {
+      fail(`[core-local-file] 核心视觉 local-file 占比 ${pct}% < 30%（只统计 visual-core-entities，外围 generated 不进分母）`);
+    } else {
+      ok(`[core-local-file] 核心视觉 local-file 占比 ${pct}% ≥ 30%`);
+    }
   }
 }
 
@@ -237,6 +298,66 @@ if (!report) {
   }
 }
 
+// ── 5.5. T8 辅助：decor 占比 > 40% 时 warn ──────────────────
+// decor 是 binding-to 的退路，但不应用它水通过。如果一半以上 asset 都写 decor，
+// 大概率是 expander 偷懒没去绑真正的 @entity/@ui。
+let totalBindings = 0, decorBindings = 0;
+for (const sec of sections) {
+  for (const item of spec[sec] ?? []) {
+    if (!item || !isLocalFileItem(item, sec)) continue;
+    totalBindings++;
+    if (String(item["binding-to"] ?? "") === "decor") decorBindings++;
+  }
+}
+if (totalBindings >= 5) {
+  const decorRatio = decorBindings / totalBindings;
+  const decorPct = (decorRatio * 100).toFixed(0);
+  if (decorRatio > 0.4) {
+    warn(`[binding-decor] ${decorBindings}/${totalBindings} (${decorPct}%) 的 local-file 写了 binding-to: decor，可能漏绑 @entity/@ui；请检查 core 素材是否正确绑定到 PRD 实体`);
+  } else {
+    ok(`[binding-decor] decor 占比 ${decorPct}% ≤ 40%`);
+  }
+}
+
+// ── 6. T17/L3: 同 pack 优先软约束 ──────────────────────────────
+// 一个 case 的 local-file 应该 ≥70% 来自同一个 pack（视觉风格不割裂）
+// 不同 pack 可以混，但必须在 selection-report.pack-mix-reason 里说明原因
+// 只 warn，不 fail——给创作空间，但让模型知道"从 20 个 pack 各挑一件"不健康
+const packCounts = new Map();
+let totalLocal = 0;
+for (const sec of sections) {
+  for (const item of spec[sec] ?? []) {
+    if (!item || !isLocalFileItem(item, sec) || !item.source) continue;
+    const packId = packIdFromSource(item.source);
+    if (!packId) continue;
+    totalLocal++;
+    packCounts.set(packId, (packCounts.get(packId) ?? 0) + 1);
+  }
+}
+if (totalLocal >= 5) {  // 太少素材时跳过检查
+  const packThreshold = packCoherenceThreshold(strategy);
+  if (packThreshold === null) {
+    ok(`[pack-coherence] style-coherence=n/a，跳过 pack 一致性检查`);
+  } else {
+    const sorted = [...packCounts.entries()].sort((a, b) => b[1] - a[1]);
+    const topPack = sorted[0];
+    const topRatio = topPack[1] / totalLocal;
+    const topPct = (topRatio * 100).toFixed(0);
+    const thrPct = (packThreshold * 100).toFixed(0);
+    if (topRatio < packThreshold) {
+      const breakdown = sorted.slice(0, 5).map(([id, n]) => `${id}=${n}`).join(" ");
+      const hasReason = typeof report?.["pack-mix-reason"] === "string" && report["pack-mix-reason"].length > 0;
+      if (!hasReason) {
+        warn(`[pack-coherence] 最大包 "${topPack[0]}" 仅占 local-file ${topPct}% (<${thrPct}%，strategy=${strategy["style-coherence"]?.level})，视觉风格易割裂；各包分布: ${breakdown}。如有意混包请在 selection-report.pack-mix-reason 说明`);
+      } else {
+        ok(`[pack-coherence] 混包但已说明原因: "${String(report["pack-mix-reason"]).slice(0, 60)}..."`);
+      }
+    } else {
+      ok(`[pack-coherence] 主包 "${topPack[0]}" 覆盖率 ${topPct}% ≥ ${thrPct}% (strategy=${strategy["style-coherence"]?.level})`);
+    }
+  }
+}
+
 // ── Finish ─────────────────────────────────────────────────────
 function finish() {
   console.log(
@@ -255,3 +376,20 @@ function finish() {
   process.exit(errors.length > 0 ? 1 : 0);
 }
 finish();
+
+// T8 helper: 从 PRD 抽所有 @entity / @ui 的 id，用于 binding-to 校验
+function loadPrdEntityUiIds(caseDir) {
+  const prdPath = join(caseDir, "docs/game-prd.md");
+  const ids = new Set();
+  if (!existsSync(prdPath)) return ids;
+  try {
+    const content = readFileSync(prdPath, "utf-8");
+    // 抓 ### @entity(xxx) 和 ### @ui(xxx)
+    const re = /^#{2,4}[ \t]+@(entity|ui)\(([^)]+)\)/gm;
+    let m;
+    while ((m = re.exec(content)) !== null) {
+      ids.add(m[2].trim());
+    }
+  } catch {}
+  return ids;
+}

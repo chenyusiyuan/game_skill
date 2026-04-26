@@ -123,6 +123,13 @@ if (pageStats.bodyText.length < 5 && pageStats.canvasCount === 0 && !pageStats.h
   errors.push(`首屏没有可见文本或画布（text=${pageStats.bodyText.length}, canvas=${pageStats.canvasCount}, nodes=${pageStats.visibleNodeCount}）——典型白屏`);
 }
 
+// 3.5 T16/L2：DOM-UI 型项目 body 文本内容太少预警（抓 dom_ui phase=start 卡住那类）
+// engine 项目主要在 canvas 里渲染，body 可能就是空——跳过
+// DOM-UI 项目如果 body 文本 < 50 字符，说明 UI 根本没渲染出来
+if (pageStats.canvasCount === 0 && pageStats.bodyText.length < 50) {
+  errors.push(`DOM 型项目 body 文本仅 ${pageStats.bodyText.length} 字符，UI 大概率未完整渲染（可能开始按钮失效 / 脚本错误 / 样式丢失）`);
+}
+
 // 4. window.gameState 暴露
 const hasGameState = await page.evaluate(() => typeof window.gameState !== "undefined");
 if (!hasGameState) {
@@ -149,12 +156,164 @@ if (requiredAssetSources.length > 0 && launch?.runMode === "local-http") {
   }
 }
 
-// 5. 引擎型项目运行时检查：测试 API + "能开始一局"
+// 4.6 运行期画布健康度检查（T16/L2）
+// 对所有 genre 通用，直接读 DOM/引擎运行期状态，模型没法作弊
+// 先把 engineMarker 提到这里用
 const engineMarker = await page.evaluate(() => {
-  // 读 ENGINE 标识
   const comments = document.head?.innerHTML?.match(/ENGINE:\s*(\w+)/);
   return comments ? comments[1].toLowerCase() : "";
 });
+
+// 给渲染一点额外缓冲：Pixi / Phaser 的 texture 加载是异步的
+await page.waitForTimeout(1000);
+
+const canvasHealth = await page.evaluate((engine) => {
+  const report = {
+    engine,
+    missingTextures: [],   // Phaser/Pixi 引擎: 被引用但实际是 missing/empty 的 texture
+    brokenImages: [],      // Canvas/DOM: img.naturalWidth === 0
+    overflowNodes: [],     // DOM 可见节点 bbox 不在 viewport 80% 内
+    canvasAreaRatio: null, // canvas 面积 / viewport 面积
+    viewport: { w: window.innerWidth, h: window.innerHeight },
+  };
+  const vw = window.innerWidth, vh = window.innerHeight;
+
+  // (1) Phaser: window.game.textures，检查被引用的 texture key 是否是 __MISSING/__DEFAULT
+  if (engine === "phaser3" || engine === "phaser") {
+    try {
+      const g = window.game;
+      if (g?.textures) {
+        const keys = g.textures.getTextureKeys?.() ?? [];
+        for (const k of keys) {
+          if (k === "__MISSING" || k === "__DEFAULT" || k === "__WHITE") continue;
+          const t = g.textures.get(k);
+          // Phaser missing: key 虽存在但 source 是默认占位
+          if (!t || t.key === "__MISSING") report.missingTextures.push(k);
+          else if (t.source?.[0]?.image?.width === 0) report.missingTextures.push(k);
+        }
+      }
+    } catch (e) { report.textureCheckError = String(e.message); }
+  }
+
+  // (2) PixiJS: 遍历 stage 找 Sprite，看 texture 是否真的缺数据源
+  // P1-1: Pixi v8 正常 Sprite 的 texture 没有 baseTexture 字段而是 source，需兼容
+  if (engine === "pixijs" || engine === "pixi") {
+    try {
+      const app = window.app ?? window.pixiApp ?? window.game;
+      const stage = app?.stage;
+      if (stage) {
+        const walk = (node) => {
+          const ctor = node?.constructor?.name ?? "";
+          const isSpriteLike =
+            ctor === "Sprite" ||
+            ctor === "TilingSprite" ||
+            ctor === "AnimatedSprite" ||
+            ctor.endsWith("Sprite");
+          if (isSpriteLike && node?.texture) {
+            const tex = node.texture;
+            // v8: tex.source 是 TextureSource；v7: tex.baseTexture 是 BaseTexture。
+            // noFrame 只表示使用整张图，不等于纹理缺失。
+            const source = tex.source ?? tex.baseTexture;
+            const hasSource = Boolean(source);
+            // 明确的 EMPTY 占位：1x1 默认纹理
+            const is1x1Placeholder = tex.width === 1 && tex.height === 1;
+            // 只在 Sprite-like 节点上报"完全没有数据源"或"明确是 EMPTY 占位"。
+            // Graphics 等程序化绘制节点也可能携带内部 1x1 默认纹理，不能当成素材缺失。
+            if (!hasSource || is1x1Placeholder) {
+              report.missingTextures.push(node.label ?? node.name ?? ctor);
+            }
+          }
+          for (const c of (node.children ?? [])) walk(c);
+        };
+        walk(stage);
+      }
+    } catch (e) { report.textureCheckError = String(e.message); }
+  }
+
+  // (3) Canvas/DOM 都可能用 <img>
+  const imgs = [...document.querySelectorAll("img")];
+  for (const img of imgs) {
+    if (img.naturalWidth === 0 && img.src) {
+      report.brokenImages.push(img.src.slice(-60));
+    }
+  }
+
+  // (4) DOM 可见元素 bbox 检查：至少 80% 面积在 viewport 内
+  // 检查所有有实际尺寸的可见元素；不筛"叶子/内容"——外层容器溢出也要抓
+  const vis = [...document.body.querySelectorAll("*")].filter(el => {
+    if (["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(el.tagName)) return false;
+    const cs = window.getComputedStyle(el);
+    if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return false;
+    const r = el.getBoundingClientRect();
+    if (r.width < 20 || r.height < 20) return false;
+    // 跳过纯布局的 body/html 自身
+    if (el === document.body || el === document.documentElement) return false;
+    return true;
+  });
+  for (const el of vis) {
+    const r = el.getBoundingClientRect();
+    // 计算 bbox 和 viewport 的交集面积占 bbox 自身的比例
+    const ix0 = Math.max(0, r.left), iy0 = Math.max(0, r.top);
+    const ix1 = Math.min(vw, r.right), iy1 = Math.min(vh, r.bottom);
+    const iw = Math.max(0, ix1 - ix0), ih = Math.max(0, iy1 - iy0);
+    const inside = iw * ih, total = r.width * r.height;
+    if (total > 0 && inside / total < 0.8) {
+      report.overflowNodes.push({
+        tag: el.tagName,
+        rect: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) },
+        inside: +(inside / total).toFixed(2),
+        text: (el.textContent ?? "").trim().slice(0, 30),
+      });
+    }
+  }
+
+  // (5) Canvas 面积占比（engine 项目才检查，DOM-UI 跳过）
+  if (["phaser3", "phaser", "pixijs", "pixi", "canvas", "three"].includes(engine)) {
+    const canvases = [...document.querySelectorAll("canvas")];
+    let totalArea = 0;
+    for (const c of canvases) {
+      const r = c.getBoundingClientRect();
+      totalArea += r.width * r.height;
+    }
+    report.canvasAreaRatio = +(totalArea / (vw * vh)).toFixed(3);
+  }
+
+  return report;
+}, engineMarker);
+
+// 阈值判定
+if (canvasHealth.missingTextures.length > 0) {
+  const list = canvasHealth.missingTextures.slice(0, 8).join(", ");
+  const more = canvasHealth.missingTextures.length > 8 ? ` ...+${canvasHealth.missingTextures.length - 8}` : "";
+  errors.push(`[CANVAS] ${canvasHealth.missingTextures.length} 个 texture 是 missing/empty: ${list}${more}`);
+}
+if (canvasHealth.brokenImages.length > 0) {
+  errors.push(`[CANVAS] ${canvasHealth.brokenImages.length} 张 <img> naturalWidth=0（加载失败）:`);
+  canvasHealth.brokenImages.slice(0, 5).forEach(s => errors.push("    " + s));
+}
+if (canvasHealth.overflowNodes.length > 0) {
+  // 排除极端 overflow 误报：只报 top 5 最严重
+  const worst = canvasHealth.overflowNodes
+    .sort((a, b) => a.inside - b.inside)
+    .slice(0, 5);
+  errors.push(`[CANVAS] ${canvasHealth.overflowNodes.length} 个可见元素 bbox <80% 在 viewport 内（HUD 溢出/偏移/按钮移出）:`);
+  for (const n of worst) {
+    errors.push(`    <${n.tag}> ${n.inside * 100 | 0}% inside rect=${JSON.stringify(n.rect)} text="${n.text}"`);
+  }
+}
+if (canvasHealth.canvasAreaRatio !== null && canvasHealth.canvasAreaRatio < 0.1) {
+  errors.push(`[CANVAS] canvas 总面积仅占 viewport ${(canvasHealth.canvasAreaRatio * 100).toFixed(1)}% (<10%)——引擎可能未正确初始化或被遮挡`);
+}
+if (canvasHealth.textureCheckError) {
+  console.log(`  ⚠ [CANVAS] texture 遍历时报错（不阻断）: ${canvasHealth.textureCheckError}`);
+}
+if (canvasHealth.missingTextures.length === 0 && canvasHealth.brokenImages.length === 0 &&
+    canvasHealth.overflowNodes.length === 0 &&
+    (canvasHealth.canvasAreaRatio === null || canvasHealth.canvasAreaRatio >= 0.1)) {
+  console.log(`  ✓ [CANVAS] 画布健康度通过 (canvas 占比 ${canvasHealth.canvasAreaRatio ?? "-"}, overflow=0, missing=0)`);
+}
+
+// 5. 引擎型项目运行时检查：测试 API + "能开始一局"
 const isEngineProject = ["phaser3", "phaser", "pixijs", "pixi", "canvas", "three"].includes(engineMarker);
 
 if (isEngineProject) {
@@ -203,6 +362,56 @@ if (isEngineProject) {
     errors.push(`[BOOT-START] clickStartButton 报错: ${canStartGame.error}`);
   } else if (canStartGame.phase === "playing") {
     console.log(`  ✓ [BOOT-START] 能开始一局 (method=${canStartGame.method}, phase=${canStartGame.phase})`);
+
+    // 5c. T16/L2 扩展：进入 playing 后再采一次 overflow，抓"游戏中 HUD 溢出/棋盘偏移"
+    await page.waitForTimeout(1500);
+    const inGameHealth = await page.evaluate(() => {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const overflowNodes = [];
+      const brokenImages = [];
+      const vis = [...document.body.querySelectorAll("*")].filter(el => {
+        if (["SCRIPT", "STYLE", "META", "LINK", "HEAD"].includes(el.tagName)) return false;
+        const cs = window.getComputedStyle(el);
+        if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return false;
+        const r = el.getBoundingClientRect();
+        if (r.width < 20 || r.height < 20) return false;
+        if (el === document.body || el === document.documentElement) return false;
+        return true;
+      });
+      for (const el of vis) {
+        const r = el.getBoundingClientRect();
+        const ix0 = Math.max(0, r.left), iy0 = Math.max(0, r.top);
+        const ix1 = Math.min(vw, r.right), iy1 = Math.min(vh, r.bottom);
+        const iw = Math.max(0, ix1 - ix0), ih = Math.max(0, iy1 - iy0);
+        const inside = iw * ih, total = r.width * r.height;
+        if (total > 0 && inside / total < 0.8) {
+          overflowNodes.push({
+            tag: el.tagName,
+            rect: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) },
+            inside: +(inside / total).toFixed(2),
+            text: (el.textContent ?? "").trim().slice(0, 30),
+          });
+        }
+      }
+      for (const img of document.querySelectorAll("img")) {
+        if (img.naturalWidth === 0 && img.src) brokenImages.push(img.src.slice(-60));
+      }
+      return { overflowNodes, brokenImages, viewport: { w: vw, h: vh } };
+    });
+    if (inGameHealth.overflowNodes.length > 0) {
+      const worst = inGameHealth.overflowNodes.sort((a, b) => a.inside - b.inside).slice(0, 5);
+      errors.push(`[CANVAS:IN-GAME] ${inGameHealth.overflowNodes.length} 个元素在 playing 状态下 bbox <80% 在 viewport 内（游戏中 HUD/棋盘溢出）:`);
+      for (const n of worst) {
+        errors.push(`    <${n.tag}> ${n.inside * 100 | 0}% inside rect=${JSON.stringify(n.rect)} text="${n.text}"`);
+      }
+    }
+    if (inGameHealth.brokenImages.length > 0) {
+      errors.push(`[CANVAS:IN-GAME] ${inGameHealth.brokenImages.length} 张 <img> 在 playing 状态下加载失败:`);
+      inGameHealth.brokenImages.slice(0, 5).forEach(s => errors.push("    " + s));
+    }
+    if (inGameHealth.overflowNodes.length === 0 && inGameHealth.brokenImages.length === 0) {
+      console.log(`  ✓ [CANVAS:IN-GAME] playing 状态下 DOM 健康度通过`);
+    }
   } else if (canStartGame.method === "no-start-button-found") {
     // 非阻断：只是 warning
     console.log(`  ⚠ [BOOT-START] 未找到开始按钮且 phase=${canStartGame.phase}，请确认游戏流程是否正确`);

@@ -29,6 +29,7 @@ import { fileURLToPath } from "url";
 import yaml from "js-yaml";
 import { createLogger, parseLogArg } from "./_logger.js";
 import { readGameMeta } from "./_run_mode.js";
+import { readAssetStrategy } from "./_asset_strategy.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const _logPath = parseLogArg(process.argv);
@@ -61,6 +62,13 @@ function finish() {
 
 console.log(`素材消费校验: ${caseDir}`);
 
+// asset-strategy: mode=none → bypass
+const strategy = readAssetStrategy(caseDir);
+if (strategy.mode === "none") {
+  ok(`mode=none：无需消费校验，整条 bypass`);
+  finish();
+}
+
 if (!existsSync(assetsYamlPath)) {
   console.log("  · 无 specs/assets.yaml，跳过");
   finish();
@@ -89,29 +97,55 @@ try {
   finish();
 }
 
-const localFileAssets = [];
+// T9: 从 contract 读 must-render 清单；没有 contract 就 fallback 到 assets.yaml 的 local-file 全量
+// required = 必须被业务代码消费的 asset id 子集；其它 asset 存在但不强制消费
+let requiredAssetIds = null;
+const contractPath = join(caseDir, "specs/implementation-contract.yaml");
+if (existsSync(contractPath)) {
+  try {
+    const contract = yaml.load(readFileSync(contractPath, "utf-8"));
+    const bindings = Array.isArray(contract?.["asset-bindings"]) ? contract["asset-bindings"] : [];
+    const mustRender = bindings.filter((b) =>
+      b["must-render"] === true &&
+      ["images", "spritesheets", "audio"].includes(b.section)
+    );
+    requiredAssetIds = new Set(mustRender.map((b) => String(b.id)));
+  } catch {}
+}
+
+const assetItems = [];
 for (const sec of ["images", "audio", "spritesheets"]) {
   const list = spec?.[sec] ?? [];
   if (!Array.isArray(list)) continue;
   for (const item of list) {
     if (!item) continue;
-    const isLocal = item.type === "local-file" ||
-      (typeof item.source === "string" &&
-        (item.source.startsWith("assets/library_2d/") ||
-         item.source.startsWith("assets/library_3d/")));
-    if (!isLocal) continue;
-    localFileAssets.push({
+    const type = normalizeAssetType(item, sec);
+    if (!["local-file", "graphics-generated", "inline-svg", "synthesized"].includes(type)) continue;
+    assetItems.push({
       section: sec,
       id: item.id ?? basename(item.source ?? "unknown"),
       source: item.source ?? "",
+      type,
     });
   }
 }
 
-if (localFileAssets.length === 0) {
+// T9: 如果没有 contract 派生的 required 集合，fallback 成 local-file 全量（兼容旧流程）
+const requiredAssets = requiredAssetIds
+  ? assetItems.filter((a) => requiredAssetIds.has(String(a.id)))
+  : assetItems.filter((a) => a.type === "local-file");
+
+if (assetItems.length === 0) {
   // 上游 check_asset_selection.js 已经在 images=[] 时失败，这里只需
   // 给出 warning，不重复阻断。
-  warn("assets.yaml 中没有 type=local-file 条目，跳过消费校验（check_asset_selection.js 应已拦截素材占比不足）");
+  warn("assets.yaml 中没有可检查的视觉/音频 asset 条目，跳过消费校验");
+  finish();
+}
+
+if (requiredAssets.length === 0 && requiredAssetIds !== null) {
+  // contract 里没有 must-render=true 的 asset —— 也许所有 asset 都是 decor
+  // 这是合法的，不阻断；但提醒用户
+  warn("implementation-contract.yaml 中没有 must-render=true 的素材；如果 PRD 真的无图形化核心 entity 则忽略，否则检查 binding-to 设置");
   finish();
 }
 
@@ -143,36 +177,37 @@ for (const p of jsFiles) {
   businessBlobs.push(readFileSync(p, "utf-8"));
 }
 const businessSrc = businessBlobs.join("\n");
+const generatedConsumerPattern = /fillRect\s*\(|strokeRect\s*\(|roundRect\s*\(|arc\s*\(|beginPath\s*\(|ctx\.fill\s*\(|ctx\.stroke\s*\(|new\s+Graphics\s*\(|\.add\.graphics\s*\(|\.fillRect\s*\(|\.fillCircle\s*\(|\.rect\s*\(|\.circle\s*\(|\.fill\s*\(|\.stroke\s*\(|<svg\b|createElementNS\s*\([^)]*svg/;
 
 // 4) 单条 asset 被引用判定：id 或 basename 命中 allSrc（allSrc 含 manifest，id 在 manifest 里也算用了）
+// T9: 只统计 required（contract 声明 must-render=true）子集；其它 asset 存在不报错
 let used = 0;
 const unused = [];
-for (const a of localFileAssets) {
+for (const a of requiredAssets) {
   const base = a.source ? basename(a.source) : "";
-  // 保守匹配：id 或 basename 至少出现一次（manifest 里出现不算数，manifest 是生成物不是业务）
-  // 所以优先看 businessSrc；businessSrc 命中直接通过；
-  // 若 businessSrc 没命中，再看 allSrc（至少 manifest 有登记），判 warn 不判 fail
-  const inBiz = (a.id && new RegExp(`["'\`]${escapeReg(a.id)}["'\`]`).test(businessSrc)) ||
-                (base && businessSrc.includes(base));
-  if (inBiz) {
+  const hasRef = (a.id && new RegExp(`["'\`]${escapeReg(a.id)}["'\`]`).test(businessSrc)) ||
+    (a.type === "local-file" && base && businessSrc.includes(base));
+  const hasConsumer = consumerPatternForAsset(a).test(businessSrc);
+  if (hasRef && hasConsumer) {
     used++;
   } else {
     unused.push(a);
   }
 }
 
-const ratio = used / localFileAssets.length;
+const ratio = requiredAssets.length === 0 ? 1 : used / requiredAssets.length;
 const pct = (ratio * 100).toFixed(1);
-console.log(`  • local-file 条目: 总 ${localFileAssets.length}，业务代码引用 ${used}（${pct}%）`);
+console.log(`  • required asset 条目: ${requiredAssets.length} / 全量 ${assetItems.length}，业务代码消费 ${used}（${pct}%）`);
 for (const a of unused.slice(0, 10)) {
   console.log(`    ↳ 未引用: [${a.section}] ${a.id} (${a.source})`);
 }
 if (unused.length > 10) console.log(`    ↳ ... 还有 ${unused.length - 10} 条未列出`);
 
-if (ratio < 0.6) {
-  fail(`local-file 素材引用率 ${pct}% < 60%，业务代码没真的用起来（可能只在 manifest 登记了但 scenes/main.js 里 0 次消费）`);
+// T9: required 必须 100% 被消费（而不是以前的"整体 60%"——整体阈值允许模型靠塞非核心素材过线）
+if (ratio < 1.0 && requiredAssets.length > 0) {
+  fail(`required asset 有 ${unused.length} 条未被业务代码消费（must-render=true 的素材必须 100% 被引用并形成渲染/播放证据）`);
 } else {
-  ok(`local-file 素材引用率 ${pct}% ≥ 60%`);
+  ok(`required asset 消费率 100% (${used}/${requiredAssets.length})`);
 }
 
 // 5) 引擎级消费调用至少出现一次
@@ -187,10 +222,16 @@ const engineConsumerPatterns = {
   three:   [/TextureLoader\s*\(/, /GLTFLoader\s*\(/, /AudioLoader\s*\(/, /new\s+THREE\.Sprite\s*\(/, /SpriteMaterial\s*\(/, /MeshBasicMaterial\s*\(\s*{[^}]*map\s*:/],
 };
 
+const hasRequiredLocal = requiredAssets.some((a) => a.type === "local-file");
+const hasRequiredGeneratedVisual = requiredAssets.some((a) =>
+  ["graphics-generated", "inline-svg"].includes(a.type) &&
+  ["images", "spritesheets"].includes(a.section)
+);
+
 const patterns = engineConsumerPatterns[engineId];
 if (!patterns) {
   warn(`未识别的 engineId=${engineId}，跳过消费调用检查`);
-} else {
+} else if (hasRequiredLocal) {
   // 在业务源码（排除 adapter/manifest）里查消费调用
   const hits = patterns.map((re) => re.test(businessSrc));
   const hitIdx = hits.findIndex(Boolean);
@@ -199,8 +240,40 @@ if (!patterns) {
   } else {
     ok(`[ENGINE-${engineId}] 业务代码存在引擎级消费调用（匹配模式 ${hitIdx}）`);
   }
+} else if (hasRequiredGeneratedVisual) {
+  if (!generatedConsumerPattern.test(businessSrc)) {
+    fail(`[ENGINE-${engineId}] required generated 视觉 asset 缺少程序化绘制证据（fillRect/Graphics/svg 等）`);
+  } else {
+    ok(`[ENGINE-${engineId}] 业务代码存在 generated 视觉绘制调用`);
+  }
+} else {
+  ok(`[ENGINE-${engineId}] 无 required local/generated 视觉素材，跳过引擎级消费调用检查`);
 }
 
 function escapeReg(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+function normalizeAssetType(item, section) {
+  const source = item?.source ?? "";
+  if (item?.type === "generated") return section === "audio" ? "synthesized" : "graphics-generated";
+  if (item?.type) return String(item.type);
+  if (typeof source === "string" && source.startsWith("assets/library_2d/")) return "local-file";
+  if (typeof source === "string" && source.startsWith("assets/library_3d/")) return "local-file";
+  if (source === "inline-svg") return "inline-svg";
+  if (source === "generated") return section === "audio" ? "synthesized" : "graphics-generated";
+  if (source === "synthesized") return "synthesized";
+  return "unknown";
+}
+
+function consumerPatternForAsset(asset) {
+  if (asset.section === "audio") {
+    return asset.type === "synthesized"
+      ? /AudioContext\s*\(|OscillatorNode|createOscillator\s*\(|beep\s*\(|playTone\s*\(/
+      : /getAudio\s*\(|playSound\s*\(|sound\.add\s*\(|sound\.play\s*\(/;
+  }
+  if (asset.type === "graphics-generated" || asset.type === "inline-svg") {
+    return generatedConsumerPattern;
+  }
+  return /getTexture\s*\(|new\s+Sprite\s*\(|\.add\.image\s*\(|\.add\.sprite\s*\(|drawImage\s*\(|Sprite\.from\s*\(/;
+}
 
 finish();

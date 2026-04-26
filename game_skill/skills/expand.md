@@ -162,7 +162,17 @@ node ${SKILL_DIR}/scripts/check_implementation_contract.js cases/${PROJECT}/ --s
 ```yaml
 scenes:
   - id: start
-    layout: center-stack
+    # layout 必须是对象，四段齐全（T15/L1）——codegen 按这些数值/比例渲染，避免首屏偏移
+    # viewport: 目标画布或 body 尺寸（"full" = 100% × 100% / 具体 "1280x720" / {w,h} 对象）
+    # board-bbox: 玩法主区域矩形；start/result 场景可用 "none"
+    # hud-bbox: HUD 区域矩形；没有 HUD 的场景可用 "none"
+    # safe-area: 所有关键 UI 必须落在的安全区，通常 "centered-80%" 或具体比例对象
+    layout:
+      viewport: "full"
+      board-bbox: "none"
+      hud-bbox: "none"
+      safe-area: { x: "10%", y: "10%", width: "80%", height: "80%" }
+      preset: center-stack      # 原 layout 字符串降级为 preset 标签（可选，供 codegen 参考）
     zones:
       - id: title-area
         shape: rect
@@ -186,7 +196,12 @@ scenes:
       - { target: start-btn, delay: 200, animation: "fade-slide-up" }
 
   - id: play
-    layout: grid-two-column
+    layout:
+      viewport: "full"
+      board-bbox: { x: "25%", y: "15%", width: "50%", height: "70%" }
+      hud-bbox: { x: 0, y: 0, width: "100%", height: "10%" }
+      safe-area: { x: "2%", y: "2%", width: "96%", height: "96%" }
+      preset: grid-two-column
     zones:
       - id: card-grid-en
         shape: rect
@@ -213,7 +228,12 @@ scenes:
       - { target: card-grid-zh, delay: 200, animation: "stagger-fade-up" }
 
   - id: result
-    layout: center-stack
+    layout:
+      viewport: "full"
+      board-bbox: "none"
+      hud-bbox: "none"
+      safe-area: { x: "10%", y: "20%", width: "80%", height: "60%" }
+      preset: center-stack
     zones:
       - id: result-panel
         shape: rect
@@ -389,20 +409,33 @@ color-scheme:                       # [新增] 从 PRD front-matter 复制
   fx-hint: pixel
 asset-style: pixel-retro            # 从 palette-id 映射得到，用于匹配 catalog.suitable-styles
 
+# ── binding-to 规则（T8/L3 必读）──
+# 每条 type: local-file 条目都必须声明 binding-to，值有两类：
+#   A) PRD 中的 @entity(id) 或 @ui(id) 的 id —— 说明这个素材是该实体/UI 的视觉表达
+#      codegen 会用它决定"哪个素材渲染在哪里"，verify 会用它决定"哪些素材必须真的被业务代码消费"
+#      典型例子：btn-start → @ui(btn-start)；pig-red → @entity(pig)；block-red → @entity(block)
+#   B) "decor" —— 纯装饰素材（背景音效、字体、转角贴图、点缀图等），不绑玩法
+#      codegen 可选消费，verify 不强制
+# 写错或漏写 binding-to 会让 check_asset_selection.js 直接 fail。
+# 原则：尽量绑核心 @entity/@ui；写 decor 是退路，不要用它水通过——decor 超过 40% 会 warn。
+
 # ── 图片资源 ──
 images:
   # 优先使用本地 Kenney 素材（相对于项目根目录）
   - id: btn-start
     source: assets/library_2d/ui-pixel/tile_0010.png    # 像素按钮左端
     type: local-file
+    binding-to: btn-start           # → @ui(btn-start)
     usage: "开始按钮（与 tile_0011 + tile_0012 拼成完整按钮）"
   - id: heart-full
     source: assets/library_2d/ui-pixel/tile_0026.png    # 满心
     type: local-file
+    binding-to: hud-hearts          # → @ui(hud-hearts)
     usage: "HUD 生命值（满）"
   - id: heart-empty
     source: assets/library_2d/ui-pixel/tile_0028.png    # 空心
     type: local-file
+    binding-to: hud-hearts
     usage: "HUD 生命值（空）"
   # 本地素材不足时，用 inline-svg 或 graphics-generated 补充
   - id: custom-bg
@@ -416,14 +449,17 @@ audio:
   - id: sfx-click
     source: assets/library_2d/audio/ui-clicks/click1.ogg
     type: local-file
+    binding-to: decor               # 音效通常算装饰
     usage: "按钮点击音效"
   - id: sfx-success
     source: assets/library_2d/audio/ui-interface/confirmation_001.ogg
     type: local-file
+    binding-to: decor
     usage: "配对成功音效"
   - id: sfx-error
     source: assets/library_2d/audio/ui-interface/error_001.ogg
     type: local-file
+    binding-to: decor
     usage: "配对失败音效"
   # 无合适本地音效时，用合成音效
   - id: bgm-loop
@@ -438,6 +474,7 @@ fonts:
   - family: "Kenney Future"
     source: assets/library_2d/fonts/Kenney Future.ttf
     type: local-file
+    binding-to: decor               # 字体统一写 decor
 
 # ── 精灵表（如使用 roguelike/pixel tilemap）──
 spritesheets: []

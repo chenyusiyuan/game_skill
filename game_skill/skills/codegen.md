@@ -21,6 +21,11 @@ description: "Phase 4: 代码生成。读取 GamePRD 的 runtime，经 reference
 - `run-mode=local-http`：允许 `src/*.js`、`import/export`、多文件结构
 - 所有 CDN 依赖走 HTTPS，版本号 pin 到主版本（读 `_index.json.version-pin`）
 - 必须暴露 `window.gameState`（Playwright 验证桥，见 verify-hooks.md）
+- **必须在每条 `@rule` 触发时 push 到 `window.__trace`**（T3 硬约束）：
+  - 初始化时 `window.__trace = window.__trace || [];`
+  - 每条 `@rule(<rule-id>)` 在执行 effect 后必须 push：`window.__trace.push({ rule: "<rule-id>", before: {...}, after: {...}, t: Date.now() });`
+  - `before` / `after` 至少包含 `event-graph.yaml` 里 `rule-traces.<rule-id>.actions` 声明的 `subject.field` 值
+  - 目的：`check_playthrough.js` 用 trace 覆盖率（≥80%）判定玩法是否真的跑起来，profile 不再承担 expect
 - **不得静默删除** `must-have-features`
 
 ---
