@@ -1224,6 +1224,262 @@ console.log("\n[P0.2] _runtime_probes: ray-cast 语义复算");
 }
 
 // =============================
+// P1.1 (spike): ray-cast.runtime.mjs
+// =============================
+console.log("\n[P1.1] ray-cast.runtime: reducer wrapper + trace 自动填充");
+
+{
+  // runtime 模块在 browser 用；Node 侧也能 import（跑 Node unit test）
+  const runtimeMod = await import(
+    "../../references/engines/_common/primitives/ray-cast.runtime.mjs"
+  );
+  const reducerMod = await import(
+    "../../references/mechanics/spatial/ray-cast.reducer.mjs"
+  );
+
+  test("Node 环境（无 window）调用不崩，返回命中对象", () => {
+    // 没有 window，getTraceSink 返回 null，不 push trace
+    const savedWindow = globalThis.window;
+    delete globalThis.window;
+    try {
+      const hit = runtimeMod.rayCastGridFirstHit({
+        rule: "attack",
+        source: { id: "pig-1", gridPosition: { row: -1, col: 2 } },
+        targets: [
+          { id: "b-0-2", row: 0, col: 2, alive: true },
+          { id: "b-1-2", row: 1, col: 2, alive: true },
+        ],
+        direction: { dx: 0, dy: 1 },
+      });
+      assert(hit?.id === "b-0-2", `应命中最近 b-0-2，实际 ${hit?.id}`);
+    } finally {
+      if (savedWindow !== undefined) globalThis.window = savedWindow;
+    }
+  });
+
+  test("Browser mock: runtime 自动 push 结构化 trace", () => {
+    const fakeWindow = {};
+    const savedWindow = globalThis.window;
+    globalThis.window = fakeWindow;
+    try {
+      runtimeMod.rayCastGridFirstHit({
+        rule: "attack-consume",
+        node: "attack-consume",
+        source: { id: "pig-1", gridPosition: { row: -1, col: 2 } },
+        targets: [
+          { id: "b-0-2", row: 0, col: 2, alive: true },
+          { id: "b-1-2", row: 1, col: 2, alive: true },
+        ],
+        direction: { dx: 0, dy: 1 },
+      });
+      assert(Array.isArray(fakeWindow.__trace), "window.__trace 应被初始化为数组");
+      assert(fakeWindow.__trace.length === 1, `应 push 1 条事件，实际 ${fakeWindow.__trace.length}`);
+      const ev = fakeWindow.__trace[0];
+      assert(ev.primitive === "ray-cast@v1", `primitive 应为 ray-cast@v1，实际 ${ev.primitive}`);
+      assert(ev.rule === "attack-consume", `rule 字段应透传`);
+      assert(ev.node === "attack-consume", `node 字段应透传`);
+      assert(ev.before?.source?.id === "pig-1", `before.source.id 应是 pig-1`);
+      assert(Array.isArray(ev.before?.targetsSnapshot) && ev.before.targetsSnapshot.length === 2,
+        `before.targetsSnapshot 应含 2 条`);
+      assert(ev.before?.resolvedDirection?.dy === 1, `resolvedDirection 应透传`);
+      assert(ev.after?.returnedHits?.[0]?.id === "b-0-2", `after.returnedHits[0] 应是 b-0-2`);
+    } finally {
+      if (savedWindow === undefined) delete globalThis.window;
+      else globalThis.window = savedWindow;
+    }
+  });
+
+  test("等价性: runtime.rayCastGridFirstHit === reducer.castGrid[0].target", () => {
+    const savedWindow = globalThis.window;
+    delete globalThis.window;
+    try {
+      // 100 次随机输入对比
+      let mismatch = 0;
+      for (let i = 0; i < 100; i++) {
+        const srcRow = Math.floor(Math.random() * 5) - 2;
+        const srcCol = Math.floor(Math.random() * 5);
+        const blocks = Array.from({ length: Math.floor(Math.random() * 4) + 1 }, (_, j) => ({
+          id: `b-${j}`,
+          row: Math.floor(Math.random() * 5),
+          col: Math.floor(Math.random() * 5),
+          alive: Math.random() > 0.2,
+        }));
+        const dx = [-1, 0, 1][Math.floor(Math.random() * 3)];
+        const dy = [-1, 0, 1][Math.floor(Math.random() * 3)];
+        if (dx === 0 && dy === 0) continue;
+
+        const runtimeHit = runtimeMod.rayCastGridFirstHit({
+          rule: "x",
+          source: { id: "s", gridPosition: { row: srcRow, col: srcCol } },
+          targets: blocks,
+          direction: { dx, dy },
+        });
+        const reducerHits = reducerMod.castGrid(
+          { row: srcRow, col: srcCol },
+          { dx, dy },
+          blocks,
+          { "coord-system": "grid", "stop-on": "first-hit" },
+        );
+        const expectedId = reducerHits[0]?.target?.id ?? null;
+        const actualId = runtimeHit?.id ?? null;
+        if (expectedId !== actualId) mismatch++;
+      }
+      assert(mismatch === 0, `runtime 与 reducer 不等价: ${mismatch}/100 次不符`);
+    } finally {
+      if (savedWindow !== undefined) globalThis.window = savedWindow;
+    }
+  });
+
+  test("all-hits 模式: 返回所有命中，顺序与 reducer 一致", () => {
+    const savedWindow = globalThis.window;
+    delete globalThis.window;
+    try {
+      const hits = runtimeMod.rayCastGrid({
+        rule: "scan",
+        source: { id: "s", gridPosition: { row: -1, col: 2 } },
+        targets: [
+          { id: "b-0-2", row: 0, col: 2, alive: true },
+          { id: "b-1-2", row: 1, col: 2, alive: true },
+          { id: "b-2-2", row: 2, col: 2, alive: true },
+        ],
+        direction: { dx: 0, dy: 1 },
+        params: { "coord-system": "grid", "stop-on": "all-hits" },
+      });
+      assert(Array.isArray(hits) && hits.length === 3, `应返回 3 条命中，实际 ${hits?.length}`);
+      assert(hits[0].id === "b-0-2" && hits[2].id === "b-2-2", `顺序应按距离升序`);
+    } finally {
+      if (savedWindow !== undefined) globalThis.window = savedWindow;
+    }
+  });
+}
+
+// =============================
+// P1.1 full: index.mjs 聚合 + 10 个 runtime smoke
+// =============================
+console.log("\n[P1.1 full] engines/_common/primitives: 聚合导出与 smoke 测");
+
+{
+  const idx = await import(
+    "../../references/engines/_common/primitives/index.mjs"
+  );
+  const expectedApi = [
+    "rayCastGrid", "rayCastGridFirstHit",
+    "tickTrack", "positionAt",
+    "gridMove",
+    "addCell", "removeCell",
+    "queryNeighbors",
+    "predicateMatch",
+    "consumeResource",
+    "fireTrigger",
+    "checkWinLose",
+    "accumulateScore",
+    "pushTraceEvent", "getTraceSink", "snapshot",
+  ];
+
+  test("index.mjs 导出所有 runtime API", () => {
+    const missing = expectedApi.filter((k) => typeof idx[k] !== "function");
+    assert(missing.length === 0, `index.mjs 缺失: ${missing.join(", ")}`);
+  });
+
+  test("predicateMatch: Browser mock, color 匹配命中", () => {
+    const fakeWindow = {};
+    const saved = globalThis.window;
+    globalThis.window = fakeWindow;
+    try {
+      const ok = idx.predicateMatch({
+        rule: "color-match",
+        left: { id: "pig-1", color: "red" },
+        right: { id: "b-0-2", color: "red" },
+        params: { fields: ["color"], op: "eq" },
+      });
+      assert(ok === true, `同色应 match true`);
+      const ev = fakeWindow.__trace.at(-1);
+      assert(ev.primitive === "predicate-match@v1");
+      assert(ev.after.matched === true);
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
+  test("predicateMatch: 异色不 match，trace 记录 matched=false", () => {
+    const fakeWindow = {};
+    const saved = globalThis.window;
+    globalThis.window = fakeWindow;
+    try {
+      const ok = idx.predicateMatch({
+        rule: "color-match",
+        left: { id: "pig-1", color: "red" },
+        right: { id: "b-0-2", color: "blue" },
+        params: { fields: ["color"], op: "eq" },
+      });
+      assert(ok === false, `异色应 match false`);
+      assert(fakeWindow.__trace.at(-1).after.matched === false);
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
+  test("consumeResource: ammo/durability 各减 1，trace 捕获 before/after", () => {
+    const fakeWindow = {};
+    const saved = globalThis.window;
+    globalThis.window = fakeWindow;
+    try {
+      const pig = { id: "pig-1", ammo: 3 };
+      const block = { id: "b-0-2", durability: 1 };
+      const res = idx.consumeResource({
+        rule: "attack-consume",
+        agent: pig,
+        target: block,
+        params: { "agent-field": "pig.ammo", "target-field": "block.durability", amount: 1 },
+      });
+      assert(res.agent.ammo === 2, `pig.ammo 应 3→2，实际 ${res.agent.ammo}`);
+      assert(res.target.durability === 0, `block.durability 应 1→0`);
+      const ev = fakeWindow.__trace.at(-1);
+      assert(ev.primitive === "resource-consume@v1");
+      assert(ev.before.agent.ammo === 3 && ev.after.agent.ammo === 2);
+      const zeroed = ev.after.events.find((e) => e.type === "resource.target-zero");
+      assert(zeroed, `应触发 resource.target-zero 事件`);
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
+  test("tickTrack: 推进 t 并在 segment 切换时 push trace", () => {
+    const fakeWindow = {};
+    const saved = globalThis.window;
+    globalThis.window = fakeWindow;
+    try {
+      const pig = { id: "pig-1", t: 0.24, speed: 0.02, segmentId: "top" };
+      const trackParams = {
+        shape: "rect-loop",
+        geometry: { x: 0, y: 0, width: 4, height: 4 },
+        segments: [
+          { id: "top",    range: [0,    0.25] },
+          { id: "right",  range: [0.25, 0.5] },
+          { id: "bottom", range: [0.5,  0.75] },
+          { id: "left",   range: [0.75, 1.0] },
+        ],
+      };
+      const next = idx.tickTrack({
+        rule: "pig-move",
+        agent: pig,
+        dt: 1,
+        params: trackParams,
+      });
+      assert(next.segmentId === "right", `应切到 right 段，实际 ${next.segmentId}`);
+      assert(fakeWindow.__trace.length > 0, `segment 切换应 push trace`);
+      assert(fakeWindow.__trace.at(-1).primitive === "parametric-track@v1");
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+}
+
+// =============================
 // 汇总
 // =============================
 console.log(`\n结果: ${passed} passed, ${failed} failed`);
