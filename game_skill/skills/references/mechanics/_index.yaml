@@ -84,3 +84,35 @@ primitives:
     reducer: progression/score-accum.reducer.mjs
     summary: 基于事件的分数累计
     typical-use: 几乎所有 PRD
+
+  - id: slot-pool
+    version: v1
+    category: lifecycle
+    spec: lifecycle/slot-pool.md
+    reducer: lifecycle/slot-pool.reducer.mjs
+    summary: 固定容量等待槽，bind/unbind 保留 entity 字段
+    typical-use: Pixel-Flow 四角等待区、母球重置位、待出发位
+
+  - id: capacity-gate
+    version: v1
+    category: lifecycle
+    spec: lifecycle/capacity-gate.md
+    reducer: lifecycle/capacity-gate.reducer.mjs
+    summary: 同时活跃数硬上限 + 拒绝事件，禁止静默丢弃
+    typical-use: 同时在场人数限制、并发门控
+
+  - id: entity-lifecycle
+    version: v1
+    category: lifecycle
+    spec: lifecycle/entity-lifecycle.md
+    reducer: lifecycle/entity-lifecycle.reducer.mjs
+    summary: entity 四态机 waiting/active/returning/dead，白名单转移
+    typical-use: 角色/子弹/怪物的统一生命周期
+
+  - id: cooldown-dispatch
+    version: v1
+    category: lifecycle
+    spec: lifecycle/cooldown-dispatch.md
+    reducer: lifecycle/cooldown-dispatch.reducer.mjs
+    summary: 输入冷却 + 白名单 downstream，禁止绕过
+    typical-use: 玩家点击防抖、技能冷却、攻击间隔

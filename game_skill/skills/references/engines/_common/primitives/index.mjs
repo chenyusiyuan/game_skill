@@ -42,5 +42,11 @@ export { fireTrigger } from "./fsm-transition.runtime.mjs";
 export { checkWinLose } from "./win-lose-check.runtime.mjs";
 export { accumulateScore } from "./score-accum.runtime.mjs";
 
+// lifecycle (P1.2 新增 4 个)
+export { bindSlot, unbindSlot } from "./slot-pool.runtime.mjs";
+export { requestCapacity, releaseCapacity } from "./capacity-gate.runtime.mjs";
+export { transitionLifecycle } from "./entity-lifecycle.runtime.mjs";
+export { requestDispatch } from "./cooldown-dispatch.runtime.mjs";
+
 // 共享 trace 工具（runtime 内部用；业务极少直接用）
 export { pushTraceEvent, getTraceSink, snapshot } from "./_trace.mjs";

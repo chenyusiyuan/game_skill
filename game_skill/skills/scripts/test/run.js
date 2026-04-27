@@ -1500,7 +1500,7 @@ console.log("\n[P1.4] _primitive_runtime_map: parseEsmImports + isPrimitivesImpo
     assert(!isEngineEnforced(""), "空 engine not enforced");
   });
 
-  test("isRuntimeBacked + apisFor 覆盖所有 10 个 P1.1 primitive", () => {
+  test("isRuntimeBacked + apisFor 覆盖所有 P1.1 + P1.2 primitive", () => {
     const expected = [
       "parametric-track@v1",
       "grid-step@v1",
@@ -1512,12 +1512,17 @@ console.log("\n[P1.4] _primitive_runtime_map: parseEsmImports + isPrimitivesImpo
       "fsm-transition@v1",
       "win-lose-check@v1",
       "score-accum@v1",
+      // P1.2 生命周期四件套
+      "slot-pool@v1",
+      "capacity-gate@v1",
+      "entity-lifecycle@v1",
+      "cooldown-dispatch@v1",
     ];
     for (const p of expected) {
       assert(isRuntimeBacked(p), `${p} 应 runtime-backed`);
       assert(apisFor(p).length > 0, `${p} 应至少有一个 API`);
     }
-    assert(!isRuntimeBacked("slot-pool@v1"), "未实现 runtime 的 primitive 不应 backed");
+    assert(!isRuntimeBacked("nonexistent@v1"), "未实现 runtime 的 primitive 不应 backed");
   });
 
   test("parseEsmImports: 命名导入", () => {
@@ -1799,6 +1804,260 @@ console.log("\n[P1.4] check_implementation_contract: phaser3 引擎跳过 runtim
       /\[runtime\].*非 canvas\/pixijs，跳过/.test(output),
       `应报 runtime 段跳过\n${output}`,
     );
+  });
+}
+
+// =============================
+// P1.2: lifecycle primitives 三件套 — reducer + runtime 等价性
+// =============================
+console.log("\n[P1.2] slot-pool / capacity-gate / entity-lifecycle / cooldown-dispatch: reducer + runtime");
+
+{
+  const repoRoot = resolve(here, "../../../..");
+  const slotReducer = await import(
+    `file://${repoRoot}/game_skill/skills/references/mechanics/lifecycle/slot-pool.reducer.mjs`
+  );
+  const slotRuntime = await import(
+    `file://${repoRoot}/game_skill/skills/references/engines/_common/primitives/slot-pool.runtime.mjs`
+  );
+  const gateReducer = await import(
+    `file://${repoRoot}/game_skill/skills/references/mechanics/lifecycle/capacity-gate.reducer.mjs`
+  );
+  const gateRuntime = await import(
+    `file://${repoRoot}/game_skill/skills/references/engines/_common/primitives/capacity-gate.runtime.mjs`
+  );
+  const lifeReducer = await import(
+    `file://${repoRoot}/game_skill/skills/references/mechanics/lifecycle/entity-lifecycle.reducer.mjs`
+  );
+  const lifeRuntime = await import(
+    `file://${repoRoot}/game_skill/skills/references/engines/_common/primitives/entity-lifecycle.runtime.mjs`
+  );
+  const cdReducer = await import(
+    `file://${repoRoot}/game_skill/skills/references/mechanics/lifecycle/cooldown-dispatch.reducer.mjs`
+  );
+  const cdRuntime = await import(
+    `file://${repoRoot}/game_skill/skills/references/engines/_common/primitives/cooldown-dispatch.runtime.mjs`
+  );
+
+  test("slot-pool.reducer: bind 到空槽、再次 bind 同一 occupant idempotent", () => {
+    let s = {};
+    s = slotReducer.step(s, { type: "bind", occupantId: "pig-0" }, { capacity: 2 });
+    assert(s.pool.slots.some((x) => x.occupantId === "pig-0"));
+    assert(s._events[0].type === "pool.bound");
+    const s2 = slotReducer.step(s, { type: "bind", occupantId: "pig-0" }, { capacity: 2 });
+    assert(s2.pool.slots.filter((x) => x.occupantId === "pig-0").length === 1, "不应重复绑定");
+    assert((s2._events ?? []).length === 0, "idempotent no-op 不发事件");
+  });
+
+  test("slot-pool.reducer: 超容量触发 overflow", () => {
+    let s = {};
+    s = slotReducer.step(s, { type: "bind", occupantId: "a" }, { capacity: 1 });
+    s = slotReducer.step(s, { type: "bind", occupantId: "b" }, { capacity: 1 });
+    const last = s._events.at(-1);
+    assert(last?.type === "pool.overflow", `应 overflow，实际 ${last?.type}`);
+  });
+
+  test("slot-pool.reducer: unbind 保留 entity 字段（自身不归零）", () => {
+    // reducer 不接触 entity 对象，只管 slot 占用；验证无副作用
+    const pig = { id: "pig-0", ammo: 3 };
+    let s = { pool: { capacity: 2, slots: [{ id: "s0", occupantId: "pig-0" }, { id: "s1", occupantId: null }] } };
+    s = slotReducer.step(s, { type: "unbind", occupantId: "pig-0" }, { capacity: 2 });
+    assert(s.pool.slots[0].occupantId === null);
+    assert(pig.ammo === 3, "pool 不应动 entity 字段");
+  });
+
+  test("slot-pool.runtime: browser mock 下 auto push trace", () => {
+    const saved = globalThis.window;
+    try {
+      const fakeWindow = { __trace: [] };
+      globalThis.window = fakeWindow;
+      const r = slotRuntime.bindSlot({
+        rule: "dispatch-pig",
+        node: "return-to-slot",
+        pool: { capacity: 2, slots: [{ id: "s0", occupantId: null }, { id: "s1", occupantId: null }] },
+        occupantId: "pig-0",
+        params: { capacity: 2 },
+      });
+      assert(r.pool.slots[0].occupantId === "pig-0");
+      const ev = fakeWindow.__trace.at(-1);
+      assert(ev?.primitive === "slot-pool@v1");
+      assert(ev.after?.events?.[0]?.type === "pool.bound");
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
+  test("capacity-gate.reducer: 超 capacity 触发 blocked", () => {
+    let s = {};
+    s = gateReducer.step(s, { type: "request", entityId: "a" }, { capacity: 1 });
+    assert(s._events[0].type === "capacity.admitted");
+    s = gateReducer.step(s, { type: "request", entityId: "b" }, { capacity: 1 });
+    assert(s._events[0].type === "capacity.blocked", "b 应被 blocked");
+    assert(s.gate.active.length === 1, "active 不应增长到 2");
+  });
+
+  test("capacity-gate.reducer: release 已激活 entity 恢复容量", () => {
+    let s = { gate: { capacity: 1, active: ["a"] } };
+    s = gateReducer.step(s, { type: "release", entityId: "a" }, { capacity: 1 });
+    assert(s.gate.active.length === 0);
+    s = gateReducer.step(s, { type: "request", entityId: "b" }, { capacity: 1 });
+    assert(s._events[0].type === "capacity.admitted");
+  });
+
+  test("capacity-gate.runtime: 命中 blocked 时 admitted=false", () => {
+    const saved = globalThis.window;
+    try {
+      globalThis.window = { __trace: [] };
+      const r = gateRuntime.requestCapacity({
+        rule: "dispatch",
+        node: "gate",
+        gate: { capacity: 1, active: ["a"] },
+        entityId: "b",
+        params: { capacity: 1 },
+      });
+      assert(r.admitted === false);
+      assert(r.blocked === true);
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
+  test("entity-lifecycle.reducer: 白名单转移", () => {
+    const params = {
+      transitions: [
+        { from: "waiting", event: "dispatched", to: "active" },
+        { from: "active", event: "exhausted", to: "returning" },
+      ],
+    };
+    let s = { entity: { id: "p", lifecycle: "waiting" } };
+    s = lifeReducer.step(s, { type: "transition", entityId: "p", event: "dispatched" }, params);
+    assert(s.entity.lifecycle === "active");
+    assert(s._events[0].type === "lifecycle.entered");
+  });
+
+  test("entity-lifecycle.reducer: 非白名单事件 → invalid-transition 且 state 不变", () => {
+    const params = { transitions: [{ from: "waiting", event: "dispatched", to: "active" }] };
+    let s = { entity: { id: "p", lifecycle: "waiting" } };
+    s = lifeReducer.step(s, { type: "transition", entityId: "p", event: "score-set" }, params);
+    assert(s.entity.lifecycle === "waiting", "state 不应变");
+    assert(s._events[0].type === "lifecycle.invalid-transition");
+  });
+
+  test("entity-lifecycle.reducer: dead 是终态", () => {
+    const params = {
+      transitions: [
+        { from: "active", event: "killed", to: "dead" },
+        { from: "dead", event: "revive", to: "active" }, // 白名单允许但 reducer 应拒
+      ],
+    };
+    let s = { entity: { id: "p", lifecycle: "active" } };
+    s = lifeReducer.step(s, { type: "transition", entityId: "p", event: "killed" }, params);
+    assert(s.entity.lifecycle === "dead");
+    s = lifeReducer.step(s, { type: "transition", entityId: "p", event: "revive" }, params);
+    assert(s.entity.lifecycle === "dead", "dead 不应复活");
+    assert(s._events[0].type === "lifecycle.invalid-transition");
+  });
+
+  test("entity-lifecycle.runtime: trace 捕获 from/to", () => {
+    const saved = globalThis.window;
+    try {
+      globalThis.window = { __trace: [] };
+      const r = lifeRuntime.transitionLifecycle({
+        rule: "pig-dispatch",
+        node: "lifecycle",
+        entity: { id: "p", lifecycle: "waiting" },
+        event: "dispatched",
+        params: { transitions: [{ from: "waiting", event: "dispatched", to: "active" }] },
+      });
+      assert(r.changed === true);
+      assert(r.from === "waiting" && r.to === "active");
+      const ev = globalThis.window.__trace.at(-1);
+      assert(ev.primitive === "entity-lifecycle@v1");
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
+  test("cooldown-dispatch.reducer: 冷却内再次触发被拒", () => {
+    const params = {
+      "cooldown-ms": 250,
+      "allowed-events": [{ kind: "lifecycle-event", event: "dispatched" }],
+    };
+    const downstream = { kind: "lifecycle-event", event: "dispatched", entityId: "p" };
+    let s = {};
+    s = cdReducer.step(s, { type: "request", now: 0, downstream }, params);
+    assert(s._events[0].type === "dispatch.fired");
+    s = cdReducer.step(s, { type: "request", now: 100, downstream }, params);
+    assert(s._events[0].type === "dispatch.rejected-cooldown", "100ms < 250ms 应 reject");
+    s = cdReducer.step(s, { type: "request", now: 260, downstream }, params);
+    assert(s._events[0].type === "dispatch.fired", "260ms > 250ms 应放行");
+  });
+
+  test("cooldown-dispatch.reducer: 黑名单 downstream 直接拒", () => {
+    const params = {
+      "cooldown-ms": 0,
+      "allowed-events": [{ kind: "lifecycle-event" }],
+    };
+    let s = {};
+    s = cdReducer.step(
+      s,
+      { type: "request", now: 0, downstream: { kind: "state.score-set", value: 100 } },
+      params,
+    );
+    assert(s._events[0].type === "dispatch.rejected-forbidden");
+    assert(s._events[0].reason === "forbidden-kind");
+  });
+
+  test("cooldown-dispatch.reducer: downstream 不在白名单 → rejected-forbidden", () => {
+    const params = {
+      "cooldown-ms": 0,
+      "allowed-events": [{ kind: "lifecycle-event", event: "dispatched" }],
+    };
+    let s = {};
+    s = cdReducer.step(
+      s,
+      { type: "request", now: 0, downstream: { kind: "capacity.request", entityId: "x" } },
+      params,
+    );
+    assert(s._events[0].type === "dispatch.rejected-forbidden");
+    assert(s._events[0].reason === "not-whitelisted");
+  });
+
+  test("cooldown-dispatch.runtime: 冷却内 fired=false", () => {
+    const saved = globalThis.window;
+    try {
+      globalThis.window = { __trace: [] };
+      const params = {
+        "cooldown-ms": 250,
+        "allowed-events": [{ kind: "lifecycle-event", event: "dispatched" }],
+      };
+      const downstream = { kind: "lifecycle-event", event: "dispatched", entityId: "p" };
+      const r1 = cdRuntime.requestDispatch({
+        rule: "click-dispatch",
+        node: "input-gate",
+        dispatcher: { id: "d", lastFiredAt: null },
+        downstream,
+        now: 0,
+        params,
+      });
+      assert(r1.fired === true);
+      const r2 = cdRuntime.requestDispatch({
+        rule: "click-dispatch",
+        node: "input-gate",
+        dispatcher: r1.dispatcher,
+        downstream,
+        now: 50,
+        params,
+      });
+      assert(r2.fired === false);
+      assert(r2.rejectedCooldown === true);
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
   });
 }
 

@@ -34,6 +34,10 @@ export const PRIMITIVE_RUNTIME_API = Object.freeze({
   "fsm-transition@v1": ["fireTrigger"],
   "win-lose-check@v1": ["checkWinLose"],
   "score-accum@v1": ["accumulateScore"],
+  "slot-pool@v1": ["bindSlot", "unbindSlot"],
+  "capacity-gate@v1": ["requestCapacity", "releaseCapacity"],
+  "entity-lifecycle@v1": ["transitionLifecycle"],
+  "cooldown-dispatch@v1": ["requestDispatch"],
 });
 
 /**
