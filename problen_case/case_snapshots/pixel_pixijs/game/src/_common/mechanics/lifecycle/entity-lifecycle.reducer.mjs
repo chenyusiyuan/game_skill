@@ -6,19 +6,9 @@ export const emittedEvents = ["lifecycle.entered.*", "lifecycle.invalid-transiti
 
 export const STATES = Object.freeze(["waiting", "active", "returning", "dead"]);
 
-export function resolveAction(node, ev, _state) {
-  // Support lifecycle.event trigger
+export function resolveAction(_node, ev, _state) {
   if (ev?.type === "lifecycle.event" && ev.entityId && ev.event) {
     return { type: "transition", entityId: ev.entityId, event: ev.event };
-  }
-  // Support resource.agent-zero trigger (for exhaustion scenarios)
-  // When agent runs out of resource, transition to dead state
-  if (ev?.type === "resource.agent-zero" && node.params?.transition === "dead") {
-    return { type: "transition", entityId: ev.agentId, event: "exhausted" };
-  }
-  // Support track.loop-complete trigger (for recycle scenarios)
-  if (ev?.type === "track.loop-complete" && node.params?.transition === "returning") {
-    return { type: "transition", entityId: ev.agent?.id, event: "returned" };
   }
   return null;
 }
@@ -33,26 +23,13 @@ function findTransition(params, from, event) {
 }
 
 /**
- * state shape:
- *   - { entity: { id, lifecycle, ... } } for scoped entity
- *   - { collections: { pigs: [...], ... } } for global state with collections
+ * state shape (scoped to one entity):
+ *   { entity: { id, lifecycle, ... } }
  * transition action modifies only `lifecycle`. Other fields untouched.
  */
 export function step(state, action, params = {}) {
   if (action.type !== "transition") return state;
-
-  // Find entity either from state.entity or from state.collections
-  let entity = state.entity;
-  if (!entity && state.collections && action.entityId) {
-    for (const list of Object.values(state.collections)) {
-      const found = list.find(e => e.id === action.entityId);
-      if (found) {
-        entity = found;
-        break;
-      }
-    }
-  }
-
+  const entity = state.entity;
   if (!entity) return state;
   const from = entity.lifecycle ?? "waiting";
   if (from === "dead") {
@@ -80,17 +57,14 @@ export function step(state, action, params = {}) {
       ],
     };
   }
-
-  // Update entity in place (for collections) or return new state
-  entity.lifecycle = t.to;
+  const nextEntity = { ...entity, lifecycle: t.to };
   // Sync alive field with lifecycle: dead => alive=false
   if (t.to === "dead") {
-    entity.alive = false;
+    nextEntity.alive = false;
   }
-
   return {
     ...state,
-    entity: entity,
+    entity: nextEntity,
     _events: [{ type: "lifecycle.entered", entityId: entity.id, from, to: t.to }],
   };
 }

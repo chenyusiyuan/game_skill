@@ -1,0 +1,268 @@
+{
+  "case_id": "pixel_canvas-002",
+  "description": "pixel_canvas-002 - 从 PRD @check 自动生成的驱动脚本骨架，需人工补真实 setup",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "prd_hash": "b755aa55f479f89cf603475639641f71416b57e8",
+  "prd_path": "cases/pixel_canvas-002/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "playable-loop",
+      "check_id": "playable-loop",
+      "kind": "interaction",
+      "description": "主循环可玩",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"点击开始 → 点击派出小猪 → 小猪移动并攻击 → 观察棋盘变化\"",
+      "_prd_expect": "\"小猪沿传送带移动，攻击正对方向第一个同色块，目标块减少\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "win-condition",
+      "check_id": "win-condition",
+      "kind": "interaction",
+      "description": "胜利条件",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"清空所有目标块\"",
+      "_prd_expect": "\"显示胜利结果页\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "lose-condition",
+      "check_id": "lose-condition",
+      "kind": "interaction",
+      "description": "失败条件",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"耗尽所有小猪但棋盘仍有目标块\"",
+      "_prd_expect": "\"显示失败结果页\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "level-progression",
+      "check_id": "level-progression",
+      "kind": "interaction",
+      "description": "关卡递进",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"通关第 1 关 → 进入第 2 关 → 检查颜色数增加\"",
+      "_prd_expect": "\"第 2 关有 3 种颜色，第 3 关有 4 种颜色\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "wait-slot-recycle",
+      "check_id": "wait-slot-recycle",
+      "kind": "interaction",
+      "description": "等待槽回收",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"派出弹药 >1 的小猪 → 观察其绕圈后返回等待槽\"",
+      "_prd_expect": "\"小猪返回等待槽，保留剩余弹药\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "conveyor-capacity",
+      "check_id": "conveyor-capacity",
+      "kind": "interaction",
+      "description": "传送带容量",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"派出 4 只小猪占满传送带 → 尝试派出第 5 只\"",
+      "_prd_expect": "\"第 5 只无法派出，等待槽点击无效\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "position-attack-correct",
+      "check_id": "position-attack-correct",
+      "kind": "interaction",
+      "description": "位置攻击正确性",
+      "_todo": "把 setup 补成真实 UI 操作。profile 禁止写 expect，产品真相由 window.__trace + runtime errors 判定。",
+      "_prd_method": "\"设置棋盘: 上边第 2 列有红色块, 第 3 列有蓝色块; 派出红色小猪, 观察其经过上边第 2 列位置时攻击\"",
+      "_prd_expect": "\"只攻击第 2 列红色块，不攻击第 3 列蓝色块\"",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    }
+  ],
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-no-global-autoaim",
+      "hard_rule_id": "no-global-autoaim",
+      "kind": "hard-rule",
+      "description": "禁止全屏自动索敌",
+      "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "hard-rule-no-multi-attack",
+      "hard_rule_id": "no-multi-attack",
+      "kind": "hard-rule",
+      "description": "禁止一次攻击多个",
+      "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "hard-rule-no-penetration",
+      "hard_rule_id": "no-penetration",
+      "kind": "hard-rule",
+      "description": "禁止穿透攻击",
+      "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    },
+    {
+      "id": "hard-rule-strict-position-attack",
+      "hard_rule_id": "strict-position-attack",
+      "kind": "hard-rule",
+      "description": "位置依序攻击",
+      "_todo": "根据 @constraint 填真实 UI 驱动步骤；禁止写 expect",
+      "setup": [
+        {
+          "action": "wait",
+          "ms": 200
+        },
+        {
+          "action": "click",
+          "selector": "#btn-start",
+          "_todo": "替换为真实开始/主操作按钮；canvas 可改为 { action: \"click\", x: <number>, y: <number> }"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        }
+      ]
+    }
+  ]
+}

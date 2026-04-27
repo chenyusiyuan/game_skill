@@ -1,0 +1,263 @@
+version: 1
+primitive-catalog-version: 1
+engine: dom-ui
+
+# 外部事件：点击开始、点击小猪派出、游戏tick
+external-events: [input.click-start, input.click-pig, tick]
+
+# PRD 里识别到的 entity 与其使用的原语
+entities:
+  - id: pig
+    uses: [parametric-track, resource-consume, entity-lifecycle]
+    initial:
+      id: ""
+      color: red
+      ammo: 3
+      t: 0
+      speed: 0.1667
+      segmentId: null
+      gridPosition: { row: -1, col: -1 }
+      lifecycle: waiting
+      onTrack: false
+      waitingSlotId: null
+
+  - id: block
+    uses: [grid-board, resource-consume]
+    initial:
+      id: ""
+      row: 0
+      col: 0
+      color: red
+      hp: 1
+      alive: true
+
+  - id: game
+    uses: [win-lose-check, score-accum]
+    initial:
+      score: 0
+      phase: ready
+      blocksRemaining: 0
+
+# 原语 DAG 节点
+mechanics:
+  # ============ 棋盘系统 ============
+  - node: board
+    primitive: grid-board@v1
+    params:
+      rows: 6
+      cols: 6
+      cell-fields:
+        - { name: color, type: enum, values: [red, blue, yellow, green] }
+        - { name: hp, type: number }
+    produces-events: [board.cell-removed, board.empty]
+
+  # ============ 传送带系统 ============
+  - node: conveyor-track
+    primitive: parametric-track@v1
+    applies-to: pig
+    params:
+      shape: rect-loop
+      geometry: { x: 80, y: 80, width: 360, height: 360 }
+      grid-projection: { rows: 6, cols: 6, outside-offset: 1 }
+      segments:
+        - { id: top,    range: [0.0,  0.25] }
+        - { id: right,  range: [0.25, 0.5]  }
+        - { id: bottom, range: [0.5,  0.75] }
+        - { id: left,   range: [0.75, 1.0]  }
+    produces-events: [track.enter-segment, track.loop-complete]
+
+  # ============ 传送带容量限制 ============
+  - node: conveyor-capacity
+    primitive: capacity-gate@v1
+    trigger-on: [input.click-pig]
+    params:
+      capacity: 4
+      on-admit: [dispatch-pig-to-track]
+      on-block: [show-conveyor-full-feedback]
+      on-release: [release-conveyor-slot]
+    produces-events: [capacity.admitted, capacity.blocked, capacity.released, pig.deployed, pig.on-track]
+
+  # ============ 等待槽系统 ============
+  - node: wait-slots
+    primitive: slot-pool@v1
+    trigger-on: [lifecycle.entered.returning, input.click-pig]
+    handles: tick
+    params:
+      capacity: 5
+      slot-ids: [slot-0, slot-1, slot-2, slot-3, slot-4]
+      retain-fields: [color, ammo]
+      on-bind: [pig-enter-waiting]
+      on-unbind: [pig-leave-waiting]
+      on-overflow: [show-wait-slots-full-feedback]
+    produces-events: [pool.bound, pool.unbound, pool.overflow]
+
+  # ============ 位置依赖索敌 ============
+  - node: attack-raycast
+    primitive: ray-cast@v1
+    trigger-on: [track.enter-segment]
+    params:
+      source: { from: pig }
+      coord-system: grid
+      direction:
+        mode: normal-to-track
+        segment-direction-map:
+          top:    { dx: 0,  dy: 1 }
+          right:  { dx: -1, dy: 0 }
+          bottom: { dx: 0,  dy: -1 }
+          left:   { dx: 1,  dy: 0 }
+      targets: { from: blocks }
+      stop-on: first-hit
+    produces-events: [ray.hit-candidate, ray.miss]
+
+  # ============ 颜色匹配判定 ============
+  - node: color-match
+    primitive: predicate-match@v1
+    trigger-on: [ray.hit-candidate]
+    params:
+      left: "pig"
+      right: "hit-candidate[0]"
+      fields: [color]
+      op: eq
+      on-true: [trigger-attack]
+      on-false: [skip-attack]
+    produces-events: [match.hit, match.miss]
+
+  # ============ 攻击消耗 ============
+  - node: attack-consume
+    primitive: resource-consume@v1
+    trigger-on: [match.hit]
+    params:
+      agent-field: "pig.ammo"
+      target-field: "block.hp"
+      amount: 1
+      on-agent-zero: [pig-ammo-exhausted]
+      on-target-zero: [remove-block-from-board, score-plus-10]
+    produces-events: [resource.consumed, resource.agent-zero, resource.target-zero]
+
+  # ============ 小猪回收 ============
+  - node: pig-recycle
+    primitive: entity-lifecycle@v1
+    trigger-on: [track.loop-complete]
+    params:
+      transitions:
+        - { from: active, event: returned, to: returning }
+      transition: returning
+      condition: "pig.ammo > 0"
+      on-success: [bind-to-wait-slot]
+    produces-events: [lifecycle.entered.returning, pool.bound]
+
+  # ============ 小猪耗尽离场 ============
+  - node: pig-exhaust
+    primitive: entity-lifecycle@v1
+    trigger-on: [resource.agent-zero]
+    params:
+      transitions:
+        - { from: active, event: exhausted, to: dead }
+      transition: dead
+      on-success: [release-conveyor-slot, remove-pig]
+    produces-events: [lifecycle.entered.dead]
+
+  # ============ 胜负判定 ============
+  - node: end-check
+    primitive: win-lose-check@v1
+    params:
+      win:
+        - kind: all-cleared
+          collection: blocks
+      lose:
+        - kind: count-falls-below
+          collection: pigs
+          threshold: 1
+      evaluate-on:
+        - board.cell-removed
+        - resource.agent-zero
+    produces-events: [win, lose]
+
+  # ============ 得分系统 ============
+  - node: scoring
+    primitive: score-accum@v1
+    trigger-on: [resource.target-zero]
+    params:
+      score-field: "game.score"
+      rules:
+        - { on: resource.target-zero, delta: 10 }
+    produces-events: [score.updated]
+
+# PRD @constraint → 原语字段的映射（必须全覆盖）
+invariants:
+  - ref: "@constraint(no-auto-aim)"
+    maps-to:
+      node: attack-raycast
+      field: direction.mode
+      expected: normal-to-track
+    description: "攻击必须严格依赖小猪当前所在位置，只能攻击正对方向的第一个目标块"
+
+  - ref: "@constraint(single-target)"
+    maps-to:
+      node: attack-raycast
+      field: stop-on
+      expected: first-hit
+    description: "每次攻击只能处理 1 个目标块"
+
+  - ref: "@constraint(no-penetration)"
+    maps-to:
+      node: attack-raycast
+      invariant: no-penetration
+    description: "小猪不能跳过前方异色块去攻击后方同色块"
+
+  - ref: "@constraint(not-match3)"
+    maps-to:
+      node: attack-raycast
+      field: stop-on
+      expected: first-hit
+    description: "禁止做成三消，必须严格体现位置依赖索敌"
+
+# 识别不到的 PRD 短语
+unmapped:
+  - prd-text: "@ui(hud-timer) 计时器 HUD"
+    reason: "纯 UI 显示，不属于玩法机械"
+  - prd-text: "@ui(start-btn) 开始按钮"
+    reason: "纯 UI 交互入口，由 input.click-start 触发"
+  - prd-text: "@ui(result-title) 结算标题"
+    reason: "纯 UI 显示，不属于玩法机械"
+  - prd-text: "@system(level-manager) 关卡管理"
+    reason: "关卡数据配置，属于 data.yaml 范畴"
+  - prd-text: "战斗反馈动画：攻击弹道、命中闪烁、消除动画、回收动画"
+    reason: "纯视觉反馈，由 scene.yaml 和 CSS animation 处理"
+
+# 用于 Phase 3.5 的模拟剧本
+simulation-scenarios:
+  - name: happy-path-win
+    setup:
+      game:
+        - { id: g1, score: 0, phase: ready, blocksRemaining: 1, alive: true }
+      pigs:
+        - { id: p1, color: red, ammo: 2, t: 0, speed: 0.1667, alive: true, lifecycle: active, onTrack: true, segmentId: top, gridPosition: { row: -1, col: 0 }, waitingSlotId: null }
+      blocks:
+        - { id: b1, row: 0, col: 0, color: red, hp: 1, alive: true }
+    expected-outcome: win
+    max-ticks: 300
+
+  - name: ammo-exhaust-lose
+    setup:
+      game:
+        - { id: g1, score: 0, phase: ready, blocksRemaining: 2, alive: true }
+      pigs:
+        - { id: p1, color: red, ammo: 1, t: 0, speed: 0.1667, alive: true, lifecycle: active, onTrack: true, segmentId: top, gridPosition: { row: -1, col: 0 }, waitingSlotId: null }
+      blocks:
+        - { id: b1, row: 0, col: 0, color: red, hp: 1, alive: true }
+        - { id: b2, row: 0, col: 1, color: red, hp: 1, alive: true }
+    expected-outcome: lose
+    max-ticks: 300
+
+  - name: pig-recycle-reuse
+    setup:
+      game:
+        - { id: g1, score: 0, phase: ready, blocksRemaining: 2, alive: true }
+      pigs:
+        - { id: p1, color: red, ammo: 3, t: 0, speed: 0.1667, alive: true, lifecycle: active, onTrack: true, segmentId: top, gridPosition: { row: -1, col: 0 }, waitingSlotId: null }
+      blocks:
+        - { id: b1, row: 0, col: 0, color: red, hp: 1, alive: true }
+        - { id: b2, row: 0, col: 1, color: red, hp: 1, alive: true }
+    expected-outcome: win
+    max-ticks: 400

@@ -1,0 +1,382 @@
+version: 1
+primitive-catalog-version: 1
+engine: canvas
+
+# External events that can trigger mechanics
+external-events: [input.click-dispatch, input.click-start, input.click-retry, input.click-next, tick]
+
+# Entities identified from PRD
+entities:
+  - id: pig
+    uses: [parametric-track, resource-consume, entity-lifecycle]
+    initial:
+      id: ""
+      color: "red"
+      ammo: 4
+      t: 0
+      speed: 0.1
+      segmentId: null
+      lifecycle: "waiting"
+      onConveyor: false
+      slotIndex: -1
+      gridPosition: { row: -1, col: 0 }
+      lastAttackGrid: null
+      alive: true
+
+  - id: block
+    uses: [grid-board, resource-consume]
+    initial:
+      id: ""
+      color: "red"
+      hp: 1
+      maxHp: 1
+      row: 0
+      col: 0
+      cleared: false
+      alive: true
+
+  - id: wait-slot
+    uses: [slot-pool]
+    initial:
+      capacity: 5
+      slots: []
+
+# Game state
+game-state:
+  score: 0
+  level: 1
+  phase: "ready"
+
+# Primitive DAG nodes
+mechanics:
+  # ============ MOTION: Conveyor Belt ============
+  - node: conveyor-track
+    primitive: parametric-track@v1
+    applies-to: pig
+    params:
+      shape: rect-loop
+      geometry:
+        x: 80
+        y: 80
+        width: 360
+        height: 360
+      grid-projection:
+        rows: 6
+        cols: 6
+        outside-offset: 1
+      segments:
+        - { id: top,    range: [0.0, 0.25] }
+        - { id: right,  range: [0.25, 0.5] }
+        - { id: bottom, range: [0.5, 0.75] }
+        - { id: left,   range: [0.75, 1.0] }
+    produces-events: [track.enter-segment, track.loop-complete]
+
+  # ============ SPATIAL: Board Grid ============
+  - node: board
+    primitive: grid-board@v1
+    params:
+      rows: 6
+      cols: 6
+      cell-fields:
+        - { name: color, type: enum, values: [red, blue, yellow, green] }
+        - { name: hp, type: number }
+        - { name: maxHp, type: number }
+    produces-events: [board.cell-added, board.cell-removed, board.empty]
+
+  # ============ SPATIAL: Position-based Attack ============
+  - node: attack-raycast
+    primitive: ray-cast@v1
+    trigger-on: [track.enter-segment]
+    params:
+      source:
+        from: pig
+      coord-system: grid
+      direction:
+        mode: normal-to-track
+        segment-direction-map:
+          top:    { dx: 0,  dy: 1 }
+          right:  { dx: -1, dy: 0 }
+          bottom: { dx: 0,  dy: -1 }
+          left:   { dx: 1,  dy: 0 }
+      targets:
+        from: blocks
+      stop-on: first-hit
+      max-distance: null
+    produces-events: [ray.hit-candidate, ray.miss]
+
+  # ============ LOGIC: Color Matching ============
+  - node: color-match
+    primitive: predicate-match@v1
+    trigger-on: [ray.hit-candidate]
+    params:
+      left: "pig"
+      right: "hit-candidate[0]"
+      fields: [color]
+      op: eq
+    produces-events: [match.hit, match.miss]
+
+  # ============ LOGIC: Attack Consume ============
+  - node: attack-consume
+    primitive: resource-consume@v1
+    trigger-on: [match.hit]
+    params:
+      agent-field: "pig.ammo"
+      target-field: "block.hp"
+      amount: 1
+      on-agent-zero: [pig-exhausted]
+      on-target-zero: [remove-block, score-plus-10]
+    produces-events: [resource.consumed, resource.agent-zero, resource.target-zero]
+
+  # ============ LIFECYCLE: Wait Slot Pool ============
+  - node: wait-pool
+    primitive: slot-pool@v1
+    trigger-on: [track.loop-complete, input.click-dispatch]
+    params:
+      capacity: 5
+      slot-ids: [slot-0, slot-1, slot-2, slot-3, slot-4]
+      retain-fields: [ammo, color]
+      on-bind: [pig-return-to-slot]
+      on-unbind: [pig-dispatched]
+      on-overflow: []
+    produces-events: [pool.bound, pool.unbound, pool.overflow]
+
+  # ============ LIFECYCLE: Pig Entity Lifecycle ============
+  - node: pig-lifecycle
+    primitive: entity-lifecycle@v1
+    trigger-on: [resource.agent-zero, pool.bound, pool.unbound]
+    applies-to: pig
+    params:
+      transitions:
+        - { from: waiting,   event: dispatched, to: active }
+        - { from: active,    event: exhausted,  to: returning }
+        - { from: active,    event: killed,     to: dead }
+        - { from: returning, event: arrived,    to: waiting }
+      on-enter-active: [add-to-conveyor]
+      on-enter-returning: [remove-from-conveyor, bind-to-slot]
+      on-enter-waiting: [reset-attack-grid]
+      on-enter-dead: [remove-from-conveyor]
+    produces-events: [lifecycle.entered.active, lifecycle.entered.returning, lifecycle.entered.waiting, lifecycle.entered.dead]
+
+  # ============ PROGRESSION: Win/Lose Check ============
+  - node: end-check
+    primitive: win-lose-check@v1
+    params:
+      win:
+        - kind: all-cleared
+          collection: blocks
+      lose:
+        - kind: out-of-resource
+          collection: pigs
+          field: "alive"
+          threshold: 0
+      evaluate-on:
+        - board.cell-removed
+        - resource.agent-zero
+        - tick
+    produces-events: [win, lose]
+
+  # ============ PROGRESSION: Score Accumulation ============
+  - node: scoring
+    primitive: score-accum@v1
+    trigger-on: [resource.target-zero]
+    params:
+      score-field: "game.score"
+      rules:
+        - { on: resource.target-zero, delta: 10 }
+    produces-events: [score.updated]
+
+# DAG Edges (data flow between nodes)
+edges:
+  - from: conveyor-track
+    to: attack-raycast
+    event: track.enter-segment
+    description: "When pig enters new segment, trigger position attack"
+
+  - from: attack-raycast
+    to: color-match
+    event: ray.hit-candidate
+    description: "When ray hits a block, check color match"
+
+  - from: color-match
+    to: attack-consume
+    event: match.hit
+    description: "When colors match, consume resources"
+
+  - from: attack-consume
+    to: pig-lifecycle
+    event: resource.agent-zero
+    description: "When pig ammo is zero, trigger exhausted transition"
+
+  - from: attack-consume
+    to: scoring
+    event: resource.target-zero
+    description: "When block hp is zero, add score"
+
+  - from: attack-consume
+    to: board
+    event: resource.target-zero
+    description: "When block hp is zero, remove from board"
+
+  - from: conveyor-track
+    to: wait-pool
+    event: track.loop-complete
+    description: "When pig completes one loop, bind back to wait slot"
+
+  - from: wait-pool
+    to: pig-lifecycle
+    event: pool.unbound
+    description: "When pig is dispatched from slot, enter active state"
+
+  - from: wait-pool
+    to: pig-lifecycle
+    event: pool.bound
+    description: "When pig returns to slot, enter waiting state"
+
+  - from: board
+    to: end-check
+    event: board.cell-removed
+    description: "Check win condition when block is removed"
+
+  - from: pig-lifecycle
+    to: end-check
+    event: lifecycle.entered.dead
+    description: "Check lose condition when pig dies"
+
+# PRD @constraint -> primitive field mappings
+invariants:
+  - ref: "@constraint(no-global-autoaim)"
+    maps-to:
+      node: attack-raycast
+      field: direction.mode
+      expected: normal-to-track
+    description: "Attack direction is determined by current track segment, not global search"
+
+  - ref: "@constraint(no-multi-attack)"
+    maps-to:
+      node: attack-raycast
+      field: stop-on
+      expected: first-hit
+    description: "Only attack one block at a time"
+
+  - ref: "@constraint(no-pierce-attack)"
+    maps-to:
+      node: attack-raycast
+      invariant: no-penetration
+    description: "Cannot skip blocks to attack farther ones"
+
+  - ref: "@constraint(conveyor-required)"
+    maps-to:
+      node: conveyor-track
+      field: shape
+      expected: rect-loop
+    description: "Pigs must move on rect-loop conveyor around board"
+
+  - ref: "@constraint(slot-recycle-required)"
+    maps-to:
+      node: wait-pool
+      field: capacity
+      expected: 5
+    description: "Wait slots must exist for pig recycling"
+
+# PRD rules that don't map to Stage 1 primitives
+unmapped:
+  - prd-text: "关卡递进（2色→3色→4色）"
+    reason: "Level progression is a meta-feature; not a core mechanic primitive. Handled by game orchestrator, not mechanics DAG."
+
+  - prd-text: "锁定块（需先清除外层）"
+    reason: "Nice-to-have feature not in MVP scope; would require additional layer/protection primitive not in Stage 1 catalog."
+
+  - prd-text: "传送带容量限制"
+    reason: "Nice-to-have feature; capacity-gate@v1 could be added but not required for MVP. Current design allows unlimited pigs on conveyor."
+
+  - prd-text: "攻击动画粒子效果"
+    reason: "Visual effect only, not gameplay mechanic. Handled by renderer/sfx layer."
+
+  - prd-text: "音效"
+    reason: "Audio feedback, not gameplay mechanic. Excluded from MVP per PRD."
+
+# Simulation scenarios for Phase 3.5 verification
+simulation-scenarios:
+  - name: happy-path-win
+    description: "Pig matches color, clears all blocks, wins"
+    setup:
+      pigs:
+        - { id: p1, color: red, ammo: 4, t: 0, speed: 0.25, segmentId: null, lifecycle: waiting, onConveyor: false, slotIndex: 0, gridPosition: { row: -1, col: 0 }, lastAttackGrid: null, alive: true }
+        - { id: p2, color: red, ammo: 4, t: 0, speed: 0.25, segmentId: null, lifecycle: waiting, onConveyor: false, slotIndex: 1, gridPosition: { row: -1, col: 0 }, lastAttackGrid: null, alive: true }
+      blocks:
+        - { id: b1, color: red, hp: 1, maxHp: 1, row: 0, col: 0, cleared: false, alive: true }
+        - { id: b2, color: red, hp: 1, maxHp: 1, row: 0, col: 1, cleared: false, alive: true }
+        - { id: b3, color: red, hp: 1, maxHp: 1, row: 1, col: 0, cleared: false, alive: true }
+        - { id: b4, color: red, hp: 1, maxHp: 1, row: 1, col: 1, cleared: false, alive: true }
+      wait-pool:
+        - capacity: 5
+        - slots:
+          - { id: slot-0, occupantId: p1 }
+          - { id: slot-1, occupantId: p2 }
+          - { id: slot-2, occupantId: null }
+          - { id: slot-3, occupantId: null }
+          - { id: slot-4, occupantId: null }
+      game:
+        - { score: 0 }
+        - { level: 1 }
+        - { phase: playing }
+    actions:
+      - { type: dispatch, pig: p1 }
+      - { type: tick, count: 50 }
+      - { type: dispatch, pig: p2 }
+      - { type: tick, count: 50 }
+    expected-outcome: win
+    max-ticks: 200
+
+  - name: color-mismatch-no-attack
+    description: "Pig does not attack different color block"
+    setup:
+      pigs:
+        - { id: p1, color: red, ammo: 1, t: 0, speed: 0.25, segmentId: null, lifecycle: waiting, onConveyor: false, slotIndex: 0, gridPosition: { row: -1, col: 0 }, lastAttackGrid: null, alive: true }
+      blocks:
+        - { id: b1, color: blue, hp: 1, maxHp: 1, row: 0, col: 0, cleared: false, alive: true }
+      wait-pool:
+        - capacity: 5
+        - slots:
+          - { id: slot-0, occupantId: p1 }
+          - { id: slot-1, occupantId: null }
+          - { id: slot-2, occupantId: null }
+          - { id: slot-3, occupantId: null }
+          - { id: slot-4, occupantId: null }
+      game:
+        - { score: 0 }
+        - { level: 1 }
+        - { phase: playing }
+    actions:
+      - { type: dispatch, pig: p1 }
+      - { type: tick, count: 60 }
+    expected-outcome: lose
+    max-ticks: 100
+
+  - name: pig-recycle-to-slot
+    description: "Pig with remaining ammo returns to wait slot after one loop"
+    setup:
+      pigs:
+        - { id: p1, color: red, ammo: 5, t: 0, speed: 0.5, segmentId: null, lifecycle: waiting, onConveyor: false, slotIndex: 0, gridPosition: { row: -1, col: 0 }, lastAttackGrid: null, alive: true }
+      blocks:
+        - { id: b1, color: blue, hp: 1, maxHp: 1, row: 0, col: 0, cleared: false, alive: true }
+      wait-pool:
+        - capacity: 5
+        - slots:
+          - { id: slot-0, occupantId: p1 }
+          - { id: slot-1, occupantId: null }
+          - { id: slot-2, occupantId: null }
+          - { id: slot-3, occupantId: null }
+          - { id: slot-4, occupantId: null }
+      game:
+        - { score: 0 }
+        - { level: 1 }
+        - { phase: playing }
+    actions:
+      - { type: dispatch, pig: p1 }
+      - { type: tick, count: 10 }
+    expected-pig-state:
+      pig: p1
+      lifecycle: waiting
+      ammo: 5
+    max-ticks: 50

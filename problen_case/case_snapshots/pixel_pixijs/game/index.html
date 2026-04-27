@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<!-- ENGINE: pixijs | VERSION: pixi.js@8 | RUN: local-http -->
+<meta charset="UTF-8">
+<title>Pixel Flow - 像素传送带清板</title>
+<style>
+  body {
+    margin: 0;
+    background: #1a1a2e;
+    color: #e2e8f0;
+    font-family: "Press Start 2P", system-ui, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  #root canvas {
+    border-radius: 0;
+    box-shadow: 2px 2px 0 #000;
+  }
+</style>
+
+<!-- importmap must be in head before the module script that uses it -->
+<script type="importmap">
+{
+  "imports": {
+    "pixi.js": "https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.mjs"
+  }
+}
+</script>
+
+<!-- Google Fonts: Press Start 2P -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "project": "pixel_phaser",
+  "createdAt": "2026-04-27T09:03:24.017Z",
+  "updatedAt": "2026-04-27T09:59:31.875Z",
+  "currentPhase": "verify",
+  "phases": {
+    "understand": {
+      "status": "completed",
+      "finishedAt": "2026-04-27T09:08:09.029Z"
+    },
+    "prd": {
+      "status": "completed",
+      "finishedAt": "2026-04-27T09:13:19.930Z"
+    },
+    "expand": {
+      "status": "completed",
+      "subtasks": {
+        "mechanics": {
+          "status": "completed",
+          "finishedAt": "2026-04-27T09:17:30.654Z",
+          "output": "specs/.pending/mechanics.yaml"
+        },
+        "scene": {
+          "status": "completed",
+          "finishedAt": "2026-04-27T09:20:30.346Z",
+          "output": "specs/.pending/scene.yaml"
+        },
+        "rule": {
+          "status": "completed",
+          "finishedAt": "2026-04-27T09:20:30.347Z",
+          "output": "specs/.pending/rule.yaml"
+        },
+        "data": {
+          "status": "completed",
+          "finishedAt": "2026-04-27T09:20:30.347Z",
+          "output": "specs/.pending/data.yaml"
+        },
+        "assets": {
+          "status": "completed",
+          "finishedAt": "2026-04-27T09:20:30.347Z",
+          "output": "specs/.pending/assets.yaml"
+        },
+        "event-graph": {
+          "status": "completed",
+          "finishedAt": "2026-04-27T09:20:30.347Z",
+          "output": "specs/.pending/event-graph.yaml"
+        },
+        "implementation-contract": {
+          "status": "completed",
+          "finishedAt": "2026-04-27T09:20:41.860Z",
+          "output": "specs/.pending/implementation-contract.yaml"
+        }
+      },
+      "startedAt": "2026-04-27T09:14:21.369Z",
+      "attempts": 1,
+      "finishedAt": "2026-04-27T09:34:45.849Z",
+      "outputs": [
+        "specs/mechanics.yaml",
+        "specs/scene.yaml",
+        "specs/rule.yaml",
+        "specs/data.yaml",
+        "specs/assets.yaml",
+        "specs/event-graph.yaml",
+        "specs/implementation-contract.yaml"
+      ]
+    },
+    "codegen": {
+      "status": "completed",
+      "finishedAt": "2026-04-27T09:59:31.874Z"
+    },
+    "verify": {
+      "status": "pending",
+      "profileSha": "adbfbdf8058644606927324aaed796784f0e16e576cf92dc762681c498b729ea",
+      "profilePath": "/Users/bytedance/Project/game_skill/game_skill/skills/scripts/profiles/pixel_phaser.json"
+    },
+    "specClarify": {
+      "status": "completed",
+      "finishedAt": "2026-04-27T09:14:09.060Z"
+    }
+  },
+  "runtime": "phaser3",
+  "prd": {
+    "runtime": "phaser3"
+  },
+  "codegen": {
+    "runtime": "phaser3"
+  }
+}

@@ -1,0 +1,328 @@
+# gameState 初始值定义（codegen 必须完整搬入，不得遗漏字段）
+initial-state:
+  # 场景与阶段
+  currentScene: "start"
+  phase: "ready"           # ready | playing | win | lose
+
+  # 关卡信息
+  level: 1
+  score: 0
+
+  # 棋盘状态
+  board:
+    rows: 6
+    cols: 6
+    blocks: []              # @entity(block) 数组
+
+  # 传送带状态
+  conveyor:
+    pigs: []                # 当前在传送带上的小猪数组
+    capacity: 4             # 传送带容量上限
+    entryX: 0               # 入口 X 坐标
+    entryY: 0               # 入口 Y 坐标
+    speed: 2                # 移动速度（像素/帧）
+
+  # 等待槽状态
+  waitSlots:
+    slots: []               # 槽位数组，每个槽位可放置一只小猪或为 null
+    maxSlots: 5             # 槽位数量
+
+  # 可用小猪池（未派出的）
+  availablePigs: []         # 待分配到等待槽的小猪
+
+  # 统计信息
+  totalBlocks: 0            # 目标块总数
+  clearedBlocks: 0          # 已清除目标块数
+  dispatchedPigs: 0         # 已派出小猪数
+  expiredPigs: 0            # 已耗尽小猪数
+
+  # 游戏循环控制
+  isRunning: false          # 游戏循环是否运行
+  isProcessing: false       # 异步锁（防止重复操作）
+  lastFrameTime: 0          # 上一帧时间戳
+
+  # 颜色配置引用
+  colorPalette:
+    red: "#ef4444"
+    blue: "#3b82f6"
+    yellow: "#eab308"
+    green: "#22c55e"
+
+# 资源数据
+resources:
+  # 颜色配置
+  - id: color-palette
+    type: config
+    source: inline
+    schema:
+      red: string
+      blue: string
+      yellow: string
+      green: string
+    examples:
+      - { red: "#ef4444", blue: "#3b82f6", yellow: "#eab308", green: "#22c55e" }
+      - { red: "#ff6b6b", blue: "#4ecdc4", yellow: "#ffe66d", green: "#95e1d3" }
+      - { red: "#e74c3c", blue: "#3498db", yellow: "#f1c40f", green: "#2ecc71" }
+
+  # 关卡配置
+  - id: level-configs
+    type: config
+    source: inline
+    schema:
+      level: number
+      difficulty: string
+      colors: array           # 可用颜色列表
+      boardSize: string       # "WxH" 格式
+      rows: number
+      cols: number
+      pigCount: number        # 小猪总数
+      pigsPerColor: number    # 每种颜色的小猪数
+      pigAmmo: number         # 每只小猪的弹药量
+      blockCount: number      # 目标块总数
+      blockHp: number         # 目标块默认血量
+      blockLayout: array      # 目标块布局配置
+    examples:
+      # Level 1: 2色, 6x6, 8只小猪
+      - level: 1
+        difficulty: "easy"
+        colors: ["red", "blue"]
+        boardSize: "6x6"
+        rows: 6
+        cols: 6
+        pigCount: 8
+        pigsPerColor: 4
+        pigAmmo: 2
+        blockCount: 12
+        blockHp: 1
+        blockLayout:
+          # 每个 block 配置: { row, col, color, hp }
+          - { row: 0, col: 1, color: "red", hp: 1 }
+          - { row: 0, col: 4, color: "blue", hp: 1 }
+          - { row: 1, col: 0, color: "red", hp: 1 }
+          - { row: 1, col: 2, color: "blue", hp: 1 }
+          - { row: 2, col: 3, color: "red", hp: 1 }
+          - { row: 2, col: 5, color: "blue", hp: 1 }
+          - { row: 3, col: 1, color: "red", hp: 1 }
+          - { row: 3, col: 4, color: "blue", hp: 1 }
+          - { row: 4, col: 0, color: "red", hp: 1 }
+          - { row: 4, col: 2, color: "blue", hp: 1 }
+          - { row: 5, col: 3, color: "red", hp: 1 }
+          - { row: 5, col: 5, color: "blue", hp: 1 }
+
+      # Level 2: 3色, 6x6, 12只小猪
+      - level: 2
+        difficulty: "medium"
+        colors: ["red", "blue", "yellow"]
+        boardSize: "6x6"
+        rows: 6
+        cols: 6
+        pigCount: 12
+        pigsPerColor: 4
+        pigAmmo: 2
+        blockCount: 18
+        blockHp: 1
+        blockLayout:
+          - { row: 0, col: 0, color: "red", hp: 1 }
+          - { row: 0, col: 2, color: "blue", hp: 1 }
+          - { row: 0, col: 4, color: "yellow", hp: 1 }
+          - { row: 1, col: 1, color: "red", hp: 1 }
+          - { row: 1, col: 3, color: "blue", hp: 1 }
+          - { row: 1, col: 5, color: "yellow", hp: 1 }
+          - { row: 2, col: 0, color: "yellow", hp: 1 }
+          - { row: 2, col: 2, color: "red", hp: 1 }
+          - { row: 2, col: 4, color: "blue", hp: 1 }
+          - { row: 3, col: 1, color: "blue", hp: 1 }
+          - { row: 3, col: 3, color: "yellow", hp: 1 }
+          - { row: 3, col: 5, color: "red", hp: 1 }
+          - { row: 4, col: 0, color: "red", hp: 1 }
+          - { row: 4, col: 2, color: "blue", hp: 1 }
+          - { row: 4, col: 4, color: "yellow", hp: 1 }
+          - { row: 5, col: 1, color: "yellow", hp: 1 }
+          - { row: 5, col: 3, color: "red", hp: 1 }
+          - { row: 5, col: 5, color: "blue", hp: 1 }
+
+      # Level 3: 4色, 7x7, 16只小猪
+      - level: 3
+        difficulty: "hard"
+        colors: ["red", "blue", "yellow", "green"]
+        boardSize: "7x7"
+        rows: 7
+        cols: 7
+        pigCount: 16
+        pigsPerColor: 4
+        pigAmmo: 2
+        blockCount: 24
+        blockHp: 1
+        blockLayout:
+          - { row: 0, col: 1, color: "red", hp: 1 }
+          - { row: 0, col: 3, color: "blue", hp: 1 }
+          - { row: 0, col: 5, color: "yellow", hp: 1 }
+          - { row: 1, col: 0, color: "green", hp: 1 }
+          - { row: 1, col: 2, color: "red", hp: 1 }
+          - { row: 1, col: 4, color: "blue", hp: 1 }
+          - { row: 1, col: 6, color: "yellow", hp: 1 }
+          - { row: 2, col: 1, color: "green", hp: 1 }
+          - { row: 2, col: 3, color: "red", hp: 1 }
+          - { row: 2, col: 5, color: "blue", hp: 1 }
+          - { row: 3, col: 0, color: "yellow", hp: 1 }
+          - { row: 3, col: 2, color: "green", hp: 1 }
+          - { row: 3, col: 4, color: "red", hp: 1 }
+          - { row: 3, col: 6, color: "blue", hp: 1 }
+          - { row: 4, col: 1, color: "yellow", hp: 1 }
+          - { row: 4, col: 3, color: "green", hp: 1 }
+          - { row: 4, col: 5, color: "red", hp: 1 }
+          - { row: 5, col: 0, color: "blue", hp: 1 }
+          - { row: 5, col: 2, color: "yellow", hp: 1 }
+          - { row: 5, col: 4, color: "green", hp: 1 }
+          - { row: 5, col: 6, color: "red", hp: 1 }
+          - { row: 6, col: 1, color: "blue", hp: 1 }
+          - { row: 6, col: 3, color: "yellow", hp: 1 }
+          - { row: 6, col: 5, color: "green", hp: 1 }
+
+# 数值平衡校验（codegen 阶段和 verify 阶段都必须检查）
+balance-check:
+  # 通用公式：supply >= demand，否则关卡不可通关
+  # supply = 小猪总数 × 每只小猪弹药量
+  # demand = 目标块总数 × 每块血量
+  levels:
+    - id: level-1
+      supply:
+        description: "8 只小猪 × 每只 2 次攻击 = 16 次总攻击"
+        formula: "pigCount * pigAmmo"
+        value: 16
+      demand:
+        description: "12 个目标块 × 每块 1 血 = 12 次总消耗"
+        formula: "blockCount * blockHp"
+        value: 12
+      margin:
+        description: "容错余量"
+        formula: "(supply - demand) / demand * 100%"
+        value: "33.3%"
+      verdict: "PASS: supply(16) >= demand(12)，容错余量 33.3%"
+      analysis:
+        - "玩家有 4 次额外攻击机会用于策略调整"
+        - "颜色匹配机制要求玩家合理分配小猪"
+        - "每色 4 只小猪，需覆盖对应颜色目标块"
+
+    - id: level-2
+      supply:
+        description: "12 只小猪 × 每只 2 次攻击 = 24 次总攻击"
+        formula: "pigCount * pigAmmo"
+        value: 24
+      demand:
+        description: "18 个目标块 × 每块 1 血 = 18 次总消耗"
+        formula: "blockCount * blockHp"
+        value: 18
+      margin:
+        description: "容错余量"
+        formula: "(supply - demand) / demand * 100%"
+        value: "33.3%"
+      verdict: "PASS: supply(24) >= demand(18)，容错余量 33.3%"
+      analysis:
+        - "3 种颜色增加匹配难度"
+        - "每色 4 只小猪，目标块分布更复杂"
+        - "需要更精确的颜色分配策略"
+
+    - id: level-3
+      supply:
+        description: "16 只小猪 × 每只 2 次攻击 = 32 次总攻击"
+        formula: "pigCount * pigAmmo"
+        value: 32
+      demand:
+        description: "24 个目标块 × 每块 1 血 = 24 次总消耗"
+        formula: "blockCount * blockHp"
+        value: 24
+      margin:
+        description: "容错余量"
+        formula: "(supply - demand) / demand * 100%"
+        value: "33.3%"
+      verdict: "PASS: supply(32) >= demand(24)，容错余量 33.3%"
+      analysis:
+        - "4 种颜色 + 7x7 棋盘增加复杂度"
+        - "传送带路径更长，判定点更多"
+        - "每色 4 只小猪，需要最优路径规划"
+        - "回收机制的重要性提升"
+
+# 实体模板（用于动态生成）
+entity-templates:
+  pig:
+    id: ""                  # 自动生成
+    color: ""               # red | blue | yellow | green
+    ammo: 2                 # 剩余弹药量
+    x: 0                    # 传送带上的像素位置 X
+    y: 0                    # 传送带上的像素位置 Y
+    row: -1                 # 当前对应的棋盘行（-1 表示不在棋盘边缘）
+    col: -1                 # 当前对应的棋盘列
+    direction: "top"        # 移动方向：top | right | bottom | left
+    onConveyor: false       # 是否在传送带上
+    slotIndex: -1           # 在等待槽中的位置（-1 表示不在槽中）
+    lastAttackGrid: null    # 上次攻击的格子位置，避免重复攻击
+
+  block:
+    id: ""                  # 自动生成
+    color: ""               # red | blue | yellow | green
+    hp: 1                   # 当前耐久
+    maxHp: 1                # 最大耐久
+    row: 0                  # 棋盘行
+    col: 0                  # 棋盘列
+    cleared: false          # 是否已被消除
+
+# 传送带配置
+conveyor-config:
+  # 传送带路径定义（相对于棋盘的四条边）
+  # 小猪从左上角入口进入，沿顺时针方向移动
+  segments:
+    - direction: "top"      # 上边，从左往右
+      startCorner: "top-left"
+      endCorner: "top-right"
+    - direction: "right"    # 右边，从上往下
+      startCorner: "top-right"
+      endCorner: "bottom-right"
+    - direction: "bottom"   # 下边，从右往左
+      startCorner: "bottom-right"
+      endCorner: "bottom-left"
+    - direction: "left"     # 左边，从下往上
+      startCorner: "bottom-left"
+      endCorner: "top-left"
+
+  # 判定点配置
+  # Spec澄清：小猪移动到与棋盘每一行/列对齐的位置时触发攻击判定
+  attack-triggers:
+    - segment: "top"
+      alignment: "col"      # 与列对齐时触发
+      positions: "all"      # 所有格子位置
+    - segment: "right"
+      alignment: "row"
+      positions: "all"
+    - segment: "bottom"
+      alignment: "col"
+      positions: "all"
+    - segment: "left"
+      alignment: "row"
+      positions: "all"
+
+  # 回收判定点（回到入口位置）
+  recycle-point:
+    description: "小猪回到入口位置时判定一圈完成"
+    position: "entry"
+
+# 等待槽配置
+wait-slot-config:
+  maxSlots: 5
+  layout: "horizontal"      # 水平排列
+  position: "bottom"        # 底部
+
+# 颜色映射（用于渲染）
+color-mapping:
+  red:
+    hex: "#ef4444"
+    label: "红色"
+  blue:
+    hex: "#3b82f6"
+    label: "蓝色"
+  yellow:
+    hex: "#eab308"
+    label: "黄色"
+  green:
+    hex: "#22c55e"
+    label: "绿色"

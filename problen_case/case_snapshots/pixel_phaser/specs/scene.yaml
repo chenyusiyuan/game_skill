@@ -1,0 +1,133 @@
+scenes:
+  - id: start
+    layout:
+      viewport: "full"
+      board-bbox: "none"
+      hud-bbox: "none"
+      safe-area: { x: "10%", y: "10%", width: "80%", height: "80%" }
+      preset: center-stack
+    zones:
+      - id: title-area
+        shape: rect
+        geometry: { x: "50%", y: "25%", width: "80%", height: "auto" }
+      - id: start-btn
+        shape: rect
+        geometry: { x: "50%", y: "55%", width: 200, height: 60 }
+      - id: level-select
+        shape: rect
+        geometry: { x: "50%", y: "75%", width: "60%", height: "auto" }
+    ui-slots:
+      - { id: title, position: center, binds: "config.title" }
+      - { id: start-btn, position: center, binds: "@ui(start-btn)" }
+      - { id: level-select, position: center, binds: "@ui(level-select)" }
+    state-on-enter: idle
+    enter-transition:
+      type: fade-in
+      duration: 400
+    exit-transition:
+      type: fade-out
+      duration: 300
+    enter-sequence:
+      - { target: title-area, delay: 0, animation: "scale-bounce" }
+      - { target: start-btn, delay: 200, animation: "fade-slide-up" }
+      - { target: level-select, delay: 400, animation: "fade-in" }
+
+  - id: play
+    layout:
+      viewport: "full"
+      board-bbox: { x: "10%", y: "15%", width: "80%", height: "60%" }
+      hud-bbox: { x: 0, y: 0, width: "100%", height: "10%" }
+      safe-area: { x: "2%", y: "2%", width: "96%", height: "96%" }
+      preset: vertical-three-zone
+    zones:
+      - id: hud-area
+        shape: rect
+        geometry: { x: "50%", y: "5%", width: "96%", height: "8%" }
+      - id: board
+        shape: rect
+        geometry: { x: "50%", y: "45%", width: "80%", height: "55%" }
+      - id: conveyor
+        shape: surround
+        geometry: { x: "50%", y: "45%", width: "85%", height: "60%" }
+      - id: waiting-slots
+        shape: rect
+        geometry: { x: "50%", y: "90%", width: "80%", height: "12%" }
+    ui-slots:
+      - { id: hud-level, position: top-left, binds: "state.level" }
+      - { id: hud-score, position: top-right, binds: "state.score" }
+      - { id: board, position: center, binds: "@ui(board)" }
+      - { id: conveyor, position: surround-board, binds: "@ui(conveyor)" }
+      - { id: waiting-slots, position: bottom, binds: "@ui(waiting-slots)" }
+    state-on-enter: ready
+    enter-transition:
+      type: fade-in
+      duration: 300
+    exit-transition:
+      type: fade-out
+      duration: 300
+    enter-sequence:
+      - { target: hud-area, delay: 0, animation: "fade-in" }
+      - { target: board, delay: 100, animation: "fade-in" }
+      - { target: conveyor, delay: 150, animation: "fade-in" }
+      - { target: waiting-slots, delay: 200, animation: "stagger-fade-up" }
+
+  - id: result
+    layout:
+      viewport: "full"
+      board-bbox: "none"
+      hud-bbox: "none"
+      safe-area: { x: "10%", y: "20%", width: "80%", height: "60%" }
+      preset: center-stack
+    zones:
+      - id: result-panel
+        shape: rect
+        geometry: { x: "50%", y: "40%", width: "70%", height: "auto" }
+      - id: retry-btn
+        shape: rect
+        geometry: { x: "35%", y: "75%", width: 120, height: 50 }
+      - id: next-btn
+        shape: rect
+        geometry: { x: "65%", y: "75%", width: 120, height: 50 }
+    ui-slots:
+      - { id: result-title, position: center-top, binds: "state.isWin ? 'Victory!' : 'Game Over'" }
+      - { id: final-score, position: center, binds: "state.score" }
+      - { id: retry-btn, position: bottom-left, binds: "@ui(retry-btn)" }
+      - { id: next-btn, position: bottom-right, binds: "@ui(next-btn)" }
+    state-on-enter: idle
+    enter-transition:
+      type: zoom-in
+      duration: 500
+    exit-transition:
+      type: fade-out
+      duration: 300
+    enter-sequence:
+      - { target: result-panel, delay: 0, animation: "scale-bounce" }
+      - { target: result-title, delay: 200, animation: "fade-in" }
+      - { target: final-score, delay: 400, animation: "count-up" }
+      - { target: retry-btn, delay: 600, animation: "fade-slide-up" }
+      - { target: next-btn, delay: 700, animation: "fade-slide-up" }
+
+boot-contract:
+  entry-scene: start
+  ready-condition: "window.gameState.phase === 'ready'"
+  start-action:
+    trigger: click
+    target: start-btn
+    result: "phase -> playing; scene -> play"
+  scene-transitions:
+    - from: start
+      to: play
+      trigger: "click start-btn"
+      guard: "phase === 'ready'"
+    - from: play
+      to: result
+      trigger: "phase === 'win' || phase === 'lose'"
+      guard: null
+    - from: result
+      to: play
+      trigger: "click retry-btn"
+      guard: null
+    - from: result
+      to: play
+      trigger: "click next-btn"
+      guard: "state.isWin === true"

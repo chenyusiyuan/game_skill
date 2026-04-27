@@ -1,0 +1,136 @@
+{
+  "case_id": "pixel_dom_ui-001",
+  "description": "Pixel Flow - DOM UI playthrough profile",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 10000,
+  "prd_hash": "127f28cb5b4efdc2c349f5ad990fac8ee85656fe",
+  "prd_path": "cases/pixel_dom_ui/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "playable-loop",
+      "check_id": "playable-loop",
+      "kind": "interaction",
+      "description": "主循环可玩",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "selector": "[data-action='dispatch']" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "position-attack",
+      "check_id": "position-attack",
+      "kind": "interaction",
+      "description": "位置索敌验证",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "selector": "[data-action='dispatch']" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "waiting-slot-recycle",
+      "check_id": "waiting-slot-recycle",
+      "kind": "interaction",
+      "description": "等待槽回收验证",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "selector": "[data-action='dispatch']" },
+        { "action": "wait", "ms": 5000 }
+      ]
+    },
+    {
+      "id": "win-condition",
+      "check_id": "win-condition",
+      "kind": "interaction",
+      "description": "胜利条件验证",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 800 }
+      ]
+    },
+    {
+      "id": "lose-condition",
+      "check_id": "lose-condition",
+      "kind": "interaction",
+      "description": "失败条件验证",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 800 }
+      ]
+    },
+    {
+      "id": "level-progression",
+      "check_id": "level-progression",
+      "kind": "interaction",
+      "description": "关卡递进验证",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 800 }
+      ]
+    }
+  ],
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-no-global-autoaim",
+      "hard_rule_id": "no-global-autoaim",
+      "kind": "hard-rule",
+      "description": "禁止全屏自动索敌",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "selector": "[data-action='dispatch']" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "hard-rule-no-multi-attack",
+      "hard_rule_id": "no-multi-attack",
+      "kind": "hard-rule",
+      "description": "禁止单次攻击多块",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "selector": "[data-action='dispatch']" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "hard-rule-no-penetration",
+      "hard_rule_id": "no-penetration",
+      "kind": "hard-rule",
+      "description": "禁止穿透攻击",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "selector": "[data-action='dispatch']" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    },
+    {
+      "id": "hard-rule-core-mechanics",
+      "hard_rule_id": "core-mechanics",
+      "kind": "hard-rule",
+      "description": "核心机制完整性",
+      "setup": [
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "#btn-start" },
+        { "action": "wait", "ms": 800 },
+        { "action": "click", "selector": "[data-action='dispatch']" },
+        { "action": "wait", "ms": 3000 }
+      ]
+    }
+  ]
+}
