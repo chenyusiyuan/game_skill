@@ -433,7 +433,22 @@ asset-style: pixel-retro            # 从 palette-id 映射得到，用于匹配
 # 如果 @entity/@ui 的语义是 色块/方块/目标块/color block，且玩法依赖 color 字段，
 # 不要绑定具象 local-file 素材。应使用 generated/graphics-generated，并显式声明：
 #   visual-primitive: color-block
+#   color-source:    entity.color     # 颜色来自绑定实体的字段
 # codegen 将用 PRD color-scheme 的色值画纯色格子、描边和耐久角标。
+#
+# ── visual-primitive 规则（P0.4 硬门禁）──
+# binding-to 落在 asset-strategy.visual-core-entities 的视觉 asset 必须声明 visual-primitive，
+# 值必须 ∈ 下面枚举；错写（如 btn / color_block）会被 check_asset_selection.js 直接 fail：
+#   color-block / color-unit / colorable-token   —— 颜色来自玩法字段的抽象色块 / 单位 / 令牌
+#   ui-button / ui-panel / ui-readout / ui-text-surface  —— UI 控件与文字承载面
+#   background / grid / track / track-segment   —— 场景结构
+#   icon / terrain-cell / decorative            —— 图标/地格/装饰
+#
+# color-source 字段（visual-primitive ∈ {color-block, color-unit, colorable-token} 时必填）：
+#   entity.<field>    —— 从绑定实体的某个字段取色，如 entity.color
+#   palette.<name>    —— 从调色板命名色，如 palette.primary
+#   #rrggbb / rgb(..) —— 字面色值
+# 这条约束保证 "同一个实体的颜色" 在 color-scheme / entity 字段 / asset 渲染之间有唯一真相源。
 
 # ── 图片资源 ──
 images:
@@ -458,7 +473,15 @@ images:
     type: generated
     binding-to: block
     visual-primitive: color-block
+    color-source: entity.color                 # 色值来自 @entity(block).color
     usage: "红色目标色块（纯色格子，不绑定具象素材）"
+  - id: pig-red
+    source: assets/library_2d/ui-pixel/tile_0013.png
+    type: local-file
+    binding-to: pig
+    visual-primitive: color-unit               # 小猪是"颜色单位"，本身有造型但颜色由字段决定
+    color-source: entity.color                 # codegen 将用 tint/overlay 按 pig.color 染色
+    usage: "小猪单位（本地素材 + 动态上色）"
   # 本地素材不足时，用 inline-svg 或 graphics-generated 补充
   - id: custom-bg
     source: inline-svg

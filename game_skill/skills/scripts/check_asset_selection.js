@@ -28,6 +28,14 @@ import { readFileSync, existsSync } from "fs";
 import { basename, resolve, dirname, join } from "path";
 import { fileURLToPath } from "url";
 import yaml from "js-yaml";
+import {
+  VISUAL_PRIMITIVE_ENUM,
+  isValidVisualPrimitive,
+  requiresColorSource,
+  requiresGeneratedType,
+  isGeneratedType,
+  isValidColorSource,
+} from "./_visual_primitive_enum.js";
 import { createLogger, parseLogArg } from "./_logger.js";
 import { readAssetStrategy, packCoherenceThreshold } from "./_asset_strategy.js";
 
@@ -201,6 +209,38 @@ for (const sec of sections) {
 
     if (bindingTo && bindingTo !== "decor" && prdEntityUiIds.size > 0 && !prdEntityUiIds.has(String(bindingTo))) {
       fail(`[${sec}.${id}] binding-to="${bindingTo}" 在 PRD 的 @entity/@ui 里不存在；合法值（节选）: ${[...prdEntityUiIds].slice(0, 8).join(", ")}...`);
+    }
+
+    // P0.4: visual-primitive 通用校验（images/spritesheets 才有视觉语义）
+    if (["images", "spritesheets"].includes(sec)) {
+      const vpRaw = item["visual-primitive"];
+      const hasVp = vpRaw !== undefined && vpRaw !== null && vpRaw !== "";
+      const bindingIsCore = bindingTo && coreEntityIds.has(String(bindingTo));
+
+      // (1) 值若声明，必须 ∈ enum（防御错写 btn / color_block 等）
+      if (hasVp && !isValidVisualPrimitive(String(vpRaw))) {
+        fail(`[${sec}.${id}] visual-primitive="${vpRaw}" 不在合法枚举内；合法值: ${VISUAL_PRIMITIVE_ENUM.join(", ")}`);
+      }
+
+      // (2) core entity 绑定必须有 visual-primitive
+      if (bindingIsCore && !hasVp) {
+        fail(`[${sec}.${id}] binding-to="${bindingTo}" 是 visual-core-entities；必须声明 visual-primitive（合法值: ${VISUAL_PRIMITIVE_ENUM.join(", ")}）`);
+      }
+
+      // (3) 需要 color-source 的 slot 必须声明 color-source
+      if (hasVp && requiresColorSource(String(vpRaw))) {
+        const cs = item["color-source"];
+        if (!cs) {
+          fail(`[${sec}.${id}] visual-primitive="${vpRaw}" 要求声明 color-source（允许: entity.<field> / palette.<name> / #rrggbb / rgb(...)）`);
+        } else if (!isValidColorSource(String(cs))) {
+          fail(`[${sec}.${id}] color-source="${cs}" 格式不合法；允许: entity.<field> / palette.<name> / #rrggbb / rgb(...)`);
+        }
+      }
+
+      // (4) 强制程序化 slot（当前只 color-block）必须 type 为 generated/inline-svg/synthesized
+      if (hasVp && requiresGeneratedType(String(vpRaw)) && !isGeneratedType(type)) {
+        fail(`[${sec}.${id}] visual-primitive="${vpRaw}" 必须使用程序化 type（graphics-generated / inline-svg / synthesized），当前 type="${type}"`);
+      }
     }
 
     if (["images", "spritesheets"].includes(sec) && isColorBlockSemantic({ id, item, bindingTo, colorPrimitiveIds })) {

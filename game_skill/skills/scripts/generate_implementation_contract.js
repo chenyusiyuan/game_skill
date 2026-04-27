@@ -126,6 +126,8 @@ function collectAssetBindings(spec, strategy) {
   const out = [];
   // generated-only 模式下，生成类型也可以 must-render=true（只要 binding-to 指向 core-entity）
   const allowGeneratedMustRender = strategy?.mode === "generated-only";
+  const coreEntityIds = new Set(strategy?.["visual-core-entities"] ?? []);
+  const DECORATIVE_ROLES = new Set(["particle", "hud-indicator", "decorative"]);
   for (const section of ["images", "spritesheets", "audio", "fonts"]) {
     const list = Array.isArray(spec[section]) ? spec[section] : [];
     for (const item of list) {
@@ -135,18 +137,27 @@ function collectAssetBindings(spec, strategy) {
       const type = normalizeType(item.type, source, section);
       let role = inferRole({ id, usage: item.usage, source, section });
       const visualPrimitive = item["visual-primitive"] ?? null;
+      const colorSource = item["color-source"] ?? null;
       if (visualPrimitive === "color-block") role = "color-block";
       const kind = inferAssetKind({ id, usage: item.usage, source, section, type });
       const isOptionalState = /hover|悬停|outline|empty|备用|fallback|backup/i.test(`${id} ${item.usage ?? ""}`);
       const isDecorativeRole = ["particle", "hud-indicator", "decorative"].includes(role);
       const bindingTo = item["binding-to"] ?? null;
       const hasRealBinding = bindingTo && bindingTo !== "decor";
+      const bindsCoreEntity = hasRealBinding && coreEntityIds.has(String(bindingTo)) && section !== "audio" && section !== "fonts";
       // library-first: 只有 local-file + 真 binding 才 must-render
       // generated-only: generated/local-file 都可以 must-render（只要有真 binding）
       const typeAllowed = allowGeneratedMustRender
         ? (type === "local-file" || type === "graphics-generated" || type === "inline-svg")
         : (type === "local-file" || (visualPrimitive === "color-block" && ["graphics-generated", "inline-svg"].includes(type)));
-      const mustRender = typeAllowed && section !== "fonts" && !isOptionalState && hasRealBinding;
+      // P0.6: 核心实体的"主绑定"（不是 isOptionalState 的 hover/empty/backup 变体）强制 must-render=true
+      //       并把启发式推出的装饰 role 提升为 core-visual，避免 check 层被 decorativeRoles 白名单跳过
+      const isPrimaryCoreBinding = bindsCoreEntity && !isOptionalState;
+      if (isPrimaryCoreBinding && DECORATIVE_ROLES.has(role)) {
+        role = "core-visual";
+      }
+      const baseMustRender = typeAllowed && section !== "fonts" && !isOptionalState && hasRealBinding;
+      const mustRender = isPrimaryCoreBinding ? true : baseMustRender;
       out.push({
         id: String(id),
         section,
@@ -156,6 +167,7 @@ function collectAssetBindings(spec, strategy) {
         source: source || type,
         "binding-to": bindingTo,
         ...(visualPrimitive ? { "visual-primitive": visualPrimitive } : {}),
+        ...(colorSource ? { "color-source": colorSource } : {}),
         "render-as": inferRenderAs(section, type, role),
         "text-bearing": isTextBearing(role),
         "must-render": mustRender,

@@ -273,10 +273,21 @@ codegen 翻译 `rule.yaml.effect-on-*.visual` 的每一条字符串为一次 `fx
 import { exposeTestHooks } from '../_common/test-hook.js';  // 5 引擎通用
 exposeTestHooks({
   state,  // 挂到 window.gameState
+  // 旧入参（保留；自动 mirror 到新 drivers 命名空间）
   hooks: { clickStartButton, clickRetryButton, ... },  // 挂到 window.gameTest.*；只能辅助测试，不能替代真实 UI 输入
   simulators: { simulateCorrectMatch, simulateWrongMatch },  // 兼容旧风格断言
+
+  // 新三分类（推荐；check_runtime_semantics.js 依赖 probes）
+  observers: { getSnapshot, getTrace, getAssetUsage },  // 挂到 window.gameTest.observers.*，只读
+  drivers:   { clickStartButton, clickRetryButton },   // 挂到 window.gameTest.drivers.*，真实用户输入映射；可和 hooks 同名，drivers 显式传的覆盖 hooks mirror
+  probes:    { resetWithScenario, stepTicks, seedRng }, // 挂到 window.gameTest.probes.*，仅确定性语义测试可用；profile 若调用 probes.* 会被 check_playthrough 直接 fail
 });
 ```
+
+**分类约定**：
+- `observers`：只读快照（getSnapshot 返回 deep copy，禁止返回可变引用），用于断言读取现场。
+- `drivers`：把"一次真实用户输入"封装成函数调用（内部应派发 click/press/fill 或模拟等价事件），可被 playthrough profile 使用。
+- `probes`：把系统推入指定场景的裸 API（如 `resetWithScenario({board, pigs})` 直接设置状态、`stepTicks(n)` 固定推进 n 帧、`seedRng(n)` 固定种子）。**playthrough 不能调 probes**；只有 `check_runtime_semantics.js` 注入固定场景时用。
 
 ### Step 4.1：识别需要的通用系统模块
 

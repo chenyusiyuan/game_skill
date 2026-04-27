@@ -16,6 +16,12 @@ import { basename, join, relative, resolve } from "path";
 import yaml from "js-yaml";
 import { createLogger, parseLogArg } from "./_logger.js";
 import { readAssetStrategy } from "./_asset_strategy.js";
+import {
+  isValidVisualPrimitive,
+  requiresColorSource,
+  isValidColorSource,
+  VISUAL_PRIMITIVE_ENUM,
+} from "./_visual_primitive_enum.js";
 
 const args = process.argv.slice(2);
 const caseDir = resolve(args[0] ?? ".");
@@ -147,6 +153,8 @@ function checkAssetBindings(c, assets) {
   const assetById = new Map(assetItems.map((a) => [a.id, a]));
   const bindings = Array.isArray(c["asset-bindings"]) ? c["asset-bindings"] : [];
   const bindingById = new Map(bindings.map((b) => [b.id, b]));
+  const coreEntityIds = new Set(strategy["visual-core-entities"] ?? []);
+  const DECORATIVE_ROLES = new Set(["particle", "hud-indicator", "decorative"]);
 
   for (const b of bindings) {
     if (!b.id) { fail("asset-bindings 中存在缺 id 的条目"); continue; }
@@ -156,7 +164,7 @@ function checkAssetBindings(c, assets) {
       continue;
     }
     if (b.type !== item.type) warn(`[contract.asset.${b.id}] type 与 assets.yaml 不一致: contract=${b.type}, assets=${item.type}`);
-    validateSemanticBinding(b, item);
+    validateSemanticBinding(b, item, coreEntityIds);
   }
 
   for (const item of assetItems.filter((a) => a.type === "local-file")) {
@@ -164,15 +172,58 @@ function checkAssetBindings(c, assets) {
       fail(`[contract.asset.${item.id}] local-file 素材缺少 asset-bindings 语义绑定`);
     }
   }
+
+  // P0.6: 每个 visual-core-entity 必须有至少 1 个"合格的主视觉 binding"
+  //   · must-render: true
+  //   · allow-fallback: false
+  //   · role 不在装饰角色白名单内
+  //   · section 是 images/spritesheets（不能只靠音频/字体顶替）
+  for (const coreId of coreEntityIds) {
+    const boundTo = bindings.filter((b) =>
+      String(b["binding-to"] ?? "") === String(coreId) &&
+      ["images", "spritesheets"].includes(String(b.section ?? ""))
+    );
+    if (boundTo.length === 0) {
+      // 交由 check_asset_selection [core-binding] 规则负责报"一个都没有"的情况
+      continue;
+    }
+    const primary = boundTo.find((b) =>
+      b["must-render"] === true &&
+      b["allow-fallback"] === false &&
+      !DECORATIVE_ROLES.has(String(b.role ?? ""))
+    );
+    if (!primary) {
+      const summary = boundTo.map((b) => `${b.id}(role=${b.role},must=${b["must-render"]},fallback=${b["allow-fallback"]})`).join(", ");
+      fail(`[contract.core-must-render] visual-core-entity "${coreId}" 无合格主视觉 binding；至少需要 1 个 must-render=true + allow-fallback=false + role 非装饰。现有: ${summary}`);
+    }
+  }
 }
 
-function validateSemanticBinding(binding, item) {
+function validateSemanticBinding(binding, item, coreEntityIds = new Set()) {
   const source = String(item.source ?? binding.source ?? "").toLowerCase();
   const file = basename(source);
   const role = String(binding.role ?? "").toLowerCase();
   const kind = String(binding["asset-kind"] ?? "").toLowerCase();
   const textBearing = Boolean(binding["text-bearing"]);
   const isButtonSource = source.includes("/buttons/") || /^button_/.test(file) || kind === "button";
+
+  // P0.4: core entity 的 binding 必须有合法 visual-primitive（single source of truth）
+  const bindingTo = binding["binding-to"];
+  const vp = binding["visual-primitive"];
+  if (bindingTo && coreEntityIds.has(String(bindingTo))) {
+    if (!vp) {
+      fail(`[contract.asset.${item.id}] binding-to="${bindingTo}" 是 visual-core-entities；contract 必须透传 visual-primitive（合法值: ${VISUAL_PRIMITIVE_ENUM.join(", ")}）`);
+    } else if (!isValidVisualPrimitive(String(vp))) {
+      fail(`[contract.asset.${item.id}] visual-primitive="${vp}" 不在合法枚举内；合法值: ${VISUAL_PRIMITIVE_ENUM.join(", ")}`);
+    } else if (requiresColorSource(String(vp))) {
+      const cs = binding["color-source"];
+      if (!cs) {
+        fail(`[contract.asset.${item.id}] visual-primitive="${vp}" 要求声明 color-source；contract 必须透传（允许: entity.<field> / palette.<name> / #rrggbb / rgb(...)）`);
+      } else if (!isValidColorSource(String(cs))) {
+        fail(`[contract.asset.${item.id}] color-source="${cs}" 格式不合法`);
+      }
+    }
+  }
 
   if (textBearing && isButtonSource && role !== "button") {
     fail(`[contract.asset.${item.id}] button 素材不能绑定到非按钮的文字承载 UI（role=${role}）`);

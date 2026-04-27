@@ -26,6 +26,7 @@ import { createHash } from "crypto";
 import { resolveLaunchTarget } from "./_run_mode.js";
 import { createLogger, parseLogArg } from "./_logger.js";
 import { guardProfileSha } from "./_profile_guard.js";
+import { detectAntiCheatHits } from "./_profile_anti_cheat.js";
 
 const _logPath = parseLogArg(process.argv);
 const log = createLogger(_logPath);
@@ -116,12 +117,23 @@ function hasGameTestBridgeStep(a) {
   });
 }
 
+// P0.1: profile eval 反作弊——禁止直接改产品真值、补 trace、调 probes。
+// 规则定义在 _profile_anti_cheat.js；此处只调用 detectAntiCheatHits。
+
 // T7: profile 必须包含真实用户输入；交互类 assertion 不能只用 window.gameTest 绕过 UI。
 const clickOk = allAssertions.some(hasRealClickStep);
 if (!clickOk) {
   profileShapeErrors.push(`[PROFILE] profile 中没有任何真实 action: click 步骤——必须至少 1 条 selector click 或 x/y 坐标 click，否则无法暴露 hitArea/按钮错位类 bug`);
 }
 for (const a of allAssertions) {
+  // P0.1: 反作弊优先——无论是否交互类 assertion，都禁止这些 pattern。
+  const cheats = detectAntiCheatHits(a);
+  for (const h of cheats) {
+    profileShapeErrors.push(
+      `[PROFILE][anti-cheat] assertion "${a.id}" 的 eval 步骤命中禁用 pattern: ${h.kind}（匹配: ${h.match}）。profile 只能驱动 UI，不能直写结果/补 trace/调 probes。`
+    );
+  }
+
   if (!isInteractionAssertion(a)) continue;
   if (isClickLikeAssertion(a) && !hasRealClickStep(a)) {
     profileShapeErrors.push(`[PROFILE] 交互类 assertion "${a.id}" 缺少真实 action: click；不能只用 window.gameTest 或直接改 state 绕过 UI`);

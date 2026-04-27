@@ -321,10 +321,14 @@ test("library-first 只统计核心视觉，外围 generated 不应拉低 local-
     "    source: assets/library_2d/ui-pixel/tile_0013.png",
     "    type: local-file",
     "    binding-to: pig",
+    "    visual-primitive: color-unit",
+    "    color-source: entity.color",
     "  - id: block-sprite",
     "    source: assets/library_2d/ui-pixel/tile_0014.png",
     "    type: local-file",
     "    binding-to: block",
+    "    visual-primitive: color-unit",
+    "    color-source: entity.color",
     ...Array.from({ length: 8 }, (_, i) => [
       `  - id: bg-generated-${i}`,
       "    source: generated",
@@ -422,6 +426,516 @@ test("generated-only 的 required generated 核心视觉必须有绘制证据", 
   const badRun = run([join(scriptsDir, "check_asset_usage.js"), bad]);
   assert(badRun.status !== 0, "没有绘制调用应失败");
   assert(/required asset/.test(badRun.stdout), `应报 required asset，实际:\n${badRun.stdout}`);
+});
+
+// =============================
+// P0.3: test-hook.js 三分类 + 双写兼容
+// =============================
+console.log("\n[P0.3] test-hook.js observers / drivers / probes");
+
+async function loadTestHookWithWindow() {
+  // 隔离：每次重新加载模块并给它一个干净 globalThis.window
+  const fakeWindow = {};
+  const savedWindow = globalThis.window;
+  globalThis.window = fakeWindow;
+  // 每次加载都拿新模块实例（绕过 ESM cache）
+  const modUrl = new URL(
+    "../../references/engines/_common/test-hook.js?t=" + Date.now(),
+    import.meta.url,
+  );
+  const mod = await import(modUrl.href);
+  return {
+    mod,
+    win: fakeWindow,
+    restore: () => {
+      if (savedWindow === undefined) delete globalThis.window;
+      else globalThis.window = savedWindow;
+    },
+  };
+}
+
+test("exposeTestHooks 旧入参 hooks 平铺到 gameTest.<name>", async () => {
+  const { mod, win, restore } = await loadTestHookWithWindow();
+  try {
+    const clickStart = () => "start";
+    mod.exposeTestHooks({ state: { s: 1 }, hooks: { clickStart } });
+    assert(win.gameState?.s === 1, "gameState 应被挂载");
+    assert(typeof win.gameTest.clickStart === "function", "旧扁平 clickStart 应可访问");
+    assert(
+      typeof win.gameTest.drivers.clickStart === "function",
+      "hooks 应自动 mirror 到 drivers.clickStart",
+    );
+  } finally {
+    restore();
+  }
+});
+
+test("exposeTestHooks probes 只挂命名空间，不平铺", async () => {
+  const { mod, win, restore } = await loadTestHookWithWindow();
+  try {
+    const resetWithScenario = () => "reset";
+    mod.exposeTestHooks({
+      state: { s: 1 },
+      hooks: { clickStartButton: () => {} },
+      probes: { resetWithScenario },
+    });
+    assert(
+      typeof win.gameTest.probes.resetWithScenario === "function",
+      "probes.resetWithScenario 应可访问",
+    );
+    assert(
+      win.gameTest.resetWithScenario === undefined,
+      "probes 不应被平铺到 gameTest.<name>",
+    );
+    assert(
+      win.resetWithScenario === undefined,
+      "probes 不应被挂到 window",
+    );
+  } finally {
+    restore();
+  }
+});
+
+test("exposeTestHooks 把 probe-like 名字放进 hooks 时发出 deprecation warn", async () => {
+  const { mod, win, restore } = await loadTestHookWithWindow();
+  const origWarn = console.warn;
+  const warns = [];
+  console.warn = (...args) => warns.push(args.join(" "));
+  try {
+    mod.exposeTestHooks({
+      state: { s: 1 },
+      hooks: { resetWithScenario: () => {}, clickStartButton: () => {} },
+    });
+    const hit = warns.some((w) =>
+      /looks like a probe/.test(w) && /resetWithScenario/.test(w),
+    );
+    assert(hit, `应 warn resetWithScenario 是 probe-like，实际 warns=${JSON.stringify(warns)}`);
+  } finally {
+    console.warn = origWarn;
+    restore();
+  }
+});
+
+test("exposeTestHooks 同时传 hooks 和 drivers 时不互相覆盖", async () => {
+  const { mod, win, restore } = await loadTestHookWithWindow();
+  try {
+    const fromHooks = () => "h";
+    const fromDrivers = () => "d";
+    mod.exposeTestHooks({
+      state: { s: 1 },
+      hooks: { clickStart: fromHooks, legacyOnly: fromHooks },
+      drivers: { clickStart: fromDrivers, newOnly: fromDrivers },
+    });
+    // drivers 里显式传的 clickStart 应覆盖 hooks mirror 的版本
+    assert(
+      win.gameTest.drivers.clickStart() === "d",
+      "drivers 显式传的实现应覆盖 hooks mirror",
+    );
+    // hooks-only 的仍在 drivers 可见
+    assert(
+      typeof win.gameTest.drivers.legacyOnly === "function",
+      "只在 hooks 的也应 mirror 进 drivers",
+    );
+    // drivers-only 的不会反向平铺到扁平 gameTest.<name>
+    assert(
+      win.gameTest.newOnly === undefined,
+      "drivers 不应反向平铺到 gameTest 扁平",
+    );
+  } finally {
+    restore();
+  }
+});
+
+test("assertHooksExposed 支持 gameTest.drivers.xxx 点分路径", async () => {
+  const { mod, win, restore } = await loadTestHookWithWindow();
+  try {
+    mod.exposeTestHooks({
+      state: { s: 1 },
+      hooks: { clickStartButton: () => {} },
+    });
+    const result = mod.assertHooksExposed([
+      "gameTest.clickStartButton",
+      "gameTest.drivers.clickStartButton",
+    ]);
+    assert(result.ok, `两个路径都应该存在，missing=${JSON.stringify(result.missing)}`);
+    const result2 = mod.assertHooksExposed(["gameTest.probes.notExist"]);
+    assert(!result2.ok && result2.missing.length === 1, "不存在的路径应被标记 missing");
+  } finally {
+    restore();
+  }
+});
+
+// =============================
+// P0.1: _profile_anti_cheat — profile eval 反作弊规则
+// =============================
+console.log("\n[P0.1] _profile_anti_cheat: detectAntiCheatHits");
+
+{
+  const { detectAntiCheatHits, ANTI_CHEAT_PATTERNS } = await import(
+    "../_profile_anti_cheat.js"
+  );
+
+  test("直接改 gameState 字段 → 命中 anti-cheat", () => {
+    const a = {
+      id: "cheat-a",
+      setup: [{ action: "eval", js: "window.gameState.score = 999" }],
+    };
+    const hits = detectAntiCheatHits(a);
+    assert(hits.length >= 1, `应命中，实际 hits=${JSON.stringify(hits)}`);
+    assert(
+      hits.some((h) => /gameState\\.\[\\w\.\]\+/.test(h.pattern) || h.match.includes("gameState")),
+      `kind 应指明 gameState 字段改写，实际=${JSON.stringify(hits)}`,
+    );
+  });
+
+  test("forceWin() 直接定判定 → 命中", () => {
+    const a = {
+      id: "cheat-b",
+      setup: [
+        { action: "click", selector: "#start" },
+        { action: "eval", js: "window.forceWin()" },
+      ],
+    };
+    const hits = detectAntiCheatHits(a);
+    assert(hits.some((h) => /forceWin/.test(h.kind)), `应含 forceWin 提示，实际 ${JSON.stringify(hits)}`);
+  });
+
+  test("补 window.__trace.push 伪造执行 → 命中", () => {
+    const a = {
+      id: "cheat-c",
+      setup: [{ action: "eval", code: "window.__trace.push({rule:'x'})" }],
+    };
+    const hits = detectAntiCheatHits(a);
+    assert(hits.some((h) => /trace/i.test(h.kind)), `应命中 trace push`);
+  });
+
+  test("调 window.gameTest.probes.* → 命中（probe 不是真实输入）", () => {
+    const a = {
+      id: "cheat-d",
+      setup: [{ action: "eval", js: "window.gameTest.probes.resetWithScenario({x:1})" }],
+    };
+    const hits = detectAntiCheatHits(a);
+    assert(hits.some((h) => /probes/.test(h.kind)), `应命中 probes`);
+  });
+
+  test("旧 API window.gameTest.clickStartButton() → 不命中（兼容路径）", () => {
+    const a = {
+      id: "legacy-ok",
+      setup: [
+        { action: "click", selector: "#start" },
+        { action: "eval", js: "window.gameTest.clickStartButton()" },
+      ],
+    };
+    const hits = detectAntiCheatHits(a);
+    assert(hits.length === 0, `兼容旧 driver 调用不应命中 anti-cheat，实际=${JSON.stringify(hits)}`);
+  });
+
+  test("Object.assign 批量改 gameState → 命中", () => {
+    const a = {
+      id: "cheat-e",
+      setup: [{ action: "eval", js: "Object.assign(window.gameState, {win:true})" }],
+    };
+    const hits = detectAntiCheatHits(a);
+    assert(hits.some((h) => /Object\.assign/.test(h.kind)), `应命中 Object.assign`);
+  });
+
+  test("纯 UI 驱动（只有 click/press/fill）→ 不命中", () => {
+    const a = {
+      id: "clean-ui",
+      setup: [
+        { action: "click", selector: "#start" },
+        { action: "press", key: "Enter" },
+        { action: "fill", selector: "#name", value: "abc" },
+      ],
+    };
+    const hits = detectAntiCheatHits(a);
+    assert(hits.length === 0, `干净 UI 驱动不应命中，实际=${JSON.stringify(hits)}`);
+  });
+
+  test("ANTI_CHEAT_PATTERNS 导出且非空", () => {
+    assert(Array.isArray(ANTI_CHEAT_PATTERNS) && ANTI_CHEAT_PATTERNS.length >= 7,
+      `应 >= 7 条规则，实际 ${ANTI_CHEAT_PATTERNS?.length}`);
+  });
+}
+
+// =============================
+// P0.4: _visual_primitive_enum — slot 枚举 + color-source 校验
+// =============================
+console.log("\n[P0.4] _visual_primitive_enum: slot 枚举与 color-source");
+
+{
+  const mod = await import("../_visual_primitive_enum.js");
+
+  test("VISUAL_PRIMITIVE_ENUM 覆盖现有 case 的所有实际值", () => {
+    const usedInCases = [
+      "color-unit", "color-block",
+      "ui-button", "ui-panel",
+      "background", "grid", "track",
+    ];
+    for (const v of usedInCases) {
+      assert(mod.isValidVisualPrimitive(v), `枚举应包含 "${v}"`);
+    }
+  });
+
+  test("isValidVisualPrimitive 拒绝错写", () => {
+    assert(!mod.isValidVisualPrimitive("btn"), "btn 应被拒");
+    assert(!mod.isValidVisualPrimitive("color_block"), "下划线写法应被拒");
+    assert(!mod.isValidVisualPrimitive("Button"), "大写应被拒");
+    assert(!mod.isValidVisualPrimitive(""), "空串应被拒");
+    assert(!mod.isValidVisualPrimitive(null), "null 应被拒");
+  });
+
+  test("requiresColorSource 识别颜色来源必填槽", () => {
+    assert(mod.requiresColorSource("color-block"), "color-block 需 color-source");
+    assert(mod.requiresColorSource("color-unit"), "color-unit 需 color-source");
+    assert(mod.requiresColorSource("colorable-token"), "colorable-token 需 color-source");
+    assert(!mod.requiresColorSource("ui-button"), "ui-button 不需要 color-source");
+    assert(!mod.requiresColorSource("background"), "background 不需要 color-source");
+  });
+
+  test("requiresGeneratedType: 只有 color-block 强制程序化生成", () => {
+    assert(mod.requiresGeneratedType("color-block"), "color-block 强制 generated");
+    assert(!mod.requiresGeneratedType("color-unit"), "color-unit 允许 local-file（如小猪角色贴图）");
+  });
+
+  test("isGeneratedType 接受三种程序化类型", () => {
+    assert(mod.isGeneratedType("graphics-generated"), "");
+    assert(mod.isGeneratedType("inline-svg"), "");
+    assert(mod.isGeneratedType("synthesized"), "");
+    assert(!mod.isGeneratedType("local-file"), "local-file 不是程序化");
+  });
+
+  test("isValidColorSource 接受 entity.*/palette.*/十六进制/函数式颜色串", () => {
+    assert(mod.isValidColorSource("entity.color"), "entity.color");
+    assert(mod.isValidColorSource("entity.hp-bar-color"), "entity.hp-bar-color");
+    assert(mod.isValidColorSource("palette.primary"), "palette.primary");
+    assert(mod.isValidColorSource("#ef4444"), "十六进制");
+    assert(mod.isValidColorSource("rgb(239, 68, 68)"), "rgb(...)");
+    assert(!mod.isValidColorSource("red"), "裸 CSS 命名色不通过（太松会允许任意单词）");
+    assert(!mod.isValidColorSource(""), "空串不通过");
+    assert(!mod.isValidColorSource("entity"), "缺字段名的 entity 不通过");
+  });
+}
+
+// =============================
+// P0.4: check_implementation_contract 接入 visual-primitive 枚举
+// =============================
+console.log("\n[P0.4] check_implementation_contract: core entity visual-primitive 强制");
+
+function writeMinimalContract(caseDir, extraBindingFields = {}) {
+  // 写最小可通过的 contract + assets + PRD（asset-strategy 含 visual-core-entities: [pig]）
+  mkdirSync(join(caseDir, "docs"), { recursive: true });
+  writeFileSync(join(caseDir, "docs/game-prd.md"), [
+    "---",
+    'game-aprd: "0.1"',
+    "project: vp-test",
+    "platform: [web]",
+    "runtime: canvas",
+    "is-3d: false",
+    "mode: 单机",
+    "language: zh-CN",
+    "asset-strategy:",
+    "  mode: library-first",
+    `  rationale: "${"核心小猪需要按颜色区分，是玩法识别的关键视觉，不可用纯装饰代替。".repeat(2)}"`,
+    "  visual-core-entities: [pig]",
+    "  visual-peripheral: []",
+    "  style-coherence: { level: strict }",
+    "---",
+    "## 1. 项目概述",
+    "### @game(main) VP Test",
+    "> genre: board-grid",
+    "> platform: [web]",
+    "> runtime: canvas",
+    "> mode: 单机",
+    "> core-loop: test",
+    "> player-goal: test",
+    "",
+    "## 6. 状态与实体",
+    "### @entity(pig) Pig",
+    "> type: unit",
+    "> fields: [color]",
+  ].join("\n"));
+  mkdirSync(join(caseDir, "specs"), { recursive: true });
+  writeFileSync(join(caseDir, "specs/assets.yaml"), [
+    "images:",
+    "  - id: pig-shape",
+    "    source: generated",
+    "    type: graphics-generated",
+    "    binding-to: pig",
+    "    visual-primitive: color-unit",
+    "    color-source: entity.color",
+    "audio: []",
+    "spritesheets: []",
+  ].join("\n"));
+  const baseBinding = {
+    id: "pig-shape",
+    section: "images",
+    type: "graphics-generated",
+    role: "color-unit",
+    "binding-to": "pig",
+    "visual-primitive": "color-unit",
+    "color-source": "entity.color",
+    "must-render": true,
+    "allow-fallback": false,
+  };
+  const merged = { ...baseBinding, ...extraBindingFields };
+  // 过滤 undefined，让调用方通过 {key: undefined} 表达"移除这个字段"
+  const binding = Object.fromEntries(
+    Object.entries(merged).filter(([, v]) => v !== undefined),
+  );
+  writeFileSync(join(caseDir, "specs/implementation-contract.yaml"), [
+    "contract-version: 1",
+    "runtime:",
+    "  engine: canvas",
+    "  run-mode: file",
+    "boot:",
+    "  entry-scene: start",
+    `  ready-condition: "window.gameState !== undefined"`,
+    "asset-bindings:",
+    "  - " + Object.entries(binding)
+      .map(([k, v]) => `${k}: ${typeof v === "string" ? JSON.stringify(v) : v}`)
+      .join("\n    "),
+  ].join("\n"));
+  writeBaseScene(caseDir);
+  mkdirSync(join(caseDir, "game"), { recursive: true });
+  writeFileSync(join(caseDir, "game/index.html"), "<!-- ENGINE: canvas --><canvas></canvas>");
+  mkdirSync(join(caseDir, ".game"), { recursive: true });
+}
+
+test("core entity 缺 visual-primitive → fail", () => {
+  const caseDir = join(tmp, "contract-vp-missing");
+  writeMinimalContract(caseDir, { "visual-primitive": undefined });
+  const r = run([join(scriptsDir, "check_implementation_contract.js"), caseDir, "--stage", "expand"]);
+  assert(r.status !== 0, `缺 visual-primitive 应 fail，exit=${r.status}\n${r.stdout}`);
+  assert(
+    /必须透传 visual-primitive/.test(r.stdout) || /visual-core-entities/.test(r.stdout),
+    `错误信息应指向 visual-primitive 缺失，实际:\n${r.stdout}`,
+  );
+});
+
+test("core entity 写了非法 visual-primitive 值 → fail", () => {
+  const caseDir = join(tmp, "contract-vp-invalid");
+  writeMinimalContract(caseDir, { "visual-primitive": "btn" });
+  const r = run([join(scriptsDir, "check_implementation_contract.js"), caseDir, "--stage", "expand"]);
+  assert(r.status !== 0, `非法值应 fail，exit=${r.status}\n${r.stdout}`);
+  assert(/不在合法枚举内/.test(r.stdout), `应指出 enum 违规，实际:\n${r.stdout}`);
+});
+
+test("color-unit 绑定缺 color-source → fail", () => {
+  const caseDir = join(tmp, "contract-vp-no-color-source");
+  writeMinimalContract(caseDir, { "color-source": undefined });
+  const r = run([join(scriptsDir, "check_implementation_contract.js"), caseDir, "--stage", "expand"]);
+  assert(r.status !== 0, `缺 color-source 应 fail，exit=${r.status}\n${r.stdout}`);
+  assert(/color-source/.test(r.stdout), `应指出 color-source 缺失，实际:\n${r.stdout}`);
+});
+
+test("color-source 格式错（比如裸 'red'）→ fail", () => {
+  const caseDir = join(tmp, "contract-vp-bad-color-source");
+  writeMinimalContract(caseDir, { "color-source": "red" });
+  const r = run([join(scriptsDir, "check_implementation_contract.js"), caseDir, "--stage", "expand"]);
+  assert(r.status !== 0, `非法 color-source 应 fail\n${r.stdout}`);
+  assert(/color-source="red"/.test(r.stdout) || /格式不合法/.test(r.stdout),
+    `应指出 color-source 格式问题，实际:\n${r.stdout}`);
+});
+
+test("core entity 配齐 visual-primitive + color-source → VP 相关不报错", () => {
+  const caseDir = join(tmp, "contract-vp-ok");
+  writeMinimalContract(caseDir); // 默认就是合法的
+  const r = run([join(scriptsDir, "check_implementation_contract.js"), caseDir, "--stage", "expand"]);
+  // 可能因其他 gate fail，但 VP 相关 fail 不应出现
+  assert(!/必须透传 visual-primitive/.test(r.stdout), `不应报 VP 缺失:\n${r.stdout}`);
+  assert(!/不在合法枚举内/.test(r.stdout), `不应报 VP 非法值:\n${r.stdout}`);
+  assert(!/color-source.*不合法|color-source.*缺失/.test(r.stdout),
+    `不应报 color-source 问题:\n${r.stdout}`);
+});
+
+// =============================
+// P0.6: check_implementation_contract core entity must-render 硬约束
+// =============================
+console.log("\n[P0.6] check_implementation_contract: core entity must-render 硬约束");
+
+test("core entity 所有 binding 都 must-render=false → fail", () => {
+  const caseDir = join(tmp, "contract-p06-no-must-render");
+  writeMinimalContract(caseDir, {
+    "must-render": false,
+    "allow-fallback": true,
+  });
+  const r = run([join(scriptsDir, "check_implementation_contract.js"), caseDir, "--stage", "expand"]);
+  assert(r.status !== 0, `应 fail`);
+  assert(/core-must-render/.test(r.stdout), `应指向 core-must-render，实际:\n${r.stdout}`);
+});
+
+test("core entity 唯一 binding role=decorative → fail", () => {
+  const caseDir = join(tmp, "contract-p06-decorative-role");
+  writeMinimalContract(caseDir, { role: "decorative" });
+  const r = run([join(scriptsDir, "check_implementation_contract.js"), caseDir, "--stage", "expand"]);
+  assert(r.status !== 0, `装饰 role 不合格，应 fail`);
+  assert(/core-must-render/.test(r.stdout), `应报 core-must-render，实际:\n${r.stdout}`);
+});
+
+test("core entity must-render=true + 非装饰 role → P0.6 不报错", () => {
+  const caseDir = join(tmp, "contract-p06-ok");
+  writeMinimalContract(caseDir); // 默认 must-render=true, allow-fallback=false, role=color-unit
+  const r = run([join(scriptsDir, "check_implementation_contract.js"), caseDir, "--stage", "expand"]);
+  assert(!/core-must-render/.test(r.stdout), `合格主视觉不应触发 core-must-render，实际:\n${r.stdout}`);
+});
+
+test("generate_implementation_contract: core entity 启发式装饰 role 被提升为 core-visual", () => {
+  // 构造一个"usage 提示装饰"但 binding 指向 core entity 的 asset
+  const caseDir = join(tmp, "generate-p06-uplift");
+  mkdirSync(join(caseDir, "docs"), { recursive: true });
+  writeFileSync(join(caseDir, "docs/game-prd.md"), [
+    "---",
+    'game-aprd: "0.1"',
+    "project: p06-uplift",
+    "platform: [web]",
+    "runtime: canvas",
+    "is-3d: false",
+    "mode: 单机",
+    "language: zh-CN",
+    "asset-strategy:",
+    "  mode: library-first",
+    `  rationale: "${"核心小猪需要主视觉，即便启发式把它误判为装饰，contract 生成层也必须把它提升为 core-visual 以防 checker 白名单跳过。".repeat(1)}"`,
+    "  visual-core-entities: [pig]",
+    "  visual-peripheral: []",
+    "  style-coherence: { level: strict }",
+    "---",
+    "## 1. 项目概述",
+    "### @game(main) P06 Uplift",
+    "> genre: board-grid",
+    "> platform: [web]",
+    "> runtime: canvas",
+    "> mode: 单机",
+    "> core-loop: test",
+    "> player-goal: test",
+    "",
+    "## 6. 状态与实体",
+    "### @entity(pig) Pig",
+    "> type: unit",
+    "> fields: [color]",
+  ].join("\n"));
+  mkdirSync(join(caseDir, "specs"), { recursive: true });
+  writeFileSync(join(caseDir, "specs/assets.yaml"), [
+    "images:",
+    "  - id: pig-particle",
+    "    source: assets/library_2d/ui-pixel/tile_0013.png",
+    "    type: local-file",
+    "    binding-to: pig",
+    "    visual-primitive: color-unit",
+    "    color-source: entity.color",
+    "    usage: \"particle 发射源\"", // 启发式会把 usage 含 particle 的推成 particle role
+    "audio: []",
+    "spritesheets: []",
+  ].join("\n"));
+  writeBaseScene(caseDir);
+  const out = "specs/implementation-contract.yaml";
+  const r = run([join(scriptsDir, "generate_implementation_contract.js"), caseDir, "--out", out]);
+  assert(r.status === 0, `generate 应通过，exit=${r.status}\n${r.stdout}\n${r.stderr}`);
+  const contract = readFileSync(join(caseDir, out), "utf-8");
+  // 装饰角色被提升为 core-visual，或至少不是 particle/hud-indicator/decorative
+  const decorativeLine = /role:\s*(particle|hud-indicator|decorative)/.test(contract);
+  assert(!decorativeLine, `core entity 绑定不应保留装饰 role。contract:\n${contract}`);
+  assert(/must-render:\s*true/.test(contract), `应含 must-render: true`);
 });
 
 // =============================
