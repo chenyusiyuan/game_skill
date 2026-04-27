@@ -22,6 +22,14 @@ import {
   isValidColorSource,
   VISUAL_PRIMITIVE_ENUM,
 } from "./_visual_primitive_enum.js";
+import {
+  PRIMITIVE_RUNTIME_API,
+  isRuntimeBacked,
+  isEngineEnforced,
+  apisFor,
+  parseEsmImports,
+  isPrimitivesImport,
+} from "./_primitive_runtime_map.js";
 
 const args = process.argv.slice(2);
 const caseDir = resolve(args[0] ?? ".");
@@ -262,6 +270,7 @@ function checkGeneratedCode(c, assets, root) {
   }
   checkTracePushPoints(businessSrc);  // T3
   checkPrimitiveImplementationCoverage(allSrc); // mechanics -> code 1:1
+  checkRuntimePrimitiveImports(c, businessSrc); // P1.4: canvas/pixijs must import runtime APIs
 
   if (engine === "phaser3" || engine === "phaser") {
     if (/\.load\.start\s*\(/.test(businessSrc)) {
@@ -306,6 +315,85 @@ function checkPrimitiveImplementationCoverage(sourceBlob) {
     fail(`[mechanics] ${missing.length}/${nodes.length} 个 mechanics node 缺少 @primitive 实现注释: ${missing.slice(0, 8).join(", ")}`);
   } else {
     ok(`[mechanics] 所有 ${nodes.length} 个 mechanics node 均有 @primitive 实现注释`);
+  }
+}
+
+// P1.4: canvas / pixijs 引擎必须 import 且调用对应的 primitive runtime API。
+// 只校验 mechanics.yaml 中出现且已有 P1.1 runtime wrapper 的 primitive；
+// 其它引擎（phaser / dom-ui / three）过渡期跳过，不 fail。
+function checkRuntimePrimitiveImports(c, businessSrc) {
+  const engine = String(c.runtime?.engine ?? "").toLowerCase();
+  if (!isEngineEnforced(engine)) {
+    ok(`[runtime] 引擎=${engine || "<未指定>"} 非 canvas/pixijs，跳过 runtime primitive import 校验`);
+    return;
+  }
+  if (!existsSync(mechanicsPath)) {
+    // checkPrimitiveImplementationCoverage 已报错，这里静默
+    return;
+  }
+  let mech;
+  try {
+    mech = yaml.load(readFileSync(mechanicsPath, "utf-8")) ?? {};
+  } catch {
+    return;
+  }
+  const nodes = Array.isArray(mech.mechanics) ? mech.mechanics : [];
+  const required = new Set();
+  for (const node of nodes) {
+    if (node?.primitive && isRuntimeBacked(node.primitive)) {
+      required.add(node.primitive);
+    }
+  }
+  if (required.size === 0) {
+    ok("[runtime] 本 case mechanics 未引用任何 runtime-backed primitive，跳过");
+    return;
+  }
+
+  const imports = parseEsmImports(businessSrc).filter((i) =>
+    isPrimitivesImport(i.specifier),
+  );
+  const importedNames = new Set();
+  for (const imp of imports) {
+    for (const n of imp.names) {
+      if (n === "*") {
+        // 命名空间导入：把它视为全量，后续 call-site 校验还会要求调用存在
+        for (const api of Object.values(PRIMITIVE_RUNTIME_API).flat()) {
+          importedNames.add(api);
+        }
+      } else {
+        importedNames.add(n);
+      }
+    }
+  }
+
+  const missingImport = [];
+  const missingCall = [];
+  for (const primitive of required) {
+    const apis = apisFor(primitive);
+    const importedApi = apis.find((api) => importedNames.has(api));
+    if (!importedApi) {
+      missingImport.push(`${primitive} (期望 import 至少一个: ${apis.join(" / ")})`);
+      continue;
+    }
+    // 被 import 的 API 必须至少被调用一次
+    const callRe = new RegExp(`\\b${escapeReg(importedApi)}\\s*\\(`);
+    if (!callRe.test(businessSrc)) {
+      missingCall.push(`${primitive}.${importedApi}`);
+    }
+  }
+
+  if (missingImport.length > 0) {
+    fail(
+      `[runtime] ${missingImport.length}/${required.size} 个 runtime-backed primitive 未 import: ${missingImport.slice(0, 6).join("; ")}`,
+    );
+  }
+  if (missingCall.length > 0) {
+    fail(
+      `[runtime] ${missingCall.length} 个 runtime API 已 import 但未调用: ${missingCall.slice(0, 6).join(", ")}（只有调用才能触发 before/after trace）`,
+    );
+  }
+  if (missingImport.length === 0 && missingCall.length === 0) {
+    ok(`[runtime] 全部 ${required.size} 个 runtime-backed primitive 均已 import + 调用`);
   }
 }
 
