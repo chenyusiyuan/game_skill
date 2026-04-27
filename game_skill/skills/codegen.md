@@ -202,7 +202,17 @@ RUNTIME=$(grep "^runtime:" docs/game-prd.md | head -1 | awk '{print $2}')
 ```bash
 # ENGINE_TEMPLATE 来自 references/engines/_index.json 当前 runtime 的 template 字段
 cp -R ${SKILL_DIR}/references/${ENGINE_TEMPLATE}/. game/
+
+# 共享层（含 primitives runtime）拷进 game/src/_common/；
+# canvas / pixijs / dom-ui 业务代码通过 '../_common/...' import
+mkdir -p game/src/_common
+cp -R ${SKILL_DIR}/references/engines/_common/. game/src/_common/
 ```
+
+说明：`_common/primitives/*.runtime.mjs` + `primitives/index.mjs` 是 §4.0.6 mandatory
+runtime 库的实体；`_common/test-hook.js` 是 §4.0.5 第 ③ 步的三分类 hook；
+`_common/fx.spec.js` / `registry.spec.js` 是 adapter 依赖。漏掉任意一个文件都会让
+业务代码 `import` 失败。
 
 ### Step 4.0.5：生成 registry manifest + 共享层依赖（P1-1 新增）
 
@@ -288,6 +298,99 @@ exposeTestHooks({
 - `observers`：只读快照（getSnapshot 返回 deep copy，禁止返回可变引用），用于断言读取现场。
 - `drivers`：把"一次真实用户输入"封装成函数调用（内部应派发 click/press/fill 或模拟等价事件），可被 playthrough profile 使用。
 - `probes`：把系统推入指定场景的裸 API（如 `resetWithScenario({board, pigs})` 直接设置状态、`stepTicks(n)` 固定推进 n 帧、`seedRng(n)` 固定种子）。**playthrough 不能调 probes**；只有 `check_runtime_semantics.js` 注入固定场景时用。
+
+### Step 4.0.6：强制 import primitive runtime（P1-1 新增；canvas + pixijs）
+
+`specs/mechanics.yaml` 里引用的每个 primitive 都对应一个 **浏览器 runtime 模块**，位于
+`${SKILL_DIR}/references/engines/_common/primitives/` 并由 Step 4 的
+`cp -R _common/. game/src/_common/` 一并同步到 `game/src/_common/primitives/`。
+业务代码（canvas / pixijs）**必须**从该库 import 对应 API，
+**禁止**再手写 ray-cast / resource-consume / predicate-match / fsm-transition /
+win-lose-check / score-accum / parametric-track / grid-step / grid-board /
+neighbor-query 的实现。
+
+**runtime 映射表**（`engines/_common/primitives/index.mjs` 聚合导出）：
+
+| mechanics primitive | runtime API | reducer 来源 |
+|---|---|---|
+| `parametric-track@v1` | `tickTrack(ctx)` / `positionAt(ctx)` | `parametric-track.reducer.mjs` |
+| `grid-step@v1` | `gridMove(ctx)` | `grid-step.reducer.mjs` |
+| `ray-cast@v1` | `rayCastGrid(ctx)` / `rayCastGridFirstHit(ctx)` | `ray-cast.reducer.mjs` |
+| `grid-board@v1` | `addCell(ctx)` / `removeCell(ctx)` | `grid-board.reducer.mjs` |
+| `neighbor-query@v1` | `queryNeighbors(ctx)` | `neighbor-query.reducer.mjs` |
+| `predicate-match@v1` | `predicateMatch(ctx)` | `predicate-match.reducer.mjs` |
+| `resource-consume@v1` | `consumeResource(ctx)` | `resource-consume.reducer.mjs` |
+| `fsm-transition@v1` | `fireTrigger(ctx)` | `fsm-transition.reducer.mjs` |
+| `win-lose-check@v1` | `checkWinLose(ctx)` | `win-lose-check.reducer.mjs` |
+| `score-accum@v1` | `accumulateScore(ctx)` | `score-accum.reducer.mjs` |
+
+**调用约定**：
+
+```js
+// business code 在 game/src/main.js 或 game/src/scenes/*.js 里：
+import {
+  rayCastGridFirstHit, predicateMatch, consumeResource,
+  tickTrack, checkWinLose, accumulateScore,
+} from './_common/primitives/index.mjs';   // 相对 game/src/ 指向 game/src/_common/primitives/
+// 场景文件多一层目录时用：
+// import { ... } from '../_common/primitives/index.mjs';
+
+// 每个调用 ctx 必须传 rule + node，命中 mechanics.yaml 的 node-id/rule-id。
+// runtime 自动 push window.__trace.push({primitive, rule, node, before, after})，
+// 业务代码不得再手写 __trace.push。
+
+function onPigTickIntoSegment(pig) {
+  const hit = rayCastGridFirstHit({
+    rule: 'attack-consume',        // 必填：对应 rule.yaml id
+    node: 'attack-consume',        // 必填：对应 mechanics.yaml node id
+    source: { id: pig.id, row: pig.row, col: pig.col, gridPosition: pig.gridPosition },
+    direction: directionFromSegment(pig.segmentId),
+    targets: state.blocks,
+    params: { 'stop-on': 'first-hit', 'coord-system': 'grid' },
+  });
+  if (!hit) return;
+
+  const match = predicateMatch({
+    rule: 'attack-consume', node: 'attack-consume',
+    candidate: hit, filter: { color: pig.color },
+  });
+  if (!match) return;
+
+  const next = consumeResource({
+    rule: 'attack-consume', node: 'attack-consume',
+    agent: pig, target: hit,
+    params: { 'agent-field': 'ammo', 'target-field': 'durability' },
+  });
+  Object.assign(pig, next.agent);
+  Object.assign(hit, next.target);
+}
+```
+
+**禁止模式**（`check_implementation_contract.js` P1.4 会逐条扫描）：
+
+- ❌ 在业务代码里写 `blocks.find(b => b.color === pig.color)` —— 该语义归
+  `ray-cast + predicate-match`，必须走 runtime。
+- ❌ 手写循环沿着 `segmentId` 对整行/整列 `for (let r=0; r<rows; r++)` 扫描 —— 该语义
+  归 `ray-cast.coord-system=grid`。
+- ❌ 手写 `pig.ammo--; block.durability--` —— 该语义归 `resource-consume`，必须透传
+  `agent-field / target-field`。
+- ❌ 手写 FSM：`if (state.phase === 'start' && event === 'click') state.phase = 'playing'`
+  —— 该语义归 `fsm-transition`，必须用 `fireTrigger({currentState, trigger, params})`。
+- ❌ 手写 `state.win = true` / `state.lose = true` —— 该语义归 `win-lose-check`，必须
+  用 `checkWinLose({state, params})` 返回值驱动。
+- ❌ 手写 `state.score += 10` —— 必须走 `accumulateScore({currentScore, eventPayload, params})`。
+- ❌ 手写 `window.__trace.push({rule: 'xxx'})` —— runtime 内部自动推送；业务代码
+  只能消费 `window.__trace`（测试可读），不得写入。
+
+**LLM 职责收窄**：
+- wiring（哪个 event 在哪个 tick 触发哪个 primitive）
+- UI 渲染（asset binding、layout、text）
+- 特殊非 primitive 的 scene/boot 逻辑
+
+**LLM 不再负责**：primitive 内部算法、trace 推送、before/after 快照。
+
+**引擎例外**：phaser3 / dom-ui / three 过渡期允许不 import runtime；等 P2 runtime
+适配做完再纳入。canvas / pixijs 无例外。
 
 ### Step 4.1：识别需要的通用系统模块
 
@@ -719,13 +822,15 @@ node game_skill/skills/scripts/check_asset_usage.js   cases/{slug}/
 
 ### Step 6.1：玩法原语落地规则
 
-这些规则来自 mechanics 层，不是可选建议：
+这些规则来自 mechanics 层，不是可选建议。**canvas / pixijs** 上这些规则由
+`_common/primitives/*.runtime.mjs` runtime 库强制实现，业务代码只做 wiring（见 §4.0.6）；
+其它引擎仍由 LLM 手写（过渡期）。
 
 - `parametric-track.shape=rect-loop`：画棋盘四周的直角闭环。Canvas 禁用 `ctx.arc()` 画轨道；DOM/Phaser/Pixi 禁用圆形 path 代替外圈。
-- `parametric-track + grid-projection`：每个运动 agent 必须维护 `gridPosition`，并随 `t/segmentId` 更新。
-- `ray-cast.coord-system=grid`：射线从 `source.gridPosition + direction` 开始逐格扫描；禁止只根据 `segmentId` 从整行/整列固定起点扫。
-- `predicate-match(fields:[color])`：ray-cast 只返回第一个阻挡候选，颜色匹配在 predicate 层做；禁止先全局找同色块再攻击。
-- `resource-consume`：扣除 `agent-field` 与 `target-field` 后再发事件，不能只改视觉。
+- `parametric-track + grid-projection`：每个运动 agent 必须维护 `gridPosition`，并随 `t/segmentId` 更新。canvas/pixijs 用 `tickTrack({ agent, dt, params })` 推进。
+- `ray-cast.coord-system=grid`：射线从 `source.gridPosition + direction` 开始逐格扫描；禁止只根据 `segmentId` 从整行/整列固定起点扫。canvas/pixijs 必须 `import { rayCastGridFirstHit } from './_common/primitives/index.mjs'`（或 `'../_common/...'`），禁止手写扫描循环。
+- `predicate-match(fields:[color])`：ray-cast 只返回第一个阻挡候选，颜色匹配在 predicate 层做；禁止先全局找同色块再攻击。canvas/pixijs 必须用 `predicateMatch({ candidate, filter })`。
+- `resource-consume`：扣除 `agent-field` 与 `target-field` 后再发事件，不能只改视觉。canvas/pixijs 必须用 `consumeResource({ agent, target, params })`，禁止手写 `agent.ammo--`。
 - DOM UI：只初始化静态 shell 一次，tick 中做 keyed update；禁止在 `setInterval` / `requestAnimationFrame` 中整页 `innerHTML = ...`，否则会闪烁和丢事件绑定。
 - Phaser/Pixi：首屏必须真实可见，StartScene/入口要有标题或开始按钮，点击后进入 playing；不能只创建空 canvas 等待测试 hook。
 - Phaser：任何 `Container` 绑定 `pointerdown` 前必须 `setSize(w,h)` 或显式 `setInteractive(hitArea, callback)`。禁止对由 `createXxx()` 返回的 Container 在调用方直接 `setInteractive({ useHandCursor: true })`，因为真实点击会出现 hitAreaCallback 错误或无响应。
