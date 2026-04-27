@@ -116,6 +116,31 @@ function packIdFromSource(source) {
   return null;
 }
 
+/**
+ * P0.5: 轻量 glob matcher，足够 catalog family.pattern 使用。支持：
+ *   *   — 同级目录内任意字符（不跨 /）
+ *   **  — 跨目录任意路径
+ *   ?   — 单字符
+ * 其它字符按字面匹配（包括 / 和 .）。
+ */
+function matchFamilyPattern(source, pattern) {
+  if (!source || !pattern) return false;
+  const escape = (c) => c.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+  let re = "";
+  for (let i = 0; i < pattern.length; i++) {
+    const ch = pattern[i];
+    if (ch === "*") {
+      if (pattern[i + 1] === "*") { re += ".*"; i++; }
+      else re += "[^/]*";
+    } else if (ch === "?") {
+      re += "[^/]";
+    } else {
+      re += escape(ch);
+    }
+  }
+  return new RegExp("^" + re + "$").test(source);
+}
+
 function normalizeAssetType(item, section) {
   const source = item?.source ?? "";
   if (item?.type === "generated") return section === "audio" ? "synthesized" : "graphics-generated";
@@ -277,6 +302,32 @@ for (const sec of sections) {
         continue;
       }
       const pack = packById.get(packId);
+      // P0.5: family-level allowed/disallowed-slots 语义冲突检测
+      //   pack 可声明 families: [{pattern, allowed-slots, disallowed-slots}]；
+      //   若 source 命中某 family 的 glob pattern，且该 asset 声明的
+      //   visual-primitive 出现在 disallowed-slots 中，则 fail。
+      //   这层用于挡"素材和玩法语义彻底不匹配"的错配，例如把 dungeon tile
+      //   绑到 pig 单位上，或把 ui-panel 的面板九宫格绑到 button。
+      const families = Array.isArray(pack?.families) ? pack.families : [];
+      if (families.length > 0) {
+        const vp = String(item["visual-primitive"] ?? "");
+        if (vp) {
+          for (const fam of families) {
+            const pat = String(fam?.pattern ?? "");
+            if (!pat || !matchFamilyPattern(item.source, pat)) continue;
+            const disallowed = Array.isArray(fam["disallowed-slots"]) ? fam["disallowed-slots"] : [];
+            if (disallowed.includes(vp)) {
+              fail(`[${sec}.${id}] source "${item.source}" 属于 pack "${packId}" 的 family "${pat}" (disallowed-slots=${disallowed.join(",")})，不能用作 visual-primitive="${vp}"`);
+            }
+            const allowed = Array.isArray(fam["allowed-slots"]) ? fam["allowed-slots"] : [];
+            if (allowed.length > 0 && !allowed.includes(vp)) {
+              fail(`[${sec}.${id}] source "${item.source}" 属于 pack "${packId}" 的 family "${pat}" (allowed-slots=${allowed.join(",")})，与声明的 visual-primitive="${vp}" 不符`);
+            }
+            // 一条 source 只匹配第一个命中的 family
+            break;
+          }
+        }
+      }
       // c) asset-style 匹配（3D catalog 通常无 suitable-styles，因此自然跳过）
       if (assetStyle && pack["suitable-styles"]) {
         const styles = pack["suitable-styles"];

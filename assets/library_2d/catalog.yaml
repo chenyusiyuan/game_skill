@@ -212,6 +212,16 @@ packs:
       - "../fonts/Kenney Future Narrow.ttf"
     index: ui/_index.yaml
     how-to-pick: "读 _index.yaml 了解分组结构，或直接 ls 子目录看文件名选择。文件名完全自描述。"
+    # P0.5 family → slot 约束：ui-pack 里按钮目录只能当 ui-button，其余按语义分流
+    families:
+      - pattern: "assets/library_2d/ui/buttons/**/*.png"
+        allowed-slots: [ui-button]
+        disallowed-slots: [color-block, color-unit, terrain-cell]
+      - pattern: "assets/library_2d/ui/icons/**/*.png"
+        allowed-slots: [icon, ui-readout]
+        disallowed-slots: [color-block, color-unit, terrain-cell, ui-panel]
+      - pattern: "assets/library_2d/ui/**/*.png"
+        disallowed-slots: [color-block, color-unit, terrain-cell]
 
   - id: ui-pixel-adventure
     path: ui-pixel/
@@ -231,6 +241,12 @@ packs:
       包含：面板九宫格(0000-0012)、按钮(0013-0021)、深色面板(0022-0030)、心(0031-0033)、进度条(0034-0039)、
       金币/宝石/星星/钥匙(0040-0043)、箭头/光标(0044-0051)、边框/缎带(0052-0062)、数字0-9(0063-0072)、
       旗帜/锁/滚动条/复选框/开关/气泡(0073-0090)
+    # P0.5 family → slot 约束
+    # ui-pixel tile 文件编号按段分语义：面板九宫格/按钮/深色面板/心/进度条 等
+    # glob 不支持数字区间，所以按通配整个 ui-pixel/*.png 保守声明
+    families:
+      - pattern: "assets/library_2d/ui-pixel/tile_*.png"
+        disallowed-slots: [color-block, color-unit, terrain-cell]
 
   # ═══════════════════════════════════════════════════════════
   # HUD / 游戏图标
@@ -248,6 +264,11 @@ packs:
     total-files: 105
     index: hud/game-icons/_index.yaml
     how-to-pick: "读 _index.yaml 了解分组，或直接 ls 目录，文件名即图标含义。包含：导航(home/return/exit)、媒体控制(pause/play/stop)、音频(audioOn/audioOff)、设置(gear/save/lock)、游戏(star/trophy/medal/target)、方向箭头、缩放、设备图标等。"
+    # P0.5 family → slot 约束：游戏图标只做 icon/HUD 读数
+    families:
+      - pattern: "assets/library_2d/hud/game-icons/*.png"
+        allowed-slots: [icon, ui-readout]
+        disallowed-slots: [color-block, color-unit, ui-panel, terrain-cell]
 
   - id: board-game-icons
     path: hud/board-icons/
@@ -261,6 +282,11 @@ packs:
     total-files: 255
     index: hud/board-icons/_index.yaml
     how-to-pick: "读 _index.yaml 了解分组，或 ls 目录看文件名。包含大量桌游元素：d4-d20 各种骰子、象棋棋子、卡牌图标、代币/筹码、沙漏、奖杯/皇冠、旗帜、书本、药水/盾牌/剑、骷髅、火焰等。"
+    # P0.5 family → slot 约束：棋子/筹码/图标
+    families:
+      - pattern: "assets/library_2d/hud/board-icons/*.png"
+        allowed-slots: [icon, colorable-token, ui-readout]
+        disallowed-slots: [color-block, ui-panel, terrain-cell]
 
   # ═══════════════════════════════════════════════════════════
   # 游戏精灵
@@ -354,6 +380,17 @@ packs:
     total-files: 86
     index: sprites/puzzle/_index.yaml
     how-to-pick: "读 _index.yaml 了解分组，或 ls 目录看文件名。ball*/element*/button*/hand*/pointer*/selector*/paddle*/particle*"
+    # P0.5 family → slot 约束：球/宝石/按钮 按子目录分
+    families:
+      - pattern: "assets/library_2d/sprites/puzzle/ball*.png"
+        allowed-slots: [color-unit, colorable-token]
+        disallowed-slots: [color-block, ui-panel, terrain-cell]
+      - pattern: "assets/library_2d/sprites/puzzle/element*.png"
+        allowed-slots: [color-unit, colorable-token]
+        disallowed-slots: [color-block, ui-panel, terrain-cell]
+      - pattern: "assets/library_2d/sprites/puzzle/button*.png"
+        allowed-slots: [ui-button]
+        disallowed-slots: [color-block, color-unit, terrain-cell]
 
   # ═══════════════════════════════════════════════════════════
   # 瓦片地图
@@ -378,6 +415,11 @@ packs:
       亡灵怪(0042-0047)、小怪(0048-0059)、Boss(0060-0063)、武器盾牌(0064-0071)、
       药水/货币/宝石/钥匙(0072-0083)、消耗品(0084-0095)、装饰(0096-0109)、陷阱(0110-0114)、
       特效(0115-0119)、UI心/魔力(0120-0131)
+    # P0.5 family → slot 约束：dungeon tile 只能作为地形/背景，禁止承担色块 / 色单位 / 按钮
+    families:
+      - pattern: "assets/library_2d/tiles/dungeon/tile_*.png"
+        allowed-slots: [terrain-cell, background]
+        disallowed-slots: [color-block, color-unit, ui-button, ui-panel]
 
   - id: tiles-town
     path: tiles/town/
@@ -398,6 +440,11 @@ packs:
       风车/水井/码头/矿洞(0036-0047)、树木/灌木/花卉(0048-0059)、岩石/栅栏(0060-0071)、
       NPC角色(0072-0083)、动物/交通(0084-0095)、物品资源(0096-0107)、工具武器(0108-0119)、
       装饰(0120-0131)
+    # P0.5 family → slot 约束
+    families:
+      - pattern: "assets/library_2d/tiles/town/tile_*.png"
+        allowed-slots: [terrain-cell, background]
+        disallowed-slots: [color-block, color-unit, ui-button, ui-panel]
 
   - id: tiles-platformer-pixel
     path: tiles/platformer-pixel/
@@ -419,6 +466,11 @@ packs:
       浮空平台4色(0120-0131)、蹦床/炮台/投射物(0132-0139)、
       敌人(史莱姆/蜗牛/苍蝇/蜜蜂/刺球/锯片 0140-0149)、特效(0150-0159)、
       HUD心/数字0-9/UI箭头/勾叉(0160-0179)
+    # P0.5 family → slot 约束
+    families:
+      - pattern: "assets/library_2d/tiles/platformer-pixel/tile_*.png"
+        allowed-slots: [terrain-cell, background]
+        disallowed-slots: [color-block, color-unit, ui-button, ui-panel]
 
   - id: tiles-roguelike-dungeon
     path: tiles/roguelike-dungeon/
@@ -457,6 +509,11 @@ packs:
     naming: "语义文件名"             # cardClubs_A.png, cardBack_blue3.png
     total-files: 68
     how-to-pick: "ls 目录。card{Clubs|Diamonds|Hearts|Spades}_{A-K}.png = 牌面；cardBack_{color}{1-5}.png = 牌背。"
+    # P0.5 family → slot 约束：牌面/牌背视为 colorable-token 或 ui-panel
+    families:
+      - pattern: "assets/library_2d/cards/*.png"
+        allowed-slots: [colorable-token, ui-panel]
+        disallowed-slots: [color-block, terrain-cell, ui-button]
 
   # ═══════════════════════════════════════════════════════════
   # 音频
