@@ -24,8 +24,8 @@ import { resolveLaunchTarget } from "./_run_mode.js";
 import {
   selectApplicableProbes,
   traceEventMatches,
-  verifyRayCastSemantics,
 } from "./_runtime_probes.js";
+import { replayEvent, indexMechanics } from "./_runtime_replay.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const _logPath = parseLogArg(process.argv);
@@ -77,15 +77,7 @@ try {
   finish(3, "missing-playwright");
 }
 
-// 动态加载 ray-cast reducer 的 castGrid（P0 版本只做这一条）
-const RAY_CAST_REDUCER = "../references/mechanics/spatial/ray-cast.reducer.mjs";
-let castGrid;
-try {
-  ({ castGrid } = await import(RAY_CAST_REDUCER));
-} catch (e) {
-  fail(`加载 ray-cast reducer 失败: ${e.message}`);
-  finish(3, "reducer-load-failed");
-}
+// 动态 reducer 加载集中在 _runtime_replay.js（P1.5 起覆盖全部 runtime-backed primitive）
 
 // 启动 Playwright 执行 probe
 const launch = await resolveLaunchTarget(gameDir);
@@ -161,28 +153,30 @@ try {
     const trace = await page.evaluate(() => Array.isArray(window.__trace) ? window.__trace.slice() : []);
     console.log(`    · trace events: ${trace.length}`);
 
-    // 5) 语义复算每条 ray-cast 事件
+    // 5) 语义复算每条 trace 事件（P1.5：所有 runtime-backed primitive）
+    const mechIndex = indexMechanics(mech);
     let skippedCount = 0;
     let violationCount = 0;
+    let replayedCount = 0;
     for (let i = 0; i < trace.length; i++) {
       const ev = trace[i];
-      if (ev?.primitive !== "ray-cast@v1") continue;
-      const mechNode = (mech.mechanics ?? []).find(
-        (n) => n.primitive === "ray-cast@v1" && (!ev.node || n.node === ev.node),
-      );
-      const params = mechNode?.params ?? {};
-      const res = verifyRayCastSemantics(ev, castGrid, params);
+      if (!ev?.primitive) continue;
+      const res = await replayEvent(ev, {
+        mechNodesByNode: mechIndex.byNode,
+        mechByPrimitive: mechIndex.byPrimitive,
+      });
       if (res.ok === null) {
         skippedCount++;
         continue;
       }
+      replayedCount++;
       if (res.ok === false) {
         violationCount++;
-        fail(`[${probe.id}][trace#${i}] ray-cast 复算不符: ${res.reason}`);
+        fail(`[${probe.id}][trace#${i}][${ev.primitive}] 复算不符: ${res.reason}`);
       }
     }
     if (skippedCount > 0) {
-      warn(`[${probe.id}] 跳过 ${skippedCount} 条缺 before/after 的 trace 事件（runtime primitive 未启用）`);
+      warn(`[${probe.id}] 跳过 ${skippedCount} 条 trace 事件（缺 before/after 或 primitive 未支持复算）`);
     }
 
     // 6) expected-trace 断言
@@ -203,7 +197,7 @@ try {
       }
     }
 
-    if (violationCount === 0) ok(`[${probe.id}] ${trace.length} events, reducer 复算全部通过（skipped=${skippedCount}）`);
+    if (violationCount === 0) ok(`[${probe.id}] ${trace.length} events, reducer 复算 ${replayedCount} 条全部通过（skipped=${skippedCount}）`);
   }
 } finally {
   await browser.close();
