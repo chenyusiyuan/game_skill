@@ -2062,6 +2062,122 @@ console.log("\n[P1.2] slot-pool / capacity-gate / entity-lifecycle / cooldown-di
 }
 
 // =============================
+// P1.6: asset-usage runtime evidence + test-hook 自动挂 getAssetUsage
+// =============================
+console.log("\n[P1.6] asset-usage: recordAssetUsage + observers.getAssetUsage 默认安装");
+
+{
+  const repoRoot = resolve(here, "../../../..");
+  const { recordAssetUsage, getAssetUsageSnapshot, resetAssetUsage } = await import(
+    `file://${repoRoot}/game_skill/skills/references/engines/_common/asset-usage.js`
+  );
+  const { exposeTestHooks } = await import(
+    `file://${repoRoot}/game_skill/skills/references/engines/_common/test-hook.js`
+  );
+
+  test("recordAssetUsage: 无 window → noop 不崩", () => {
+    const saved = globalThis.window;
+    try {
+      delete globalThis.window;
+      recordAssetUsage({ id: "x", section: "images" });
+      // 没 window 就是没 window，不抛异常即可
+    } finally {
+      if (saved !== undefined) globalThis.window = saved;
+    }
+  });
+
+  test("recordAssetUsage: browser mock 写入 window.__assetUsage 且带 manifest meta", () => {
+    const saved = globalThis.window;
+    try {
+      const fakeWindow = {};
+      globalThis.window = fakeWindow;
+      recordAssetUsage({
+        id: "pig-red",
+        section: "images",
+        kind: "texture",
+        manifestItem: {
+          id: "pig-red",
+          "binding-to": "pig",
+          "visual-primitive": "color-unit",
+          "color-source": "entity.color",
+        },
+        extra: { color: "red" },
+      });
+      const entry = fakeWindow.__assetUsage[0];
+      assert(entry.id === "pig-red");
+      assert(entry.bindingTo === "pig");
+      assert(entry.visualPrimitive === "color-unit");
+      assert(entry.colorSource === "entity.color");
+      assert(entry.extra?.color === "red");
+      assert(entry.section === "images" && entry.kind === "texture");
+      assert(typeof entry.at === "number");
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
+  test("getAssetUsageSnapshot: 返回 shallow-copy，后续原地修改不污染", () => {
+    const saved = globalThis.window;
+    try {
+      globalThis.window = { __assetUsage: [] };
+      recordAssetUsage({ id: "a", section: "images" });
+      const snap = getAssetUsageSnapshot();
+      snap[0].id = "mutated";
+      const second = getAssetUsageSnapshot();
+      assert(second[0].id === "a", "原 sink 不应被 snapshot 修改影响");
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
+  test("resetAssetUsage: 清空 sink", () => {
+    const saved = globalThis.window;
+    try {
+      globalThis.window = {};
+      recordAssetUsage({ id: "a", section: "images" });
+      assert(globalThis.window.__assetUsage.length === 1);
+      resetAssetUsage();
+      assert(globalThis.window.__assetUsage.length === 0);
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
+  test("exposeTestHooks: 默认自动挂 observers.getAssetUsage", () => {
+    const saved = globalThis.window;
+    try {
+      globalThis.window = {};
+      exposeTestHooks({ state: { hello: 1 } });
+      const getter = globalThis.window.gameTest.observers.getAssetUsage;
+      assert(typeof getter === "function", "应自动挂 getAssetUsage");
+      // 调一下返回 sink snapshot
+      recordAssetUsage({ id: "x", section: "images" });
+      const list = getter();
+      assert(Array.isArray(list) && list.length >= 1);
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
+  test("exposeTestHooks: 业务显式传 observers.getAssetUsage 则不被覆盖", () => {
+    const saved = globalThis.window;
+    try {
+      globalThis.window = {};
+      const custom = () => "custom-sentinel";
+      exposeTestHooks({ state: { hello: 1 }, observers: { getAssetUsage: custom } });
+      assert(globalThis.window.gameTest.observers.getAssetUsage === custom);
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+}
+
+// =============================
 // 汇总
 // =============================
 console.log(`\n结果: ${passed} passed, ${failed} failed`);

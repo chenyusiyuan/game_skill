@@ -7,6 +7,7 @@
  */
 
 import { validateManifest, buildStats } from "../../../_common/registry.spec.js";
+import { recordAssetUsage } from "../../../_common/asset-usage.js";
 
 export async function createRegistry(manifest) {
   const { ok, errors } = validateManifest(manifest);
@@ -14,6 +15,9 @@ export async function createRegistry(manifest) {
 
   const base = manifest.basePath || "";
   const entries = new Map();
+  const manifestImageById = new Map((manifest.images ?? []).map((it) => [it.id, it]));
+  const manifestSheetById = new Map((manifest.spritesheets ?? []).map((it) => [it.id, it]));
+  const manifestAudioById = new Map((manifest.audio ?? []).map((it) => [it.id, it]));
 
   // 并行预加载
   const loadImage = (item) => new Promise((resolve) => {
@@ -79,22 +83,57 @@ export async function createRegistry(manifest) {
   function get(id) { return entries.get(id); }
 
   return {
-    getTexture(id) {
+    getTexture(id, extra = null) {
       const e = get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
-      return e.kind === "image" ? e.value : null;
+      if (e.kind !== "image") return null;
+      recordAssetUsage({
+        id,
+        section: "images",
+        kind: "texture",
+        manifestItem: manifestImageById.get(id),
+        extra,
+      });
+      return e.value;
     },
-    getSpritesheet(id) {
+    getSpritesheet(id, extra = null) {
       const e = get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
-      // canvas 没原生 spritesheet，返回 { image, frameWidth, frameHeight }
-      const meta = (manifest.spritesheets ?? []).find(s => s.id === id);
-      return e.kind === "image" ? { image: e.value, frameWidth: meta?.frameWidth, frameHeight: meta?.frameHeight } : null;
+      const meta = manifestSheetById.get(id);
+      if (e.kind !== "image") return null;
+      recordAssetUsage({
+        id,
+        section: "spritesheets",
+        kind: "spritesheet",
+        manifestItem: meta,
+        extra,
+      });
+      return { image: e.value, frameWidth: meta?.frameWidth, frameHeight: meta?.frameHeight };
     },
-    getAudio(id) {
+    getAudio(id, extra = null) {
       const e = get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
-      return e.kind === "audio" ? e.value : e.kind === "synth-meta" ? { synthParams: e.value } : null;
+      if (e.kind === "audio") {
+        recordAssetUsage({
+          id,
+          section: "audio",
+          kind: "audio",
+          manifestItem: manifestAudioById.get(id),
+          extra,
+        });
+        return e.value;
+      }
+      if (e.kind === "synth-meta") {
+        recordAssetUsage({
+          id,
+          section: "audio",
+          kind: "audio",
+          manifestItem: manifestAudioById.get(id),
+          extra,
+        });
+        return { synthParams: e.value };
+      }
+      return null;
     },
     has: (id) => entries.has(id),
     stats: () => buildStats(entries),

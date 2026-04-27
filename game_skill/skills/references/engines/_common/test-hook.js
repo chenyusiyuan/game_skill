@@ -33,6 +33,8 @@
 const PROBE_LIKE_KEYS =
   /^(resetWith|seed|setScenario|setRng|stepTicks?|tick|advance|forceState)/;
 
+import { getAssetUsageSnapshot } from "./asset-usage.js";
+
 export function exposeTestHooks({
   state,
   hooks = {},
@@ -67,6 +69,12 @@ export function exposeTestHooks({
   for (const [k, fn] of Object.entries(observers)) {
     if (typeof fn !== "function") continue;
     observersNs[k] = fn;
+  }
+  // Default getAssetUsage observer (P1.6): surfaces window.__assetUsage
+  // that the registry adapter fills on each getTexture / getSpritesheet / getAudio.
+  // Business code can still override by passing observers.getAssetUsage explicitly.
+  if (typeof observersNs.getAssetUsage !== "function") {
+    observersNs.getAssetUsage = () => getAssetUsageSnapshot();
   }
 
   const driversNs = (ns.drivers ??= {});

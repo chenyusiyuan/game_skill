@@ -241,6 +241,17 @@ const registry = await createRegistry(manifest);
 
 拿资源统一走 `registry.getTexture(id)` / `getSpritesheet(id)` / `getAudio(id)`。
 
+**P1.6 runtime evidence**：每次 `registry.getTexture / getSpritesheet / getAudio` 被业务
+代码调用时，canvas / pixijs adapter 内部自动 `recordAssetUsage(...)` 把一条
+entry push 到 `window.__assetUsage`（带 bindingTo / visualPrimitive / colorSource
+/ 业务传的 `extra`）。check_asset_usage.js 的 runtime 层会读取它，要求每个
+`must-render=true` 的 asset 在 Playwright 实际跑游戏后至少出现一次——比 grep
+静态消费更硬。业务代码对 color-block / color-unit **建议**把当前颜色传进 extra：
+
+```js
+registry.getTexture('pig-red', { color: pig.color });
+```
+
 **Phaser 例外**：由于 Phaser Loader 生命周期要求素材在 `preload()` 阶段注册，Phaser 模板**必须**使用两段式 registry（禁止单段式）：
 
 ```js
