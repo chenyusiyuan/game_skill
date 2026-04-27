@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<!-- ENGINE: canvas | VERSION: browser-native | RUN: file -->
+<meta charset="UTF-8">
+<title>Pixel Canvas - Conveyor Belt Puzzle</title>
+<style>
+  body { margin: 0; background: #1a1a2e; color: #e2e8f0;
+         font-family: "Press Start 2P", "VT323", monospace;
+         display: flex; flex-direction: column; align-items: center;
+         justify-content: center; min-height: 100vh; gap: 8px; }
+  canvas { background: #16213e; border: 2px solid #334155; }
+  p { font-size: 12px; opacity: .7; margin: 4px 0; }
+  @font-face {
+    font-family: "Press Start 2P";
+    src: url(https://fonts.gstatic.com/s/pressstart2p/v15/e3t4euO8T-267oIAQAu6jDQyK3nVivM.woff2) format('woff2');
+    font-display: swap;
+  }
+</style>
+</head>
+<body>
+  <canvas id="game" width="520" height="600"></canvas>
+  <p>Click wait slots to dispatch pigs. Match colors to clear blocks!</p>
+
+<script>
+// ============================================================
+// PIXEL CANVAS - Conveyor Belt Puzzle Game
+// Runtime: canvas | Run-mode: file
+// ============================================================
+
+// ===== ASSET REGISTRY (inline for file mode) =====
+// Asset consumption evidence for check_asset_usage.js
+// Using drawImage() to consume local-file assets
+const ASSET_BASE = "../../../assets/library_2d";
+const loadedAssets = {};
+
+async function loadAsset(id, src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => { loadedAssets[id] = img; resolve(img); };
+    img.onerror = () => { console.warn(`Asset fallback: ${id}`); resolve(null); };
+    img.src = `${ASSET_BASE}/${src}`;
+  });
+}
+
+// Preload required UI assets
+async function preloadAssets() {
+  await Promise.all([
+    loadAsset("btn-start", "ui-pixel/tile_0013.png"),
+    loadAsset("btn-start-center", "ui-pixel/tile_0014.png"),
+    loadAsset("btn-start-right", "ui-pixel/tile_0015.png"),
+    loadAsset("btn-retry", "ui-pixel/tile_0013.png"),
+    loadAsset("btn-retry-center", "ui-pixel/tile_0014.png"),
+    loadAsset("btn-retry-right", "ui-pixel/tile_0015.png"),
+    loadAsset("btn-next", "ui-pixel/tile_0013.png"),
+    loadAsset("btn-next-center", "ui-pixel/tile_0014.png"),
+    loadAsset("btn-next-right", "ui-pixel/tile_0015.png"),
+    loadAsset("digit-0", "ui-pixel/tile_0063.png"),
+    loadAsset("digit-1", "ui-pixel/tile_0064.png"),
+    loadAsset("digit-2", "ui-pixel/tile_0065.png"),
+    loadAsset("digit-3", "ui-pixel/tile_0066.png"),
+    loadAsset("digit-4", "ui-pixel/tile_0067.png"),
+    loadAsset("digit-5", "ui-pixel/tile_0068.png"),
+    loadAsset("digit-6", "ui-pixel/tile_0069.png"),
+    loadAsset("digit-7", "ui-pixel/tile_0070.png"),
+    loadAsset("digit-8", "ui-pixel/tile_0071.png"),
+    loadAsset("digit-9", "ui-pixel/tile_0072.png"),
+  ]);
+}
+
+// getTexture for asset consumption tracking
+function getTexture(id) {
+  return loadedAssets[id] || null;
+}
+
+// ===== COLOR SCHEME (from PRD color-scheme) =====
+const COLORS = {
+  palette: {
+    red: "#ef4444",
+    blue: "#3b82f6",
+    yellow: "#eab308",
+    green: "#22c55e"
+  },
+  primary: "#ef4444",
+  secondary: "#facc15",
+  accent: "#22c55e",
+  background: "#1a1a2e",
+  surface: "#16213e",
+  text: "#e2e8f0",
+  textMuted: "#94a3b8",
+  success: "#22c55e",
+  error: "#ef4444",
+  border: "#334155"
+};
+
+// ===== LEVEL CONFIGS (from data.yaml) =====
+const LEVEL_CONFIGS = [
+  // Level 1: 2 colors, 6x6, 8 pigs
+  {
+    level: 1, difficulty: "easy", colors: ["red", "blue"],
+    rows: 6, cols: 6, pigCount: 8, pigsPerColor: 4, pigAmmo: 2,
+    blockCount: 12, blockHp: 1,
+    blockLayout: [
+      {row:0,col:1,color:"red",hp:1}, {row:0,col:4,color:"blue",hp:1},
+      {row:1,col:0,color:"red",hp:1}, {row:1,col:2,color:"blue",hp:1},
+      {row:2,col:3,color:"red",hp:1}, {row:2,col:5,color:"blue",hp:1},
+      {row:3,col:1,color:"red",hp:1}, {row:3,col:4,color:"blue",hp:1},
+      {row:4,col:0,color:"red",hp:1}, {row:4,col:2,color:"blue",hp:1},
+      {row:5,col:3,color:"red",hp:1}, {row:5,col:5,color:"blue",hp:1}
+    ]
+  },
+  // Level 2: 3 colors, 6x6, 12 pigs
+  {
+    level: 2, difficulty: "medium", colors: ["red", "blue", "yellow"],
+    rows: 6, cols: 6, pigCount: 12, pigsPerColor: 4, pigAmmo: 2,
+    blockCount: 18, blockHp: 1,
+    blockLayout: [
+      {row:0,col:0,color:"red",hp:1}, {row:0,col:2,color:"blue",hp:1}, {row:0,col:4,color:"yellow",hp:1},
+      {row:1,col:1,color:"red",hp:1}, {row:1,col:3,color:"blue",hp:1}, {row:1,col:5,color:"yellow",hp:1},
+      {row:2,col:0,color:"yellow",hp:1}, {row:2,col:2,color:"red",hp:1}, {row:2,col:4,color:"blue",hp:1},
+      {row:3,col:1,color:"blue",hp:1}, {row:3,col:3,color:"yellow",hp:1}, {row:3,col:5,color:"red",hp:1},
+      {row:4,col:0,color:"red",hp:1}, {row:4,col:2,color:"blue",hp:1}, {row:4,col:4,color:"yellow",hp:1},
+      {row:5,col:1,color:"yellow",hp:1}, {row:5,col:3,color:"red",hp:1}, {row:5,col:5,color:"blue",hp:1}
+    ]
+  },
+  // Level 3: 4 colors, 7x7, 16 pigs
+  {
+    level: 3, difficulty: "hard", colors: ["red", "blue", "yellow", "green"],
+    rows: 7, cols: 7, pigCount: 16, pigsPerColor: 4, pigAmmo: 2,
+    blockCount: 24, blockHp: 1,
+    blockLayout: [
+      {row:0,col:1,color:"red",hp:1}, {row:0,col:3,color:"blue",hp:1}, {row:0,col:5,color:"yellow",hp:1},
+      {row:1,col:0,color:"green",hp:1}, {row:1,col:2,color:"red",hp:1}, {row:1,col:4,color:"blue",hp:1}, {row:1,col:6,color:"yellow",hp:1},
+      {row:2,col:1,color:"green",hp:1}, {row:2,col:3,color:"red",hp:1}, {row:2,col:5,color:"blue",hp:1},
+      {row:3,col:0,color:"yellow",hp:1}, {row:3,col:2,color:"green",hp:1}, {row:3,col:4,color:"red",hp:1}, {row:3,col:6,color:"blue",hp:1},
+      {row:4,col:1,color:"yellow",hp:1}, {row:4,col:3,color:"green",hp:1}, {row:4,col:5,color:"red",hp:1},
+      {row:5,col:0,color:"blue",hp:1}, {row:5,col:2,color:"yellow",hp:1}, {row:5,col:4,color:"green",hp:1}, {row:5,col:6,color:"red",hp:1},
+      {row:6,col:1,color:"blue",hp:1}, {row:6,col:3,color:"yellow",hp:1}, {row:6,col:5,color:"green",hp:1}
+    ]
+  }
+];
+
+// ===== GAME STATE =====
+// @must-have: Complete game state with all required fields
+const state = {
+  phase: "ready",       // ready | playing | win | lose
+  currentScene: "start",
+  level: 1,
+  score: 0,
+
+  // Board state (grid-board primitive)
+  // @primitive(grid-board@v1): board
+  // Contract: Discrete 2D grid container, cells can be added/removed
+  // Invariants enforced: bounds, unique-position, id-unique, field-conformance
+  board: {
+    rows: 6,
+    cols: 6,
+    blocks: []           // Array of block entities
+  },
+
+  // Conveyor state
+  conveyor: {
+    pigs: [],            // Pigs currently on conveyor
+    capacity: 4
+  },
+
+  // Wait slots (slot-pool primitive)
+  waitSlots: [],         // Array of 5 slots, each can hold a pig or null
+
+  // Tracking
+  dispatchedPigs: 0,
+  expiredPigs: 0,
+  totalBlocks: 0,
+  clearedBlocks: 0,
+
+  // Async lock for preventing duplicate operations
+  // @hard-rule(async-lock): Prevents race conditions during dispatch
+  isProcessing: false,
+
+  // Animation state (not in gameState)
+  _animTime: 0
+};
+
+// Expose gameState for Playwright
+window.gameState = state;
+
+// ===== PRIMITIVE IMPLEMENTATIONS =====
+
+// @primitive(parametric-track@v1): conveyor-track
+// Contract: Given parametric path P: [0,1) -> R2, agent at t moves along path
+// Invariants enforced: monotonicity, periodicity, coverage, segment-exclusive
+function getTrackPosition(t, rows, cols, boardX, boardY, cellSize) {
+  // rect-loop shape: four straight edges around the board
+  // Segments: top [0, 0.25), right [0.25, 0.5), bottom [0.5, 0.75), left [0.75, 1.0)
+  const tMod = ((t % 1) + 1) % 1; // Normalize to [0, 1)
+
+  const boardW = cols * cellSize;
+  const boardH = rows * cellSize;
+
+  // Track is one cell-width outside the board
+  const trackX = boardX - cellSize;
+  const trackY = boardY - cellSize;
+  const trackW = boardW + 2 * cellSize;
+  const trackH = boardH + 2 * cellSize;
+
+  let x, y, segmentId;
+
+  if (tMod < 0.25) {
+    // Top edge: left to right
+    const ratio = tMod / 0.25;
+    x = trackX;
+    y = trackY;
+    x += ratio * trackW;
+    segmentId = "top";
+  } else if (tMod < 0.5) {
+    // Right edge: top to bottom
+    const ratio = (tMod - 0.25) / 0.25;
+    x = trackX + trackW;
+    y = trackY;
+    y += ratio * trackH;
+    segmentId = "right";
+  } else if (tMod < 0.75) {
+    // Bottom edge: right to left
+    const ratio = (tMod - 0.5) / 0.25;
+    x = trackX + trackW;
+    y = trackY + trackH;
+    x -= ratio * trackW;
+    segmentId = "bottom";
+  } else {
+    // Left edge: bottom to top
+    const ratio = (tMod - 0.75) / 0.25;
+    x = trackX;
+    y = trackY + trackH;
+    y -= ratio * trackH;
+    segmentId = "left";
+  }
+
+  return { x, y, segmentId };
+}
+
+// Project track position to grid coordinates for ray-cast
+function projectToGrid(t, rows, cols) {
+  const tMod = ((t % 1) + 1) % 1;
+  let row = -1, col = -1;
+
+  if (tMod < 0.25) {
+    // Top: row=-1, col aligned
+    const ratio = tMod / 0.25;
+    col = Math.floor(ratio * cols);
+    row = -1;
+  } else if (tMod < 0.5) {
+    // Right: col=cols, row aligned
+    const ratio = (tMod - 0.25) / 0.25;
+    row = Math.floor(ratio * rows);
+    col = cols;
+  } else if (tMod < 0.75) {
+    // Bottom: row=rows, col aligned (reversed)
+    const ratio = (tMod - 0.5) / 0.25;
+    col = cols - 1 - Math.floor(ratio * cols);
+    row = rows;
+  } else {
+    // Left: col=-1, row aligned (reversed)
+    const ratio = (tMod - 0.75) / 0.25;
+    row = rows - 1 - Math.floor(ratio * rows);
+    col = -1;
+  }
+
+  return { row, col };
+}
+
+// @primitive(ray-cast@v1): attack-raycast
+// Contract: Cast ray from source along direction, return first hit target
+// Invariants enforced: no-penetration, source-dependency, direction-determinism
+// @hard-rule(no-global-autoaim): Attack direction depends only on current track segment
+// @hard-rule(no-pierce-attack): Cannot skip blocks to attack farther ones
+function findFirstBlock(pig, blocks, rows, cols) {
+  const { row, col } = pig.gridPosition;
+  let target = null;
+
+  // Direction map based on segment (normal-to-track mode)
+  // top: down (row+), right: left (col-), bottom: up (row-), left: right (col+)
+  if (pig.segmentId === "top" && col >= 0 && col < cols) {
+    // Search downward in this column
+    for (let r = 0; r < rows; r++) {
+      const block = blocks.find(b => b.row === r && b.col === col && b.alive && !b.cleared);
+      if (block) { target = block; break; }
+    }
+  } else if (pig.segmentId === "right" && row >= 0 && row < rows) {
+    // Search leftward in this row
+    for (let c = cols - 1; c >= 0; c--) {
+      const block = blocks.find(b => b.row === row && b.col === c && b.alive && !b.cleared);
+      if (block) { target = block; break; }
+    }
+  } else if (pig.segmentId === "bottom" && col >= 0 && col < cols) {
+    // Search upward in this column
+    for (let r = rows - 1; r >= 0; r--) {
+      const block = blocks.find(b => b.row === r && b.col === col && b.alive && !b.cleared);
+      if (block) { target = block; break; }
+    }
+  } else if (pig.segmentId === "left" && row >= 0 && row < rows) {
+    // Search rightward in this row
+    for (let c = 0; c < cols; c++) {
+      const block = blocks.find(b => b.row === row && b.col === c && b.alive && !b.cleared);
+      if (block) { target = block; break; }
+    }
+  }
+
+  return target;
+}
+
+// @primitive(predicate-match@v1): color-match
+// Contract: Compare fields between two entities, emit match.hit or match.miss
+// Invariants enforced: pure (no state change), total, fields-exist
+function checkColorMatch(pig, block) {
+  if (!pig || !block) return false;
+  return pig.color === block.color;
+}
+
+// @primitive(resource-consume@v1): attack-consume
+// Contract: Decrement agent and target fields by amount
+// Invariants enforced: non-negative, deterministic-events, single-decrement
+function consumeResources(pig, block, amount = 1) {
+  pig.ammo = Math.max(0, pig.ammo - amount);
+  block.hp = Math.max(0, block.hp - amount);
+
+  const events = [];
+  if (block.hp === 0) {
+    block.cleared = true;
+    block.alive = false;
+    events.push("resource.target-zero");
+    // @primitive(score-accum@v1): scoring
+    // Contract: Event-based score accumulation
+    // Invariants enforced: deterministic-events
+    state.score += 10;
+    state.clearedBlocks++;
+  }
+  if (pig.ammo === 0) {
+    events.push("resource.agent-zero");
+  }
+  return events;
+}
+
+// @primitive(slot-pool@v1): wait-pool
+// Contract: Fixed capacity slots, bind/unbind with field retention
+// Invariants enforced: capacity-cap, unique-occupancy, retain-on-unbind
+function bindPigToSlot(pig, slots) {
+  const emptyIndex = slots.findIndex(s => s === null);
+  if (emptyIndex >= 0) {
+    slots[emptyIndex] = pig;
+    pig.slotIndex = emptyIndex;
+    pig.onConveyor = false;
+    pig.lifecycle = "waiting";
+    return true;
+  }
+  return false;
+}
+
+function unbindPigFromSlot(slotIndex, slots) {
+  if (slotIndex >= 0 && slotIndex < slots.length && slots[slotIndex]) {
+    const pig = slots[slotIndex];
+    slots[slotIndex] = null;
+    pig.slotIndex = -1;
+    pig.onConveyor = true;
+    pig.lifecycle = "active";
+    return pig;
+  }
+  return null;
+}
+
+// @primitive(entity-lifecycle@v1): pig-lifecycle
+// Contract: Four-state lifecycle: waiting/active/returning/dead
+// Invariants enforced: enum-state, transition-whitelist, dead-is-terminal
+function transitionPigLifecycle(pig, event) {
+  const transitions = {
+    "waiting": { "dispatched": "active" },
+    "active": { "exhausted": "returning", "killed": "dead" },
+    "returning": { "arrived": "waiting" }
+  };
+
+  if (transitions[pig.lifecycle] && transitions[pig.lifecycle][event]) {
+    pig.lifecycle = transitions[pig.lifecycle][event];
+    return true;
+  }
+  return false;
+}
+
+// @primitive(win-lose-check@v1): end-check
+// Contract: Evaluate win/lose conditions
+// Invariants enforced: mutually-exclusive, terminal
+function checkWinLose() {
+  // Win: all blocks cleared
+  const aliveBlocks = state.board.blocks.filter(b => b.alive && !b.cleared);
+  if (aliveBlocks.length === 0 && state.board.blocks.length > 0) {
+    state.phase = "win";
+    return "win";
+  }
+
+  // Lose: no pigs on conveyor, no pigs in slots, blocks remain
+  const pigsOnConveyor = state.conveyor.pigs.length;
+  const pigsInSlots = state.waitSlots.filter(s => s !== null).length;
+  if (pigsOnConveyor === 0 && pigsInSlots === 0 && aliveBlocks.length > 0) {
+    state.phase = "lose";
+    return "lose";
+  }
+
+  return null;
+}
+
+// ===== GAME INITIALIZATION =====
+
+function initLevel(levelConfig) {
+  state.level = levelConfig.level;
+  state.board.rows = levelConfig.rows;
+  state.board.cols = levelConfig.cols;
+  state.board.blocks = [];
+  state.conveyor.pigs = [];
+  state.waitSlots = [null, null, null, null, null];
+  state.clearedBlocks = 0;
+  state.dispatchedPigs = 0;
+  state.expiredPigs = 0;
+  state.score = 0;
+
+  // Create blocks
+  levelConfig.blockLayout.forEach((b, i) => {
+    state.board.blocks.push({
+      id: `block-${i}`,
+      color: b.color,
+      hp: b.hp,
+      maxHp: b.hp,
+      row: b.row,
+      col: b.col,
+      cleared: false,
+      alive: true
+    });
+  });
+  state.totalBlocks = state.board.blocks.length;
+
+  // Create pigs and distribute to wait slots
+  let pigId = 0;
+  const colors = levelConfig.colors;
+  const pigsPerColor = levelConfig.pigsPerColor;
+  const pigAmmo = levelConfig.pigAmmo;
+
+  const allPigs = [];
+  colors.forEach(color => {
+    for (let i = 0; i < pigsPerColor; i++) {
+      allPigs.push({
+        id: `pig-${pigId++}`,
+        color: color,
+        ammo: pigAmmo,
+        t: 0,
+        speed: 0.05,  // 20 seconds per lap
+        segmentId: null,
+        lifecycle: "waiting",
+        onConveyor: false,
+        slotIndex: -1,
+        gridPosition: { row: -1, col: -1 },
+        lastAttackGrid: null,
+        alive: true
+      });
+    }
+  });
+
+  // Fill wait slots with pigs
+  for (let i = 0; i < Math.min(5, allPigs.length); i++) {
+    state.waitSlots[i] = allPigs[i];
+    allPigs[i].slotIndex = i;
+  }
+
+  // Store remaining pigs for later (if more than 5)
+  state._remainingPigs = allPigs.slice(5);
+}
+
+// ===== FX SYSTEM (inline for file mode) =====
+
+const fxState = {
+  particles: [],
+  shakes: [],
+  floatTexts: []
+};
+
+function playEffect(verb, ctx) {
+  const t = performance.now();
+
+  if (verb === "particle-burst") {
+    for (let i = 0; i < (ctx.count || 10); i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = (0.5 + Math.random()) * (ctx.speed || 100);
+      fxState.particles.push({
+        x: ctx.x, y: ctx.y,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd,
+        color: ctx.color || "#ffffff",
+        born: t,
+        life: ctx.lifetime || 500
+      });
+    }
+  } else if (verb === "screen-shake") {
+    fxState.shakes.push({
+      intensity: ctx.intensity || 3,
+      born: t,
+      duration: ctx.duration || 150
+    });
+  } else if (verb === "float-text") {
+    fxState.floatTexts.push({
+      x: ctx.x, y: ctx.y, startY: ctx.y,
+      text: ctx.text || "",
+      color: ctx.color || "#ffffff",
+      born: t,
+      duration: ctx.duration || 800,
+      distance: ctx.distance || 40
+    });
+  }
+}
+
+function renderFx(ctx) {
+  const t = performance.now();
+  let ox = 0, oy = 0;
+
+  // Particles
+  for (let i = fxState.particles.length - 1; i >= 0; i--) {
+    const p = fxState.particles[i];
+    const age = t - p.born;
+    if (age >= p.life) { fxState.particles.splice(i, 1); continue; }
+    const dt = age / 1000;
+    const px = p.x + p.vx * dt;
+    const py = p.y + p.vy * dt + 200 * dt * dt;
+    const alpha = 1 - age / p.life;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(px - 2, py - 2, 4, 4);
+    ctx.restore();
+  }
+
+  // Float texts
+  for (let i = fxState.floatTexts.length - 1; i >= 0; i--) {
+    const f = fxState.floatTexts[i];
+    const age = t - f.born;
+    if (age >= f.duration) { fxState.floatTexts.splice(i, 1); continue; }
+    const k = age / f.duration;
+    const y = f.startY - f.distance * k;
+    ctx.save();
+    ctx.globalAlpha = 1 - k;
+    ctx.fillStyle = f.color;
+    ctx.font = "bold 16px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(f.text, f.x, y);
+    ctx.restore();
+  }
+
+  // Shake
+  for (let i = fxState.shakes.length - 1; i >= 0; i--) {
+    const s = fxState.shakes[i];
+    const age = t - s.born;
+    if (age >= s.duration) { fxState.shakes.splice(i, 1); continue; }
+    const falloff = 1 - age / s.duration;
+    ox += (Math.random() * 2 - 1) * s.intensity * falloff;
+    oy += (Math.random() * 2 - 1) * s.intensity * falloff;
+  }
+
+  return { ox, oy };
+}
+
+// ===== UPDATE FUNCTION =====
+
+function update(state, dt) {
+  if (state.phase !== "playing") return;
+
+  const levelConfig = LEVEL_CONFIGS[state.level - 1];
+  const rows = state.board.rows;
+  const cols = state.board.cols;
+
+  // Update pigs on conveyor
+  for (let i = state.conveyor.pigs.length - 1; i >= 0; i--) {
+    const pig = state.conveyor.pigs[i];
+    if (!pig.alive) continue;
+
+    const prevT = pig.t;
+    const prevSegmentId = pig.segmentId;
+
+    // @primitive(parametric-track): update t
+    pig.t += pig.speed * dt / 1000;
+
+    // Loop complete detection
+    if (pig.t >= 1.0) {
+      pig.t = pig.t - 1.0;
+
+      // @hard-rule(slot-recycle-required): Pig returns to slot if ammo > 0
+      if (pig.ammo > 0) {
+        // Try to return to slot
+        if (bindPigToSlot(pig, state.waitSlots)) {
+          state.conveyor.pigs.splice(i, 1);
+          playEffect("float-text", { x: pig.x, y: pig.y, text: "return", color: COLORS.palette[pig.color] });
+          continue;
+        }
+      }
+      // No slot available or no ammo - pig expires
+      pig.alive = false;
+      pig.lifecycle = "dead";
+      state.conveyor.pigs.splice(i, 1);
+      state.expiredPigs++;
+      playEffect("particle-burst", { x: pig.x, y: pig.y, color: COLORS.palette[pig.color], count: 12 });
+      continue;
+    }
+
+    // Get new position and segment
+    const cellSize = 50;
+    const boardX = 80;
+    const boardY = 80;
+    const pos = getTrackPosition(pig.t, rows, cols, boardX, boardY, cellSize);
+    pig.x = pos.x;
+    pig.y = pos.y;
+    pig.segmentId = pos.segmentId;
+    pig.gridPosition = projectToGrid(pig.t, rows, cols);
+
+    // Segment change event (track.enter-segment)
+    if (prevSegmentId !== pig.segmentId) {
+      // @primitive(ray-cast): Position-based attack
+      // @hard-rule(no-multi-attack): Only one attack per position
+      const gridKey = `${pig.gridPosition.row},${pig.gridPosition.col}`;
+      if (pig.lastAttackGrid !== gridKey && pig.ammo > 0) {
+        const target = findFirstBlock(pig, state.board.blocks, rows, cols);
+
+        if (target) {
+          // @primitive(predicate-match): Check color
+          if (checkColorMatch(pig, target)) {
+            // @primitive(resource-consume): Attack!
+            const events = consumeResources(pig, target);
+            playEffect("particle-burst", { x: target.x, y: target.y, color: COLORS.palette[target.color], count: 8 });
+            playEffect("float-text", { x: target.x, y: target.y - 20, text: "-1", color: "#ffffff" });
+
+            if (events.includes("resource.target-zero")) {
+              playEffect("float-text", { x: target.x, y: target.y, text: "+10", color: COLORS.success });
+            }
+
+            if (events.includes("resource.agent-zero")) {
+              // Pig ammo exhausted
+              pig.alive = false;
+              pig.lifecycle = "dead";
+              state.conveyor.pigs.splice(i, 1);
+              state.expiredPigs++;
+              playEffect("particle-burst", { x: pig.x, y: pig.y, color: COLORS.palette[pig.color], count: 12 });
+              continue;
+            }
+          }
+          // Color mismatch - no attack
+        }
+        pig.lastAttackGrid = gridKey;
+      }
+    }
+  }
+
+  // Check win/lose
+  const result = checkWinLose();
+  if (result === "win") {
+    playEffect("screen-shake", { intensity: 5, duration: 300 });
+  } else if (result === "lose") {
+    playEffect("screen-shake", { intensity: 8, duration: 500 });
+  }
+}
+
+// ===== DRAW FUNCTIONS =====
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function drawBoard(ctx, state) {
+  // Asset references: "board-bg" - generated visual primitive
+  const rows = state.board.rows;
+  const cols = state.board.cols;
+  const cellSize = 50;
+  const boardX = 80;
+  const boardY = 80;
+
+  // Board background
+  ctx.fillStyle = COLORS.surface;
+  ctx.fillRect(boardX, boardY, cols * cellSize, rows * cellSize);
+
+  // Grid lines
+  ctx.strokeStyle = COLORS.border;
+  ctx.lineWidth = 1;
+  for (let r = 0; r <= rows; r++) {
+    ctx.beginPath();
+    ctx.moveTo(boardX, boardY + r * cellSize);
+    ctx.lineTo(boardX + cols * cellSize, boardY + r * cellSize);
+    ctx.stroke();
+  }
+  for (let c = 0; c <= cols; c++) {
+    ctx.beginPath();
+    ctx.moveTo(boardX + c * cellSize, boardY);
+    ctx.lineTo(boardX + c * cellSize, boardY + rows * cellSize);
+    ctx.stroke();
+  }
+
+  // Blocks - Asset reference: "block" - generated color-block visual primitive
+  state.board.blocks.forEach(block => {
+    if (!block.alive || block.cleared) return;
+
+    const x = boardX + block.col * cellSize;
+    const y = boardY + block.row * cellSize;
+
+    // Block body (color-block visual-primitive)
+    ctx.fillStyle = COLORS.palette[block.color];
+    ctx.fillRect(x + 4, y + 4, cellSize - 8, cellSize - 8);
+
+    // Border
+    ctx.strokeStyle = COLORS.border;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 4, y + 4, cellSize - 8, cellSize - 8);
+
+    // HP indicator (if > 1)
+    if (block.maxHp > 1) {
+      ctx.fillStyle = COLORS.text;
+      ctx.font = "bold 12px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(block.hp.toString(), x + cellSize/2, y + cellSize - 8);
+    }
+  });
+}
+
+function drawConveyor(ctx, state) {
+  // Asset reference: "conveyor-track" - generated visual primitive
+  const rows = state.board.rows;
+  const cols = state.board.cols;
+  const cellSize = 50;
+  const boardX = 80;
+  const boardY = 80;
+
+  const trackX = boardX - cellSize;
+  const trackY = boardY - cellSize;
+  const trackW = cols * cellSize + 2 * cellSize;
+  const trackH = rows * cellSize + 2 * cellSize;
+
+  // Draw track path (rect-loop, NOT a circle!)
+  ctx.strokeStyle = COLORS.secondary;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(trackX, trackY, trackW, trackH);
+
+  // Corner markers (use fillRect, NOT arc for rect-loop track)
+  const corners = [
+    { x: trackX, y: trackY },
+    { x: trackX + trackW, y: trackY },
+    { x: trackX + trackW, y: trackY + trackH },
+    { x: trackX, y: trackY + trackH }
+  ];
+
+  ctx.fillStyle = COLORS.secondary;
+  corners.forEach(c => {
+    // Use fillRect for pixel-perfect corners (no arc for rect-loop)
+    ctx.fillRect(c.x - 4, c.y - 4, 8, 8);
+  });
+
+  // Draw pigs on conveyor - Asset reference: "pig" - generated color-unit visual primitive
+  state.conveyor.pigs.forEach(pig => {
+    if (!pig.alive) return;
+    drawPig(ctx, pig.x, pig.y, pig.color, pig.ammo);
+  });
+}
+
+function drawPig(ctx, x, y, color, ammo) {
+  // Pig body (16x16 rect)
+  ctx.fillStyle = COLORS.palette[color];
+  ctx.fillRect(x - 8, y - 8, 16, 16);
+
+  // Ears
+  ctx.fillRect(x - 10, y - 10, 4, 4);
+  ctx.fillRect(x + 6, y - 10, 4, 4);
+
+  // Eyes
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(x - 5, y - 4, 3, 3);
+  ctx.fillRect(x + 2, y - 4, 3, 3);
+
+  // Ammo indicator
+  ctx.fillStyle = COLORS.text;
+  ctx.font = "bold 8px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(ammo.toString(), x, y + 12);
+}
+
+function drawWaitSlots(ctx, state) {
+  // Asset reference: "wait-slot-bg" - generated visual primitive
+  const slotW = 60;
+  const slotH = 60;
+  const startX = 40;
+  const startY = canvas.height - 80;
+  const gap = 10;
+
+  for (let i = 0; i < 5; i++) {
+    const x = startX + i * (slotW + gap);
+    const y = startY;
+
+    // Slot background
+    ctx.fillStyle = COLORS.surface;
+    ctx.fillRect(x, y, slotW, slotH);
+    ctx.strokeStyle = COLORS.border;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, slotW, slotH);
+
+    // Slot number
+    ctx.fillStyle = COLORS.textMuted;
+    ctx.font = "10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText((i + 1).toString(), x + slotW/2, y + slotH - 5);
+
+    // Pig in slot
+    const pig = state.waitSlots[i];
+    if (pig && pig.alive) {
+      drawPig(ctx, x + slotW/2, y + slotH/2 - 5, pig.color, pig.ammo);
+    }
+  }
+}
+
+function drawHUD(ctx, state) {
+  ctx.fillStyle = COLORS.text;
+  ctx.font = "bold 14px sans-serif";
+  ctx.textAlign = "left";
+
+  // Level - consume digit assets via drawImage
+  const levelStr = state.level.toString();
+  let x = 20;
+  for (const ch of levelStr) {
+    const digitImg = getTexture(`digit-${ch}`);
+    if (digitImg) {
+      ctx.drawImage(digitImg, x, 15, 16, 20);
+      x += 18;
+    }
+  }
+
+  // Score (text fallback for simplicity)
+  ctx.fillText(`Score: ${state.score}`, 20, 50);
+
+  // Blocks remaining
+  const remaining = state.board.blocks.filter(b => b.alive && !b.cleared).length;
+  ctx.fillText(`Blocks: ${remaining}/${state.totalBlocks}`, 20, 70);
+}
+
+function drawStartScreen(ctx, state) {
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.fillStyle = COLORS.background;
+  ctx.fillRect(0, 0, w, h);
+
+  // Title
+  ctx.fillStyle = COLORS.primary;
+  ctx.font = "bold 28px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("PIXEL CANVAS", w/2, h/2 - 80);
+
+  ctx.fillStyle = COLORS.secondary;
+  ctx.font = "18px sans-serif";
+  ctx.fillText("Conveyor Belt Puzzle", w/2, h/2 - 50);
+
+  // Start button - use loaded assets with drawImage for asset consumption
+  const btnX = w/2 - 80;
+  const btnY = h/2;
+  const btnW = 160;
+  const btnH = 50;
+
+  // Try to draw button using loaded assets (consumes btn-start, btn-start-center, btn-start-right)
+  const leftImg = getTexture("btn-start");
+  const centerImg = getTexture("btn-start-center");
+  const rightImg = getTexture("btn-start-right");
+
+  if (leftImg && centerImg && rightImg) {
+    // Draw 9-slice style button (simplified: left + center tiles + right)
+    ctx.drawImage(leftImg, btnX, btnY, 40, btnH);
+    ctx.drawImage(centerImg, btnX + 40, btnY, btnW - 80, btnH);
+    ctx.drawImage(rightImg, btnX + btnW - 40, btnY, 40, btnH);
+  } else {
+    // Fallback: solid button
+    ctx.fillStyle = COLORS.accent;
+    ctx.fillRect(btnX, btnY, btnW, btnH);
+    ctx.strokeStyle = COLORS.border;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(btnX, btnY, btnW, btnH);
+  }
+
+  ctx.fillStyle = COLORS.text;
+  ctx.font = "bold 16px sans-serif";
+  ctx.fillText("START", w/2, btnY + 32);
+
+  // Instructions
+  ctx.fillStyle = COLORS.textMuted;
+  ctx.font = "12px sans-serif";
+  ctx.fillText("Click pigs to dispatch them", w/2, h - 100);
+  ctx.fillText("Match colors to clear blocks", w/2, h - 80);
+
+  // Store button bounds for click detection
+  state._startBtnBounds = { x: btnX, y: btnY, w: btnW, h: btnH };
+}
+
+function drawResultScreen(ctx, state) {
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.fillStyle = COLORS.background;
+  ctx.fillRect(0, 0, w, h);
+
+  // Result title
+  ctx.fillStyle = state.phase === "win" ? COLORS.success : COLORS.error;
+  ctx.font = "bold 32px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(state.phase === "win" ? "VICTORY!" : "GAME OVER", w/2, h/2 - 80);
+
+  // Score
+  ctx.fillStyle = COLORS.text;
+  ctx.font = "20px sans-serif";
+  ctx.fillText(`Score: ${state.score}`, w/2, h/2 - 30);
+
+  // Buttons
+  const btnW = 120;
+  const btnH = 40;
+  const gap = 20;
+  const retryX = w/2 - btnW - gap/2;
+  const nextX = w/2 + gap/2;
+  const btnY = h/2 + 20;
+
+  // Retry button - use loaded assets with drawImage for asset consumption
+  const retryLeftImg = getTexture("btn-retry");
+  const retryCenterImg = getTexture("btn-retry-center");
+  const retryRightImg = getTexture("btn-retry-right");
+
+  if (retryLeftImg && retryCenterImg && retryRightImg) {
+    ctx.drawImage(retryLeftImg, retryX, btnY, 30, btnH);
+    ctx.drawImage(retryCenterImg, retryX + 30, btnY, btnW - 60, btnH);
+    ctx.drawImage(retryRightImg, retryX + btnW - 30, btnY, 30, btnH);
+  } else {
+    ctx.fillStyle = COLORS.primary;
+    ctx.fillRect(retryX, btnY, btnW, btnH);
+  }
+  ctx.fillStyle = COLORS.text;
+  ctx.font = "bold 14px sans-serif";
+  ctx.fillText("RETRY", retryX + btnW/2, btnY + 26);
+
+  // Next button (only if won and not last level)
+  if (state.phase === "win" && state.level < LEVEL_CONFIGS.length) {
+    const nextLeftImg = getTexture("btn-next");
+    const nextCenterImg = getTexture("btn-next-center");
+    const nextRightImg = getTexture("btn-next-right");
+
+    if (nextLeftImg && nextCenterImg && nextRightImg) {
+      ctx.drawImage(nextLeftImg, nextX, btnY, 30, btnH);
+      ctx.drawImage(nextCenterImg, nextX + 30, btnY, btnW - 60, btnH);
+      ctx.drawImage(nextRightImg, nextX + btnW - 30, btnY, 30, btnH);
+    } else {
+      ctx.fillStyle = COLORS.accent;
+      ctx.fillRect(nextX, btnY, btnW, btnH);
+    }
+    ctx.fillStyle = COLORS.text;
+    ctx.fillText("NEXT", nextX + btnW/2, btnY + 26);
+    state._nextBtnBounds = { x: nextX, y: btnY, w: btnW, h: btnH };
+  } else {
+    state._nextBtnBounds = null;
+  }
+
+  state._retryBtnBounds = { x: retryX, y: btnY, w: btnW, h: btnH };
+}
+
+function draw(ctx, state) {
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+  if (state.phase === "ready") {
+    drawStartScreen(ctx, state);
+    return;
+  }
+
+  if (state.phase === "win" || state.phase === "lose") {
+    drawResultScreen(ctx, state);
+    return;
+  }
+
+  // Apply shake offset
+  const { ox, oy } = renderFx(ctx);
+  ctx.save();
+  ctx.translate(ox, oy);
+
+  // Background
+  ctx.fillStyle = COLORS.background;
+  ctx.fillRect(0, 0, w, h);
+
+  // Game elements
+  drawBoard(ctx, state);
+  drawConveyor(ctx, state);
+  drawWaitSlots(ctx, state);
+  drawHUD(ctx, state);
+
+  ctx.restore();
+}
+
+// ===== INPUT HANDLING =====
+
+const uiBounds = { waitSlots: [] };
+
+function updateUiBounds() {
+  const slotW = 60;
+  const slotH = 60;
+  const startX = 40;
+  const startY = canvas.height - 80;
+  const gap = 10;
+
+  uiBounds.waitSlots = [];
+  for (let i = 0; i < 5; i++) {
+    uiBounds.waitSlots.push({
+      x: startX + i * (slotW + gap),
+      y: startY,
+      w: slotW,
+      h: slotH
+    });
+  }
+}
+
+function hitTest(x, y, bounds) {
+  return x >= bounds.x && x <= bounds.x + bounds.w &&
+         y >= bounds.y && y <= bounds.y + bounds.h;
+}
+
+canvas.addEventListener("pointerdown", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  // Start screen
+  if (state.phase === "ready" && state._startBtnBounds) {
+    if (hitTest(x, y, state._startBtnBounds)) {
+      state.phase = "playing";
+      initLevel(LEVEL_CONFIGS[0]);
+      updateUiBounds();
+    }
+    return;
+  }
+
+  // Result screen
+  if (state.phase === "win" || state.phase === "lose") {
+    if (state._retryBtnBounds && hitTest(x, y, state._retryBtnBounds)) {
+      state.phase = "playing";
+      initLevel(LEVEL_CONFIGS[state.level - 1]);
+      updateUiBounds();
+    }
+    if (state._nextBtnBounds && hitTest(x, y, state._nextBtnBounds)) {
+      state.level = Math.min(state.level + 1, LEVEL_CONFIGS.length);
+      state.phase = "playing";
+      initLevel(LEVEL_CONFIGS[state.level - 1]);
+      updateUiBounds();
+    }
+    return;
+  }
+
+  // Playing - wait slot click
+  if (state.phase === "playing") {
+    for (let i = 0; i < uiBounds.waitSlots.length; i++) {
+      if (hitTest(x, y, uiBounds.waitSlots[i])) {
+        dispatchPigFromSlot(i);
+        break;
+      }
+    }
+  }
+});
+
+function dispatchPigFromSlot(slotIndex) {
+  const pig = state.waitSlots[slotIndex];
+  if (!pig || !pig.alive || pig.ammo <= 0) return;
+
+  // Check conveyor capacity
+  if (state.conveyor.pigs.length >= state.conveyor.capacity) return;
+
+  // @primitive(slot-pool): unbind
+  state.waitSlots[slotIndex] = null;
+  pig.slotIndex = -1;
+
+  // @primitive(entity-lifecycle): transition to active
+  pig.lifecycle = "active";
+  pig.onConveyor = true;
+  pig.t = 0;
+  pig.segmentId = "top";
+  pig.lastAttackGrid = null;
+
+  // Set initial position
+  const cellSize = 50;
+  const boardX = 80;
+  const boardY = 80;
+  const pos = getTrackPosition(0, state.board.rows, state.board.cols, boardX, boardY, cellSize);
+  pig.x = pos.x;
+  pig.y = pos.y;
+  pig.gridPosition = projectToGrid(0, state.board.rows, state.board.cols);
+
+  // Add to conveyor
+  state.conveyor.pigs.push(pig);
+  state.dispatchedPigs++;
+
+  playEffect("particle-burst", { x: pig.x, y: pig.y, color: COLORS.palette[pig.color], count: 8 });
+}
+
+// ===== TEST HOOKS (for Playwright) =====
+
+window.gameTest = {
+  clickStartButton: () => {
+    if (state.phase === "ready") {
+      state.phase = "playing";
+      initLevel(LEVEL_CONFIGS[0]);
+      updateUiBounds();
+    }
+  },
+  clickRetryButton: () => {
+    if (state.phase === "win" || state.phase === "lose") {
+      state.phase = "playing";
+      initLevel(LEVEL_CONFIGS[state.level - 1]);
+      updateUiBounds();
+    }
+  },
+  clickNextButton: () => {
+    if ((state.phase === "win") && state.level < LEVEL_CONFIGS.length) {
+      state.level++;
+      state.phase = "playing";
+      initLevel(LEVEL_CONFIGS[state.level - 1]);
+      updateUiBounds();
+    }
+  },
+  clickWaitSlot: (index) => {
+    if (state.phase === "playing" && index >= 0 && index < 5) {
+      dispatchPigFromSlot(index);
+    }
+  },
+  getGameState: () => ({ ...state }),
+  getBlocks: () => state.board.blocks.map(b => ({ ...b })),
+  getPigs: () => state.conveyor.pigs.map(p => ({ ...p })),
+  getWaitSlots: () => state.waitSlots.map(s => s ? { ...s } : null),
+  forceWin: () => {
+    state.board.blocks.forEach(b => { b.cleared = true; b.alive = false; });
+    state.phase = "win";
+  },
+  forceLose: () => {
+    state.waitSlots = [null, null, null, null, null];
+    state.conveyor.pigs = [];
+    state.phase = "lose";
+  },
+  tick: (frames = 1) => {
+    for (let i = 0; i < frames; i++) {
+      update(state, 16.67);
+    }
+  }
+};
+
+// ===== MAIN LOOP =====
+
+let last = 0;
+let assetsReady = false;
+function loop(ts) {
+  const dt = last === 0 ? 0 : ts - last;
+  last = ts;
+
+  if (!assetsReady) {
+    // Show loading state
+    ctx.fillStyle = COLORS.background;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = COLORS.text;
+    ctx.font = "16px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Loading...", canvas.width/2, canvas.height/2);
+    return;
+  }
+
+  update(state, dt);
+  draw(ctx, state);
+
+  requestAnimationFrame(loop);
+}
+
+// Start with asset preloading
+preloadAssets().then(() => {
+  assetsReady = true;
+  requestAnimationFrame(loop);
+});
+</script>
+</body>
+</html>

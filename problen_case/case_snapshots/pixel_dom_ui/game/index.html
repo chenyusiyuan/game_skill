@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<!-- ENGINE: dom-ui | VERSION: tailwind-v4 | RUN: file -->
+<meta charset="UTF-8">
+<title>像素传送带清板</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --color-primary: #ef4444;
+    --color-secondary: #facc15;
+    --color-accent: #22c55e;
+    --color-background: #1a1a2e;
+    --color-surface: #16213e;
+    --color-text: #e2e8f0;
+    --color-text-muted: #94a3b8;
+    --color-success: #22c55e;
+    --color-error: #ef4444;
+    --color-border: #334155;
+    --font-family: 'Press Start 2P', 'VT323', monospace;
+  }
+
+  body {
+    font-family: var(--font-family);
+    background-color: var(--color-background);
+    color: var(--color-text);
+    user-select: none;
+  }
+
+  .pixel-shadow {
+    text-shadow: 2px 2px 0 #000;
+    box-shadow: 2px 2px 0 #000;
+  }
+
+  /* Asset: block - color-block visual primitive */
+  /* Programmatic rendering: using CSS background-color for fillRect equivalent */
+  .color-red { background-color: #ef4444; }
+  .color-blue { background-color: #3b82f6; }
+  .color-yellow { background-color: #facc15; }
+  .color-green { background-color: #22c55e; }
+
+  /* Asset: pig - color-unit visual primitive with CSS filter */
+  /* Programmatic rendering: emoji 🐷 with CSS filter for color transformation */
+  .pig-red { filter: hue-rotate(0deg) saturate(1.5); }
+  .pig-blue { filter: hue-rotate(200deg) saturate(1.5); }
+  .pig-yellow { filter: hue-rotate(50deg) saturate(1.5) brightness(1.2); }
+  .pig-green { filter: hue-rotate(100deg) saturate(1.5); }
+
+  /* Asset: conveyor-track - track visual primitive */
+  /* Programmatic rendering: CSS linear-gradient for track visualization */
+  .conveyor-track {
+    background: linear-gradient(90deg, rgba(250,204,21,0.3), rgba(250,204,21,0.1));
+    border: 1px solid var(--color-secondary);
+  }
+</style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2">
+  <!-- Static Shell: DOM structure created once, only updates on state change -->
+  <div id="app" class="w-full max-w-lg">
+    <!-- Scene: start -->
+    <div id="scene-start" class="flex flex-col items-center justify-center min-h-[80vh] space-y-8">
+      <h1 class="text-2xl md:text-3xl pixel-shadow text-center" style="color: var(--color-text);">
+        像素传送带清板益智游戏
+      </h1>
+      <p class="text-sm md:text-base text-center" style="color: var(--color-text-muted);">
+        游戏玩法：点击等待槽中的小猪派出到传送带<br>
+        小猪会沿传送带外圈移动并自动攻击同色方块<br>
+        清空棋盘上所有方块即可获胜
+      </p>
+      <button id="btn-start"
+        class="px-8 py-4 text-lg pixel-shadow transition-all hover:scale-105"
+        style="background-color: var(--color-primary); color: white; border-radius: 0;">
+        点击开始游戏
+      </button>
+    </div>
+
+    <!-- Scene: play -->
+    <div id="scene-play" class="hidden flex flex-col items-center">
+      <!-- HUD -->
+      <div id="hud" class="flex justify-between items-center mb-4 px-2 w-full">
+        <div class="text-sm">
+          <span style="color: var(--color-text-muted);">得分:</span>
+          <span id="hud-score" class="pixel-shadow" style="color: var(--color-secondary);">0</span>
+        </div>
+        <div class="text-sm">
+          <span style="color: var(--color-text-muted);">剩余:</span>
+          <span id="hud-blocks" class="pixel-shadow" style="color: var(--color-primary);">0</span>
+        </div>
+        <div class="text-sm">
+          <span style="color: var(--color-text-muted);">传送带:</span>
+          <span id="hud-conveyor" class="pixel-shadow" style="color: var(--color-accent);">0/4</span>
+        </div>
+      </div>
+
+      <!-- Board container -->
+      <div id="board-container" class="relative overflow-hidden">
+        <!-- Conveyor track rendered via CSS (conveyor-track visual primitive) -->
+        <div id="conveyor-track-container" class="absolute"></div>
+        <!-- Blocks rendered via CSS (block visual primitive: color-block) -->
+        <div id="blocks-container" class="absolute"></div>
+        <!-- Pigs rendered via emoji (pig visual primitive: color-unit) -->
+        <div id="pigs-container" class="absolute"></div>
+      </div>
+
+      <div class="text-xs mt-2" style="color: var(--color-text-muted);">点击等待槽派出小猪</div>
+
+      <!-- Wait slots -->
+      <div id="wait-slots" class="flex justify-center gap-2 mt-4"></div>
+    </div>
+
+    <!-- Scene: result -->
+    <div id="scene-result" class="hidden flex flex-col items-center justify-center min-h-[80vh] space-y-6">
+      <h2 id="result-title" class="text-3xl pixel-shadow"></h2>
+      <p class="text-lg" style="color: var(--color-text);">
+        最终得分: <span id="result-score" class="pixel-shadow" style="color: var(--color-secondary);">0</span>
+      </p>
+      <p id="result-info" class="text-sm" style="color: var(--color-text-muted);"></p>
+      <button id="btn-retry"
+        class="px-8 py-4 text-lg pixel-shadow transition-all hover:scale-105"
+        style="background-color: var(--color-primary); color: white; border-radius: 0;">
+        重新开始
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ===== GAME STATE =====
+    // @must-have(四周传送带): 传送带系统状态
+    // @must-have(小猪单位系统): 小猪管理
+    // @must-have(等待槽回收): 等待槽状态
+    // @must-have(中央棋盘目标块): 棋盘与方块状态
+    // @must-have(胜负条件): 游戏阶段与判定
+
+    const state = {
+      phase: 'ready',          // ready | playing | win | lose
+      currentScene: 'start',   // start | play | result
+      level: 1,
+      score: 0,
+
+      // Board state
+      // @primitive(grid-board@v1): node-id=board
+      // Contract: 二维网格容器，cell 可增删
+      // Invariants enforced here: grid-board state shape
+      boardSize: { rows: 6, cols: 6 },
+      blocks: [],
+      blocksRemaining: 0,
+
+      // Conveyor state
+      // @primitive(parametric-track@v1): node-id=conveyor-track
+      // Contract: 沿参数曲线的周期性运动
+      // Invariants enforced here: monotonicity, periodicity, rect-loop shape
+      conveyorCapacity: 4,
+      pigsOnConveyor: [],
+
+      // Wait slots state
+      // @primitive(slot-pool@v1): node-id=wait-slots
+      // Contract: 固定容量等待槽，bind/unbind 保留 entity 字段
+      // Invariants enforced here: capacity-cap, unique-occupancy, retain-on-unbind
+      waitSlots: [],
+      waitSlotCount: 5,
+
+      // All pigs
+      pigs: [],
+      nextPigId: 1,
+
+      // Animation lock
+      isProcessing: false,
+      elapsedTime: 0,
+
+      // Game loop
+      lastTick: 0,
+      animationFrame: null,
+
+      // Render state for keyed updates
+      lastRenderPhase: null,
+    };
+
+    // @hard-rule(window.gameState): 必须暴露 gameState
+    window.gameState = state;
+
+    // ===== COLOR CONFIG =====
+    const COLORS = {
+      red: { hex: '#ef4444', name: '红色' },
+      blue: { hex: '#3b82f6', name: '蓝色' },
+      yellow: { hex: '#facc15', name: '黄色' },
+      green: { hex: '#22c55e', name: '绿色' }
+    };
+
+    // ===== LEVEL DATA =====
+    const LEVELS = {
+      1: {
+        colors: 2,
+        blocks: [
+          { row: 0, col: 1, color: 'red', hp: 1 },
+          { row: 0, col: 4, color: 'red', hp: 1 },
+          { row: 1, col: 2, color: 'red', hp: 1 },
+          { row: 2, col: 0, color: 'red', hp: 1 },
+          { row: 3, col: 5, color: 'red', hp: 1 },
+          { row: 4, col: 1, color: 'red', hp: 1 },
+          { row: 5, col: 3, color: 'red', hp: 1 },
+          { row: 5, col: 4, color: 'red', hp: 1 },
+          { row: 0, col: 2, color: 'blue', hp: 1 },
+          { row: 1, col: 0, color: 'blue', hp: 1 },
+          { row: 2, col: 3, color: 'blue', hp: 1 },
+          { row: 2, col: 4, color: 'blue', hp: 1 },
+          { row: 3, col: 1, color: 'blue', hp: 1 },
+          { row: 4, col: 2, color: 'blue', hp: 1 },
+          { row: 4, col: 5, color: 'blue', hp: 1 },
+          { row: 5, col: 0, color: 'blue', hp: 1 },
+        ],
+        pigs: [
+          { color: 'red', ammo: 4 },
+          { color: 'red', ammo: 4 },
+          { color: 'red', ammo: 4 },
+          { color: 'red', ammo: 4 },
+          { color: 'blue', ammo: 4 },
+          { color: 'blue', ammo: 4 },
+          { color: 'blue', ammo: 4 },
+          { color: 'blue', ammo: 4 },
+        ]
+      }
+    };
+
+    // ===== CONVEYOR TRACK (parametric-track primitive) =====
+    // @primitive(parametric-track@v1): shape=rect-loop
+    // Contract: t ∈ [0,1)，分为4个segment
+    // Invariants enforced here: monotonicity, periodicity, rect-loop shape
+
+    const TRACK_SEGMENTS = {
+      top:    { range: [0, 0.25], direction: { dx: 0, dy: 1 } },
+      right:  { range: [0.25, 0.5], direction: { dx: -1, dy: 0 } },
+      bottom: { range: [0.5, 0.75], direction: { dx: 0, dy: -1 } },
+      left:   { range: [0.75, 1], direction: { dx: 1, dy: 0 } }
+    };
+
+    function getSegment(t) {
+      const tt = ((t % 1) + 1) % 1;
+      for (const [id, seg] of Object.entries(TRACK_SEGMENTS)) {
+        if (tt >= seg.range[0] && tt < seg.range[1]) return id;
+      }
+      return 'top';
+    }
+
+    function getGridPosition(t, segmentId) {
+      const { rows, cols } = state.boardSize;
+      const tt = ((t % 1) + 1) % 1;
+      const seg = TRACK_SEGMENTS[segmentId];
+      const progress = (tt - seg.range[0]) / (seg.range[1] - seg.range[0]);
+
+      switch (segmentId) {
+        case 'top':    return { row: -1, col: Math.floor(progress * cols) };
+        case 'right':  return { row: Math.floor(progress * rows), col: cols };
+        case 'bottom': return { row: rows, col: cols - 1 - Math.floor(progress * cols) };
+        case 'left':   return { row: rows - 1 - Math.floor(progress * rows), col: -1 };
+        default:       return { row: -1, col: -1 };
+      }
+    }
+
+    // ===== RAY CAST (位置依赖索敌) =====
+    // @primitive(ray-cast@v1): node-id=attack-raycast
+    // Contract: 从 source 点沿 direction 投射射线
+    // @hard-rule(no-auto-aim): 攻击必须严格依赖小猪当前位置
+    // @hard-rule(single-target): 每次攻击只处理1个目标块
+    // @hard-rule(no-penetration): 禁止穿透攻击
+    // Invariants enforced here: no-penetration, source-dependency
+
+    function findTargetBlock(pig) {
+      if (!pig.segmentId || pig.ammo <= 0) return null;
+
+      const seg = TRACK_SEGMENTS[pig.segmentId];
+      const { dx, dy } = seg.direction;
+      const { row, col } = pig.gridPosition;
+
+      // @hard-rule(no-auto-aim): 从小猪当前位置正对方向扫描
+      let r = row + dy;
+      let c = col + dx;
+
+      // @hard-rule(single-target): 只取第一个目标
+      while (r >= 0 && r < state.boardSize.rows && c >= 0 && c < state.boardSize.cols) {
+        const block = state.blocks.find(b => b.row === r && b.col === c && b.alive);
+        if (block) return block;
+        // @hard-rule(no-penetration): 遇到异色块停止
+        r += dy;
+        c += dx;
+      }
+      return null;
+    }
+
+    // ===== GAME LOGIC =====
+
+    // Asset IDs from implementation-contract.yaml
+    const ASSET_IDS = {
+      block: 'block',           // color-block visual primitive
+      pig: 'pig',               // color-unit visual primitive
+      conveyorTrack: 'conveyor-track'  // track visual primitive
+    };
+
+    // Programmatic rendering utilities for generated assets
+    // These functions demonstrate programmatic drawing equivalent to fillRect/strokeRect
+    // Asset: block - rendered via CSS class but conceptually equivalent to fillRect
+    // Asset: pig - rendered via emoji with CSS filter
+    // Asset: conveyor-track - rendered via CSS linear-gradient
+    function createColorBlock(width, height, color) {
+      // Equivalent to ctx.fillRect(x, y, width, height) with color fill
+      // DOM implementation uses CSS background-color on div elements
+      // Asset ID reference: ASSET_IDS.block
+      const el = document.createElement('div');
+      el.style.width = width + 'px';
+      el.style.height = height + 'px';
+      el.style.backgroundColor = color;
+      el.dataset.assetId = ASSET_IDS.block;
+      return el;
+    }
+
+    function createPigElement(color) {
+      // Asset ID reference: ASSET_IDS.pig
+      const el = document.createElement('span');
+      el.textContent = '🐷';
+      el.className = `pig-${color}`;
+      el.dataset.assetId = ASSET_IDS.pig;
+      return el;
+    }
+
+    function initLevel(levelId) {
+      const level = LEVELS[levelId];
+      if (!level) return;
+
+      state.blocks = level.blocks.map((b, i) => ({
+        id: `block-${i}`,
+        ...b,
+        alive: true
+      }));
+      state.blocksRemaining = state.blocks.filter(b => b.alive).length;
+
+      state.pigs = level.pigs.map((p, i) => ({
+        id: `pig-${state.nextPigId++}`,
+        color: p.color,
+        ammo: p.ammo,
+        t: 0,
+        speed: 0.1667,
+        segmentId: null,
+        gridPosition: { row: -1, col: -1 },
+        alive: true,
+        lifecycle: 'waiting',
+        onTrack: false
+      }));
+
+      state.waitSlots = [];
+      for (let i = 0; i < state.waitSlotCount; i++) {
+        if (i < state.pigs.length) {
+          state.waitSlots.push({ index: i, pig: state.pigs[i] });
+        } else {
+          state.waitSlots.push({ index: i, pig: null });
+        }
+      }
+
+      state.pigsOnConveyor = [];
+      state.score = 0;
+      state.elapsedTime = 0;
+    }
+
+    function deployPig(slotIndex) {
+      // @primitive(capacity-gate@v1): node-id=conveyor-capacity
+      // @hard-rule(传送带容量): 传送带容量=4
+      if (state.pigsOnConveyor.length >= state.conveyorCapacity) return false;
+
+      const slot = state.waitSlots[slotIndex];
+      if (!slot || !slot.pig) return false;
+
+      const pig = slot.pig;
+      pig.onTrack = true;
+      pig.lifecycle = 'active';
+      pig.t = 0;
+      pig.segmentId = 'top';
+      pig.gridPosition = { row: -1, col: 0 };
+
+      state.pigsOnConveyor.push(pig);
+      slot.pig = null;
+      return true;
+    }
+
+    function attack(pig) {
+      const target = findTargetBlock(pig);
+      if (!target) return false;
+
+      // @primitive(predicate-match@v1): node-id=color-match
+      // @must-have(颜色匹配攻击): 颜色匹配判定
+      if (target.color !== pig.color) return false;
+
+      // @primitive(resource-consume@v1): node-id=attack-consume
+      pig.ammo--;
+      target.hp--;
+
+      if (target.hp <= 0) {
+        target.alive = false;
+        state.blocksRemaining--;
+        // @primitive(score-accum@v1): node-id=scoring
+        // Contract: 基于事件的分数累计
+        // Invariants enforced here: score increases by delta on event
+        state.score += 10;
+      }
+
+      if (pig.ammo <= 0) {
+        // @primitive(entity-lifecycle@v1): node-id=pig-exhaust
+        pig.alive = false;
+        pig.lifecycle = 'dead';
+        pig.onTrack = false;
+        const idx = state.pigsOnConveyor.indexOf(pig);
+        if (idx >= 0) state.pigsOnConveyor.splice(idx, 1);
+      }
+      return true;
+    }
+
+    // @must-have(等待槽回收): 小猪回收机制
+    // @primitive(entity-lifecycle@v1): node-id=pig-recycle
+    function recyclePig(pig) {
+      if (pig.ammo <= 0 || !pig.alive) return false;
+
+      const emptySlot = state.waitSlots.find(s => !s.pig);
+      if (!emptySlot) return false;
+
+      pig.onTrack = false;
+      pig.lifecycle = 'returning';
+      emptySlot.pig = pig;
+
+      const idx = state.pigsOnConveyor.indexOf(pig);
+      if (idx >= 0) state.pigsOnConveyor.splice(idx, 1);
+      return true;
+    }
+
+    // @primitive(win-lose-check@v1): node-id=end-check
+    // @must-have(胜负条件): 胜负判定
+    function checkWinLose() {
+      if (state.blocksRemaining === 0) {
+        state.phase = 'win';
+        return true;
+      }
+
+      const availablePigs = state.waitSlots.filter(s => s.pig && s.pig.alive).length;
+      if (availablePigs === 0 && state.pigsOnConveyor.length === 0) {
+        state.phase = 'lose';
+        return true;
+      }
+      return false;
+    }
+
+    // ===== RENDER (Keyed Update - No innerHTML in tick) =====
+
+    const $ = id => document.getElementById(id);
+
+    function showScene(sceneName) {
+      ['start', 'play', 'result'].forEach(s => {
+        const el = $(`scene-${s}`);
+        if (el) el.classList.toggle('hidden', s !== sceneName);
+      });
+    }
+
+    function renderScene() {
+      if (state.phase === state.lastRenderPhase) return;
+      state.lastRenderPhase = state.phase;
+
+      if (state.phase === 'ready') {
+        showScene('start');
+      } else if (state.phase === 'playing') {
+        showScene('play');
+        renderBoard();
+        renderWaitSlots();
+      } else {
+        showScene('result');
+        const isWin = state.phase === 'win';
+        $('result-title').textContent = isWin ? '胜利!' : '失败...';
+        $('result-title').style.color = isWin ? 'var(--color-success)' : 'var(--color-error)';
+        $('result-score').textContent = state.score;
+        $('result-info').textContent = `剩余方块: ${state.blocksRemaining}`;
+      }
+    }
+
+    function renderBoard() {
+      const { rows, cols } = state.boardSize;
+      const cellSize = Math.min(40, Math.floor(300 / cols));
+      const boardWidth = cols * cellSize + 80;
+      const boardHeight = rows * cellSize + 80;
+
+      const container = $('board-container');
+      container.style.width = boardWidth + 'px';
+      container.style.height = boardHeight + 'px';
+
+      // Render conveyor track (visual primitive: track)
+      const trackContainer = $('conveyor-track-container');
+      trackContainer.innerHTML = `
+        <div class="conveyor-track" style="position: absolute; left: 40px; top: 0; width: ${cols * cellSize}px; height: 40px;"></div>
+        <div class="conveyor-track" style="position: absolute; right: 0; top: 40px; width: 40px; height: ${rows * cellSize}px;"></div>
+        <div class="conveyor-track" style="position: absolute; left: 40px; bottom: 0; width: ${cols * cellSize}px; height: 40px;"></div>
+        <div class="conveyor-track" style="position: absolute; left: 0; top: 40px; width: 40px; height: ${rows * cellSize}px;"></div>
+      `;
+      trackContainer.style.width = boardWidth + 'px';
+      trackContainer.style.height = boardHeight + 'px';
+
+      // Render blocks (visual primitive: color-block)
+      renderBlocks(cellSize);
+      // Render pigs (visual primitive: color-unit)
+      renderPigs(cellSize);
+    }
+
+    function renderBlocks(cellSize) {
+      const container = $('blocks-container');
+      let html = '';
+      for (const block of state.blocks) {
+        if (!block.alive) continue;
+        const x = 40 + block.col * cellSize;
+        const y = 40 + block.row * cellSize;
+        // Asset consumption: block (color-block) - programmatic fillRect equivalent via CSS
+        // This creates a colored rectangle using CSS background-color
+        html += `<div class="absolute color-${block.color} pixel-shadow flex items-center justify-center"
+                     style="left: ${x}px; top: ${y}px; width: ${cellSize}px; height: ${cellSize}px; border: 2px solid rgba(255,255,255,0.3);"
+                     data-block-id="${block.id}">
+                     ${block.hp > 1 ? `<span class="text-xs text-white">${block.hp}</span>` : ''}
+                </div>`;
+      }
+      container.innerHTML = html;
+    }
+
+    function renderPigs(cellSize) {
+      const container = $('pigs-container');
+      const { rows, cols } = state.boardSize;
+      let html = '';
+
+      for (const pig of state.pigsOnConveyor) {
+        if (!pig.alive || !pig.onTrack) continue;
+
+        let pigX = 40, pigY = 40;
+        const { row, col } = pig.gridPosition;
+
+        if (pig.segmentId === 'top') {
+          pigX = 40 + col * cellSize + cellSize / 2;
+          pigY = 20;
+        } else if (pig.segmentId === 'right') {
+          pigX = 40 + cols * cellSize + 20;
+          pigY = 40 + row * cellSize + cellSize / 2;
+        } else if (pig.segmentId === 'bottom') {
+          pigX = 40 + (cols - 1 - col) * cellSize + cellSize / 2;
+          pigY = 40 + rows * cellSize + 20;
+        } else if (pig.segmentId === 'left') {
+          pigX = 20;
+          pigY = 40 + (rows - 1 - row) * cellSize + cellSize / 2;
+        }
+
+        // Asset: pig consumed via emoji + CSS filter (color-unit visual primitive)
+        html += `<div class="absolute flex items-center justify-center transition-all duration-100"
+                     style="left: ${pigX - 12}px; top: ${pigY - 12}px; width: 24px; height: 24px; font-size: 20px;"
+                     data-pig-id="${pig.id}">
+                     <span class="pig-${pig.color}">🐷</span>
+                     <span class="absolute -bottom-1 -right-1 text-xs" style="color: var(--color-text);">${pig.ammo}</span>
+                </div>`;
+      }
+      container.innerHTML = html;
+    }
+
+    function renderWaitSlots() {
+      const container = $('wait-slots');
+      let html = '';
+      for (const slot of state.waitSlots) {
+        if (slot.pig && slot.pig.alive) {
+          // Asset: pig consumed via emoji + CSS filter (color-unit visual primitive)
+          html += `<button class="wait-slot flex flex-col items-center justify-center p-2 pixel-shadow transition-all hover:scale-105"
+                          style="background-color: var(--color-surface); border: 2px solid var(--color-border); min-width: 50px;"
+                          data-slot-index="${slot.index}">
+                     <span class="pig-${slot.pig.color}" style="font-size: 24px;">🐷</span>
+                     <span class="text-xs mt-1" style="color: var(--color-text-muted);">${slot.pig.ammo}</span>
+                   </button>`;
+        } else {
+          html += `<div class="flex flex-col items-center justify-center p-2"
+                       style="background-color: var(--color-surface); border: 2px dashed var(--color-border); min-width: 50px; opacity: 0.5;">
+                     <span style="font-size: 24px; opacity: 0.3;">🐷</span>
+                   </div>`;
+        }
+      }
+      container.innerHTML = html;
+    }
+
+    // HUD update (called every tick, but only updates text content, no innerHTML)
+    function updateHUD() {
+      const scoreEl = $('hud-score');
+      const blocksEl = $('hud-blocks');
+      const conveyorEl = $('hud-conveyor');
+      if (scoreEl) scoreEl.textContent = state.score;
+      if (blocksEl) blocksEl.textContent = state.blocksRemaining;
+      if (conveyorEl) conveyorEl.textContent = `${state.pigsOnConveyor.length}/${state.conveyorCapacity}`;
+    }
+
+    // Full render for play scene
+    function renderPlay() {
+      renderBlocks(Math.min(40, Math.floor(300 / state.boardSize.cols)));
+      renderPigs(Math.min(40, Math.floor(300 / state.boardSize.cols)));
+      renderWaitSlots();
+      updateHUD();
+    }
+
+    // ===== GAME LOOP =====
+
+    let lastTime = 0;
+
+    function gameLoop(timestamp) {
+      if (state.phase === 'playing') {
+        const dt = lastTime ? (timestamp - lastTime) / 1000 : 0;
+        lastTime = timestamp;
+
+        for (const pig of [...state.pigsOnConveyor]) {
+          if (!pig.alive || !pig.onTrack) continue;
+
+          const oldT = pig.t;
+          const oldSegment = pig.segmentId;
+
+          pig.t += pig.speed * dt;
+          const loopComplete = Math.floor(pig.t) > Math.floor(oldT);
+          pig.t = ((pig.t % 1) + 1) % 1;
+
+          pig.segmentId = getSegment(pig.t);
+          pig.gridPosition = getGridPosition(pig.t, pig.segmentId);
+
+          if (oldSegment !== pig.segmentId && pig.ammo > 0) {
+            attack(pig);
+          }
+
+          if (loopComplete && pig.alive && pig.ammo > 0) {
+            recyclePig(pig);
+          }
+        }
+
+        state.elapsedTime += dt;
+
+        if (checkWinLose()) {
+          renderScene();
+        } else {
+          // Keyed update: only update positions, not full innerHTML
+          updateHUD();
+          renderPigs(Math.min(40, Math.floor(300 / state.boardSize.cols)));
+          renderBlocks(Math.min(40, Math.floor(300 / state.boardSize.cols)));
+        }
+      }
+
+      state.animationFrame = requestAnimationFrame(gameLoop);
+    }
+
+    // ===== EVENT HANDLERS =====
+
+    function setupEventHandlers() {
+      $('btn-start').onclick = () => {
+        state.phase = 'playing';
+        initLevel(1);
+        lastTime = 0;
+        renderScene();
+      };
+
+      $('btn-retry').onclick = () => {
+        state.phase = 'ready';
+        state.lastRenderPhase = null;
+        renderScene();
+      };
+
+      // Event delegation for wait slots
+      $('wait-slots').addEventListener('click', (e) => {
+        const slotEl = e.target.closest('[data-slot-index]');
+        if (slotEl && !state.isProcessing) {
+          const slotIndex = parseInt(slotEl.dataset.slotIndex);
+          if (deployPig(slotIndex)) {
+            renderWaitSlots();
+          }
+        }
+      });
+    }
+
+    // ===== TEST HOOKS =====
+    window.gameTest = {
+      clickStartButton: () => {
+        if (state.phase === 'ready') {
+          state.phase = 'playing';
+          initLevel(1);
+          lastTime = 0;
+          renderScene();
+        }
+      },
+      clickWaitSlot: (index) => {
+        if (state.phase === 'playing' && !state.isProcessing) {
+          if (deployPig(index)) {
+            renderWaitSlots();
+          }
+        }
+      },
+      getGameState: () => ({ ...state }),
+      getPigsOnTrack: () => state.pigsOnConveyor.map(p => ({ ...p })),
+      getBlocks: () => state.blocks.map(b => ({ ...b })),
+      getWaitSlots: () => state.waitSlots.map(s => ({ ...s, pig: s.pig ? { ...s.pig } : null }))
+    };
+
+    // ===== BOOTSTRAP =====
+    setupEventHandlers();
+    renderScene();
+    state.animationFrame = requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

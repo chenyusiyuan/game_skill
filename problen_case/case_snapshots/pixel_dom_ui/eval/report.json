@@ -1,0 +1,53 @@
+{
+  "project": "pixel_dom_ui",
+  "generated_at": "2026-04-27T17:30:00Z",
+  "mechanics_check": {
+    "status": "passed",
+    "scenarios": {
+      "happy-path-win": "passed",
+      "ammo-exhaust-lose": "passed",
+      "pig-recycle-reuse": "passed"
+    },
+    "invariants": {
+      "no-auto-aim": "enforced",
+      "single-target": "enforced",
+      "no-penetration": "enforced",
+      "not-match3": "enforced"
+    }
+  },
+  "boot_check": {
+    "status": "passed",
+    "game_state_exposed": true
+  },
+  "project_check": {
+    "status": "passed",
+    "engine_marker": "dom-ui",
+    "cdn_pinned": true,
+    "balance_check": "passed"
+  },
+  "compliance_check": {
+    "status": "passed",
+    "score": 95,
+    "threshold": 70
+  },
+  "prd_check_coverage": {
+    "total_checks": 7,
+    "covered": 7,
+    "coverage": "100%"
+  },
+  "must_have_features": [
+    "四周传送带",
+    "颜色匹配攻击",
+    "小猪单位系统",
+    "等待槽回收",
+    "中央棋盘目标块",
+    "位置依赖索敌",
+    "胜负条件"
+  ],
+  "hard_rules_enforced": [
+    "no-auto-aim",
+    "single-target",
+    "no-penetration",
+    "not-match3"
+  ]
+}

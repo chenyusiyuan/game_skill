@@ -10,6 +10,7 @@
  */
 
 import { validateManifest, buildStats } from "../../../_common/registry.spec.js";
+import { recordAssetUsage } from "../../../_common/asset-usage.js";
 
 export async function createRegistry(manifest) {
   const { ok, errors } = validateManifest(manifest);
@@ -17,6 +18,9 @@ export async function createRegistry(manifest) {
 
   const base = manifest.basePath || "";
   const entries = new Map();
+  const manifestImageById = new Map((manifest.images ?? []).map((it) => [it.id, it]));
+  const manifestSheetById = new Map((manifest.spritesheets ?? []).map((it) => [it.id, it]));
+  const manifestAudioById = new Map((manifest.audio ?? []).map((it) => [it.id, it]));
 
   // pixi.js 由业务代码在入口 import，adapter 运行时按需拿
   const pixi = await import("pixi.js");
@@ -78,22 +82,56 @@ export async function createRegistry(manifest) {
   await Promise.all(loadTasks);
 
   return {
-    getTexture(id) {
+    getTexture(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
-      if (e.kind === "image" && e.loaded) return Texture.from(id);
+      if (e.kind === "image" && e.loaded) {
+        recordAssetUsage({
+          id,
+          section: "images",
+          kind: "texture",
+          manifestItem: manifestImageById.get(id),
+          extra,
+        });
+        return Texture.from(id);
+      }
       return null;
     },
-    getSpritesheet(id) {
+    getSpritesheet(id, extra = null) {
       const e = entries.get(id);
       if (!e || !e.loaded) return null;
+      recordAssetUsage({
+        id,
+        section: "spritesheets",
+        kind: "spritesheet",
+        manifestItem: manifestSheetById.get(id),
+        extra,
+      });
       return { texture: Texture.from(id), frameWidth: e.frameWidth, frameHeight: e.frameHeight };
     },
-    getAudio(id) {
+    getAudio(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
-      if (e.kind === "audio") return e.value;
-      if (e.kind === "synth-meta") return { synthParams: e.value };
+      if (e.kind === "audio") {
+        recordAssetUsage({
+          id,
+          section: "audio",
+          kind: "audio",
+          manifestItem: manifestAudioById.get(id),
+          extra,
+        });
+        return e.value;
+      }
+      if (e.kind === "synth-meta") {
+        recordAssetUsage({
+          id,
+          section: "audio",
+          kind: "audio",
+          manifestItem: manifestAudioById.get(id),
+          extra,
+        });
+        return { synthParams: e.value };
+      }
       return null;
     },
     has(id) {

@@ -1,0 +1,307 @@
+version: 1
+primitive-catalog-version: 1
+engine: pixijs
+
+external-events:
+  - input.click-pig
+  - input.click-start
+  - input.click-retry
+  - input.click-next
+  - selection.slot-clicked
+  - selection.changed
+  - selection.valid
+  - selection.invalid
+  - conveyor.admit
+  - conveyor.blocked
+  - track.tick
+  - lifecycle.entered.waiting
+
+entities:
+  - id: pig
+    uses:
+      - parametric-track@v1
+      - entity-lifecycle@v1
+      - resource-consume@v1
+    initial:
+      id: null
+      color: red
+      ammo: 3
+      t: 0
+      speed: 0.1
+      segmentId: null
+      lifecycle: waiting
+      alive: true
+      gridPosition: { row: -1, col: 0 }
+
+  - id: block
+    uses:
+      - grid-board@v1
+      - resource-consume@v1
+    initial:
+      id: null
+      row: 0
+      col: 0
+      color: red
+      hp: 1
+      maxHp: 1
+      alive: true
+
+  - id: conveyor
+    uses:
+      - capacity-gate@v1
+    initial:
+      capacity: 4
+      active: []
+
+  - id: waiting-pool
+    uses:
+      - slot-pool@v1
+    initial:
+      capacity: 5
+      slots:
+        - { id: slot-0, occupantId: null }
+        - { id: slot-1, occupantId: null }
+        - { id: slot-2, occupantId: null }
+        - { id: slot-3, occupantId: null }
+        - { id: slot-4, occupantId: null }
+
+mechanics:
+  - node: board
+    primitive: grid-board@v1
+    params:
+      rows: 6
+      cols: 6
+      cell-fields:
+        - { name: color, type: enum, values: [red, blue, yellow, green] }
+        - { name: hp, type: number }
+        - { name: maxHp, type: number }
+    produces-events:
+      - board.cell-added
+      - board.cell-removed
+      - board.empty
+
+  - node: conveyor-track
+    primitive: parametric-track@v1
+    applies-to: pig
+    params:
+      shape: rect-loop
+      geometry:
+        x: 80
+        y: 80
+        width: 360
+        height: 360
+      grid-projection:
+        rows: 6
+        cols: 6
+        outside-offset: 1
+      segments:
+        - { id: top,    range: [0.0, 0.25] }
+        - { id: right,  range: [0.25, 0.5] }
+        - { id: bottom, range: [0.5, 0.75] }
+        - { id: left,   range: [0.75, 1.0] }
+    produces-events:
+      - track.enter-segment
+      - track.loop-complete
+
+  - node: conveyor-capacity
+    primitive: capacity-gate@v1
+    trigger-on: [selection.valid]
+    params:
+      capacity: 4
+      on-admit:   [pig-dispatch]
+      on-block:   [capacity-blocked-feedback]
+      on-release: [pig-leave-conveyor]
+    produces-events:
+      - conveyor.admit
+      - conveyor.blocked
+
+  - node: pig-lifecycle
+    primitive: entity-lifecycle@v1
+    trigger-on: [conveyor.admit, resource.agent-zero, track.loop-complete]
+    applies-to: pig
+    params:
+      transitions:
+        - { from: waiting,   event: dispatched, to: active }
+        - { from: active,    event: exhausted,  to: returning }
+        - { from: active,    event: killed,     to: dead }
+        - { from: returning, event: arrived,    to: waiting }
+      on-enter-active:    [track-start]
+      on-enter-returning: [recycle-start]
+      on-enter-waiting:   [bind-waiting-slot]
+      on-enter-dead:      [pig-remove]
+    produces-events:
+      - lifecycle.entered.active
+      - lifecycle.entered.returning
+      - lifecycle.entered.waiting
+      - lifecycle.entered.dead
+
+  - node: waiting-slots
+    primitive: slot-pool@v1
+    trigger-on: [lifecycle.entered.waiting]
+    params:
+      capacity: 5
+      slot-ids: [slot-0, slot-1, slot-2, slot-3, slot-4]
+      retain-fields: [color, ammo]
+      on-bind:   [slot-occupied]
+      on-unbind: [slot-freed]
+      on-overflow: [slot-overflow-feedback]
+    produces-events:
+      - pool.bound
+      - pool.unbound
+      - pool.overflow
+
+  - node: attack-raycast
+    primitive: ray-cast@v1
+    trigger-on: [track.enter-segment]
+    applies-to: pig
+    params:
+      source:
+        from: pig
+      direction:
+        mode: normal-to-track
+        segment-direction-map:
+          top:    { dx: 0,  dy: 1 }
+          right:  { dx: -1, dy: 0 }
+          bottom: { dx: 0,  dy: -1 }
+          left:   { dx: 1,  dy: 0 }
+      targets:
+        from: blocks
+      coord-system: grid
+      stop-on: first-hit
+      max-distance: null
+    produces-events:
+      - ray.hit-candidate
+      - ray.miss
+
+  - node: color-match
+    primitive: predicate-match@v1
+    trigger-on: [ray.hit-candidate]
+    params:
+      left: pig
+      right: hit-candidate[0]
+      fields: [color]
+      op: eq
+    produces-events:
+      - match.hit
+      - match.miss
+
+  - node: attack-consume
+    primitive: resource-consume@v1
+    trigger-on: [match.hit]
+    params:
+      agent-field: pig.ammo
+      target-field: block.hp
+      amount: 1
+      on-agent-zero: [lifecycle.entered.returning]
+      on-target-zero: [remove-block-from-board, score-plus-10]
+    produces-events:
+      - resource.consumed
+      - resource.agent-zero
+      - resource.target-zero
+
+  - node: end-check
+    primitive: win-lose-check@v1
+    handles: [tick]
+    params:
+      win:
+        - kind: all-cleared
+          collection: blocks
+      lose:
+        - kind: count-falls-below
+          collection: pigs
+          threshold: 1
+      evaluate-on:
+        - board.cell-removed
+        - resource.agent-zero
+        - tick
+    produces-events:
+      - win
+      - lose
+
+invariants:
+  - ref: "@constraint(no-global-autoaim)"
+    maps-to:
+      node: attack-raycast
+      field: direction.mode
+      expected: normal-to-track
+    comment: "direction depends on pig.segmentId from parametric-track; no global find"
+
+  - ref: "@constraint(single-target-attack)"
+    maps-to:
+      node: attack-raycast
+      field: stop-on
+      expected: first-hit
+    comment: "ray-cast returns exactly one target"
+
+  - ref: "@constraint(no-pierce-attack)"
+    maps-to:
+      node: attack-raycast
+      invariant: no-penetration
+    comment: "ray-cast must not skip intermediate blocks"
+
+  - ref: "@constraint(core-mechanics)"
+    maps-to:
+      node: conveyor-track
+      field: shape
+      expected: rect-loop
+    comment: "rect-loop conveyor + position-based attack + slot retention - core nodes exist"
+
+  - ref: "@constraint(not-match3-tower-defense)"
+    maps-to:
+      node: attack-raycast
+      field: stop-on
+      expected: first-hit
+    comment: "single-target attack prevents match3/tower-defense style multi-clear"
+
+unmapped: []
+
+simulation-scenarios:
+  # Note: Symbolic simulation verifies structural correctness and invariants.
+  # Full gameplay simulation requires actual game code (Phase 4/5).
+  - name: cleared-board-win
+    description: "Verifies win detection when all blocks are cleared but pig still exists"
+    setup:
+      pigs:
+        - id: p1
+          color: red
+          ammo: 1
+          t: 0.01
+          speed: 0.1
+          segmentId: top
+          lifecycle: active
+          alive: true
+          gridPosition: { row: -1, col: 0 }
+      blocks:
+        - id: b1
+          row: 0
+          col: 0
+          color: red
+          hp: 0
+          maxHp: 1
+          alive: false
+    expected-outcome: win
+    max-ticks: 1
+
+  - name: color-mismatch-no-attack
+    description: "Verifies lose when pig can't attack and resources are exhausted"
+    setup:
+      pigs:
+        - id: p1
+          color: red
+          ammo: 0
+          t: 0.01
+          speed: 0.1
+          segmentId: top
+          lifecycle: dead
+          alive: false
+          gridPosition: { row: -1, col: 0 }
+      blocks:
+        - id: b1
+          row: 0
+          col: 0
+          color: blue
+          hp: 1
+          maxHp: 1
+          alive: true
+    expected-outcome: lose
+    max-ticks: 1

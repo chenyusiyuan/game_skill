@@ -1,0 +1,878 @@
+contract-version: 1
+runtime:
+  engine: phaser3
+  run-mode: local-http
+boot:
+  entry-scene: start
+  ready-condition: window.gameState.phase === 'ready'
+  start-action:
+    trigger: click
+    target: start-btn
+    result: phase -> playing; scene -> play
+  scene-transitions:
+    - from: start
+      to: play
+      trigger: click start-btn
+      guard: phase === 'ready'
+    - from: play
+      to: result
+      trigger: phase === 'win' || phase === 'lose'
+      guard: null
+    - from: result
+      to: play
+      trigger: click retry-btn
+      guard: null
+    - from: result
+      to: play
+      trigger: click next-btn
+      guard: state.isWin === true
+asset-bindings:
+  - id: btn-start-left
+    section: images
+    role: button
+    asset-kind: button
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0013.png
+    binding-to: start-btn
+    visual-primitive: ui-button
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: btn-start-center
+    section: images
+    role: button
+    asset-kind: button
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0014.png
+    binding-to: start-btn
+    visual-primitive: ui-button
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: btn-start-right
+    section: images
+    role: button
+    asset-kind: button
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0015.png
+    binding-to: start-btn
+    visual-primitive: ui-button
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: btn-start-pressed-left
+    section: images
+    role: button
+    asset-kind: button
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0019.png
+    binding-to: start-btn
+    visual-primitive: ui-button
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: btn-start-pressed-center
+    section: images
+    role: button
+    asset-kind: button
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0020.png
+    binding-to: start-btn
+    visual-primitive: ui-button
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: btn-start-pressed-right
+    section: images
+    role: button
+    asset-kind: button
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0021.png
+    binding-to: start-btn
+    visual-primitive: ui-button
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: btn-retry-left
+    section: images
+    role: button
+    asset-kind: button
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0013.png
+    binding-to: retry-btn
+    visual-primitive: ui-button
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: btn-retry-center
+    section: images
+    role: button
+    asset-kind: button
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0014.png
+    binding-to: retry-btn
+    visual-primitive: ui-button
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: btn-retry-right
+    section: images
+    role: button
+    asset-kind: button
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0015.png
+    binding-to: retry-btn
+    visual-primitive: ui-button
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: btn-next-left
+    section: images
+    role: button
+    asset-kind: button
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0013.png
+    binding-to: next-btn
+    visual-primitive: ui-button
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: btn-next-center
+    section: images
+    role: button
+    asset-kind: button
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0014.png
+    binding-to: next-btn
+    visual-primitive: ui-button
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: btn-next-right
+    section: images
+    role: button
+    asset-kind: button
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0015.png
+    binding-to: next-btn
+    visual-primitive: ui-button
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: panel-top-left
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0000.png
+    binding-to: decor
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: panel-top
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0001.png
+    binding-to: decor
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: panel-top-right
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0002.png
+    binding-to: decor
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: panel-left
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0003.png
+    binding-to: decor
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: panel-center
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0004.png
+    binding-to: decor
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: panel-right
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0005.png
+    binding-to: decor
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: panel-bottom-left
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0006.png
+    binding-to: decor
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: panel-bottom
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0007.png
+    binding-to: decor
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: panel-bottom-right
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0008.png
+    binding-to: decor
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: panel-dark-top-left
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0022.png
+    binding-to: waiting-slots
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: panel-dark-top
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0023.png
+    binding-to: waiting-slots
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: panel-dark-top-right
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0024.png
+    binding-to: waiting-slots
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: panel-dark-left
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0025.png
+    binding-to: waiting-slots
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: panel-dark-center
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0026.png
+    binding-to: waiting-slots
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: panel-dark-right
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0027.png
+    binding-to: waiting-slots
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: panel-dark-bottom-left
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0028.png
+    binding-to: waiting-slots
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: panel-dark-bottom
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0029.png
+    binding-to: waiting-slots
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: panel-dark-bottom-right
+    section: images
+    role: panel
+    asset-kind: panel
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0030.png
+    binding-to: waiting-slots
+    visual-primitive: ui-panel
+    render-as: texture
+    text-bearing: true
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: hud-coin
+    section: images
+    role: hud-indicator
+    asset-kind: icon
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0040.png
+    binding-to: hud-score
+    visual-primitive: ui-readout
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: hud-star
+    section: images
+    role: hud-indicator
+    asset-kind: icon
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0042.png
+    binding-to: hud-level
+    visual-primitive: ui-readout
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: digit-0
+    section: images
+    role: hud-indicator
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0063.png
+    binding-to: decor
+    visual-primitive: ui-readout
+    render-as: texture
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: digit-1
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0064.png
+    binding-to: decor
+    visual-primitive: ui-readout
+    render-as: texture
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: digit-2
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0065.png
+    binding-to: decor
+    visual-primitive: ui-readout
+    render-as: texture
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: digit-3
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0066.png
+    binding-to: decor
+    visual-primitive: ui-readout
+    render-as: texture
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: digit-4
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0067.png
+    binding-to: decor
+    visual-primitive: ui-readout
+    render-as: texture
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: digit-5
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0068.png
+    binding-to: decor
+    visual-primitive: ui-readout
+    render-as: texture
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: digit-6
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0069.png
+    binding-to: decor
+    visual-primitive: ui-readout
+    render-as: texture
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: digit-7
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0070.png
+    binding-to: decor
+    visual-primitive: ui-readout
+    render-as: texture
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: digit-8
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0071.png
+    binding-to: decor
+    visual-primitive: ui-readout
+    render-as: texture
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: digit-9
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0072.png
+    binding-to: decor
+    visual-primitive: ui-readout
+    render-as: texture
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getTexture
+  - id: lock-closed
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0074.png
+    binding-to: level-select
+    visual-primitive: icon
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: lock-open
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0075.png
+    binding-to: level-select
+    visual-primitive: icon
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: flag
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0073.png
+    binding-to: level-select
+    visual-primitive: icon
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: arrow-left
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0044.png
+    binding-to: level-select
+    visual-primitive: icon
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: arrow-right
+    section: images
+    role: decorative
+    asset-kind: tile
+    type: local-file
+    source: assets/library_2d/ui-pixel/tile_0045.png
+    binding-to: level-select
+    visual-primitive: icon
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: pig-base
+    section: images
+    role: core-visual
+    asset-kind: image
+    type: local-file
+    source: assets/library_2d/sprites/puzzle/ballBlue.png
+    binding-to: pig
+    visual-primitive: color-unit
+    color-source: entity.color
+    render-as: texture
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: registry.getTexture
+  - id: block-target
+    section: images
+    role: color-block
+    asset-kind: generated-surface
+    type: graphics-generated
+    source: generated
+    binding-to: block
+    visual-primitive: color-block
+    color-source: entity.color
+    render-as: procedural-surface
+    text-bearing: false
+    must-render: true
+    allow-fallback: false
+    consumer: null
+  - id: board-bg
+    section: images
+    role: scene-background
+    asset-kind: generated-surface
+    type: graphics-generated
+    source: generated
+    binding-to: board
+    visual-primitive: grid
+    render-as: procedural-surface
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: null
+  - id: conveyor-track
+    section: images
+    role: decorative
+    asset-kind: generated-surface
+    type: graphics-generated
+    source: generated
+    binding-to: conveyor
+    visual-primitive: track
+    render-as: procedural-surface
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: null
+  - id: game-bg
+    section: images
+    role: scene-background
+    asset-kind: generated-surface
+    type: graphics-generated
+    source: generated
+    binding-to: decor
+    visual-primitive: background
+    render-as: procedural-surface
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: null
+  - id: sfx-click
+    section: audio
+    role: audio-feedback
+    asset-kind: audio
+    type: local-file
+    source: assets/library_2d/audio/ui-clicks/click1.ogg
+    binding-to: decor
+    render-as: audio
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getAudio
+  - id: sfx-hover
+    section: audio
+    role: audio-feedback
+    asset-kind: audio
+    type: local-file
+    source: assets/library_2d/audio/ui-clicks/rollover1.ogg
+    binding-to: decor
+    render-as: audio
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getAudio
+  - id: sfx-success
+    section: audio
+    role: audio-feedback
+    asset-kind: audio
+    type: local-file
+    source: assets/library_2d/audio/ui-interface/confirmation_002.ogg
+    binding-to: decor
+    render-as: audio
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getAudio
+  - id: sfx-error
+    section: audio
+    role: audio-feedback
+    asset-kind: audio
+    type: local-file
+    source: assets/library_2d/audio/ui-interface/error_004.ogg
+    binding-to: decor
+    render-as: audio
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getAudio
+  - id: sfx-select
+    section: audio
+    role: audio-feedback
+    asset-kind: audio
+    type: local-file
+    source: assets/library_2d/audio/ui-interface/select_003.ogg
+    binding-to: decor
+    render-as: audio
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getAudio
+  - id: sfx-level-up
+    section: audio
+    role: audio-feedback
+    asset-kind: audio
+    type: local-file
+    source: assets/library_2d/audio/ui-interface/maximize_008.ogg
+    binding-to: decor
+    render-as: audio
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getAudio
+  - id: sfx-attack
+    section: audio
+    role: audio-feedback
+    asset-kind: audio
+    type: local-file
+    source: assets/library_2d/audio/sfx/sfx_throw.ogg
+    binding-to: decor
+    render-as: audio
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getAudio
+  - id: sfx-hit
+    section: audio
+    role: audio-feedback
+    asset-kind: audio
+    type: local-file
+    source: assets/library_2d/audio/sfx/sfx_bump.ogg
+    binding-to: decor
+    render-as: audio
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getAudio
+  - id: sfx-collect
+    section: audio
+    role: audio-feedback
+    asset-kind: audio
+    type: local-file
+    source: assets/library_2d/audio/sfx/sfx_coin.ogg
+    binding-to: decor
+    render-as: audio
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getAudio
+  - id: sfx-disappear
+    section: audio
+    role: audio-feedback
+    asset-kind: audio
+    type: local-file
+    source: assets/library_2d/audio/sfx/sfx_disappear.ogg
+    binding-to: decor
+    render-as: audio
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: registry.getAudio
+  - id: bgm-loop
+    section: audio
+    role: background-music
+    asset-kind: audio
+    type: synthesized
+    source: inline
+    binding-to: decor
+    render-as: audio
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: null
+  - id: Kenney Future
+    section: fonts
+    role: font
+    asset-kind: font
+    type: local-file
+    source: assets/library_2d/fonts/Kenney Future.ttf
+    binding-to: decor
+    render-as: font-face
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: css.font-face
+  - id: Kenney Future Narrow
+    section: fonts
+    role: font
+    asset-kind: font
+    type: local-file
+    source: assets/library_2d/fonts/Kenney Future Narrow.ttf
+    binding-to: decor
+    render-as: font-face
+    text-bearing: false
+    must-render: false
+    allow-fallback: true
+    consumer: css.font-face
+engine-lifecycle:
+  asset-loading: queue-in-preload
+  forbid:
+    - scene.load.start-in-create
+    - missing-texture-as-success
+    - silent-asset-fallback
+verification:
+  required-runtime-evidence:
+    - gameState-exposed
+    - no-project-asset-http-errors
+    - required-local-assets-loaded
+    - required-local-assets-consumed
+  required-test-hooks:
+    - clickStartButton
+  report-policy: verifier-json-only

@@ -1,0 +1,41 @@
+{
+  "project": "pixel_canvas-001",
+  "generated_at": "2026-04-27T17:50:00Z",
+  "runtime": "canvas",
+  "run_mode": "file",
+  "checks": {
+    "mechanics": {
+      "status": "partial",
+      "notes": ["9个 mechanics nodes 全部有 @primitive 注释", "约束映射完整"]
+    },
+    "boot": {
+      "status": "passed",
+      "notes": ["游戏正常启动", "window.gameState 已暴露", "测试 API 已暴露"]
+    },
+    "project": {
+      "status": "passed",
+      "notes": ["ENGINE 标识正确", "异步锁字段存在", "数值平衡通过"]
+    },
+    "balance": {
+      "status": "passed",
+      "notes": ["level-1: supply(16) >= demand(12)", "level-2: supply(24) >= demand(18)", "level-3: supply(32) >= demand(24)"]
+    },
+    "compliance": {
+      "status": "passed",
+      "score": 95,
+      "threshold": 70
+    }
+  },
+  "must_have_features": {
+    "delivered": [
+      "四周环形传送带",
+      "位置依赖索敌",
+      "颜色匹配攻击",
+      "等待槽回收系统",
+      "多关卡递进"
+    ],
+    "degraded": [],
+    "rejected": []
+  },
+  "overall_status": "passed"
+}

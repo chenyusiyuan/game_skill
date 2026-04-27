@@ -16,6 +16,20 @@ import { basename, join, relative, resolve } from "path";
 import yaml from "js-yaml";
 import { createLogger, parseLogArg } from "./_logger.js";
 import { readAssetStrategy } from "./_asset_strategy.js";
+import {
+  isValidVisualPrimitive,
+  requiresColorSource,
+  isValidColorSource,
+  VISUAL_PRIMITIVE_ENUM,
+} from "./_visual_primitive_enum.js";
+import {
+  PRIMITIVE_RUNTIME_API,
+  isRuntimeBacked,
+  isEngineEnforced,
+  apisFor,
+  parseEsmImports,
+  isPrimitivesImport,
+} from "./_primitive_runtime_map.js";
 
 const args = process.argv.slice(2);
 const caseDir = resolve(args[0] ?? ".");
@@ -147,6 +161,8 @@ function checkAssetBindings(c, assets) {
   const assetById = new Map(assetItems.map((a) => [a.id, a]));
   const bindings = Array.isArray(c["asset-bindings"]) ? c["asset-bindings"] : [];
   const bindingById = new Map(bindings.map((b) => [b.id, b]));
+  const coreEntityIds = new Set(strategy["visual-core-entities"] ?? []);
+  const DECORATIVE_ROLES = new Set(["particle", "hud-indicator", "decorative"]);
 
   for (const b of bindings) {
     if (!b.id) { fail("asset-bindings 中存在缺 id 的条目"); continue; }
@@ -156,7 +172,7 @@ function checkAssetBindings(c, assets) {
       continue;
     }
     if (b.type !== item.type) warn(`[contract.asset.${b.id}] type 与 assets.yaml 不一致: contract=${b.type}, assets=${item.type}`);
-    validateSemanticBinding(b, item);
+    validateSemanticBinding(b, item, coreEntityIds);
   }
 
   for (const item of assetItems.filter((a) => a.type === "local-file")) {
@@ -164,15 +180,58 @@ function checkAssetBindings(c, assets) {
       fail(`[contract.asset.${item.id}] local-file 素材缺少 asset-bindings 语义绑定`);
     }
   }
+
+  // P0.6: 每个 visual-core-entity 必须有至少 1 个"合格的主视觉 binding"
+  //   · must-render: true
+  //   · allow-fallback: false
+  //   · role 不在装饰角色白名单内
+  //   · section 是 images/spritesheets（不能只靠音频/字体顶替）
+  for (const coreId of coreEntityIds) {
+    const boundTo = bindings.filter((b) =>
+      String(b["binding-to"] ?? "") === String(coreId) &&
+      ["images", "spritesheets"].includes(String(b.section ?? ""))
+    );
+    if (boundTo.length === 0) {
+      // 交由 check_asset_selection [core-binding] 规则负责报"一个都没有"的情况
+      continue;
+    }
+    const primary = boundTo.find((b) =>
+      b["must-render"] === true &&
+      b["allow-fallback"] === false &&
+      !DECORATIVE_ROLES.has(String(b.role ?? ""))
+    );
+    if (!primary) {
+      const summary = boundTo.map((b) => `${b.id}(role=${b.role},must=${b["must-render"]},fallback=${b["allow-fallback"]})`).join(", ");
+      fail(`[contract.core-must-render] visual-core-entity "${coreId}" 无合格主视觉 binding；至少需要 1 个 must-render=true + allow-fallback=false + role 非装饰。现有: ${summary}`);
+    }
+  }
 }
 
-function validateSemanticBinding(binding, item) {
+function validateSemanticBinding(binding, item, coreEntityIds = new Set()) {
   const source = String(item.source ?? binding.source ?? "").toLowerCase();
   const file = basename(source);
   const role = String(binding.role ?? "").toLowerCase();
   const kind = String(binding["asset-kind"] ?? "").toLowerCase();
   const textBearing = Boolean(binding["text-bearing"]);
   const isButtonSource = source.includes("/buttons/") || /^button_/.test(file) || kind === "button";
+
+  // P0.4: core entity 的 binding 必须有合法 visual-primitive（single source of truth）
+  const bindingTo = binding["binding-to"];
+  const vp = binding["visual-primitive"];
+  if (bindingTo && coreEntityIds.has(String(bindingTo))) {
+    if (!vp) {
+      fail(`[contract.asset.${item.id}] binding-to="${bindingTo}" 是 visual-core-entities；contract 必须透传 visual-primitive（合法值: ${VISUAL_PRIMITIVE_ENUM.join(", ")}）`);
+    } else if (!isValidVisualPrimitive(String(vp))) {
+      fail(`[contract.asset.${item.id}] visual-primitive="${vp}" 不在合法枚举内；合法值: ${VISUAL_PRIMITIVE_ENUM.join(", ")}`);
+    } else if (requiresColorSource(String(vp))) {
+      const cs = binding["color-source"];
+      if (!cs) {
+        fail(`[contract.asset.${item.id}] visual-primitive="${vp}" 要求声明 color-source；contract 必须透传（允许: entity.<field> / palette.<name> / #rrggbb / rgb(...)）`);
+      } else if (!isValidColorSource(String(cs))) {
+        fail(`[contract.asset.${item.id}] color-source="${cs}" 格式不合法`);
+      }
+    }
+  }
 
   if (textBearing && isButtonSource && role !== "button") {
     fail(`[contract.asset.${item.id}] button 素材不能绑定到非按钮的文字承载 UI（role=${role}）`);
@@ -211,6 +270,7 @@ function checkGeneratedCode(c, assets, root) {
   }
   checkTracePushPoints(businessSrc);  // T3
   checkPrimitiveImplementationCoverage(allSrc); // mechanics -> code 1:1
+  checkRuntimePrimitiveImports(c, businessSrc); // P1.4: canvas/pixijs must import runtime APIs
 
   if (engine === "phaser3" || engine === "phaser") {
     if (/\.load\.start\s*\(/.test(businessSrc)) {
@@ -255,6 +315,85 @@ function checkPrimitiveImplementationCoverage(sourceBlob) {
     fail(`[mechanics] ${missing.length}/${nodes.length} 个 mechanics node 缺少 @primitive 实现注释: ${missing.slice(0, 8).join(", ")}`);
   } else {
     ok(`[mechanics] 所有 ${nodes.length} 个 mechanics node 均有 @primitive 实现注释`);
+  }
+}
+
+// P1.4: canvas / pixijs 引擎必须 import 且调用对应的 primitive runtime API。
+// 只校验 mechanics.yaml 中出现且已有 P1.1 runtime wrapper 的 primitive；
+// 其它引擎（phaser / dom-ui / three）过渡期跳过，不 fail。
+function checkRuntimePrimitiveImports(c, businessSrc) {
+  const engine = String(c.runtime?.engine ?? "").toLowerCase();
+  if (!isEngineEnforced(engine)) {
+    ok(`[runtime] 引擎=${engine || "<未指定>"} 非 canvas/pixijs，跳过 runtime primitive import 校验`);
+    return;
+  }
+  if (!existsSync(mechanicsPath)) {
+    // checkPrimitiveImplementationCoverage 已报错，这里静默
+    return;
+  }
+  let mech;
+  try {
+    mech = yaml.load(readFileSync(mechanicsPath, "utf-8")) ?? {};
+  } catch {
+    return;
+  }
+  const nodes = Array.isArray(mech.mechanics) ? mech.mechanics : [];
+  const required = new Set();
+  for (const node of nodes) {
+    if (node?.primitive && isRuntimeBacked(node.primitive)) {
+      required.add(node.primitive);
+    }
+  }
+  if (required.size === 0) {
+    ok("[runtime] 本 case mechanics 未引用任何 runtime-backed primitive，跳过");
+    return;
+  }
+
+  const imports = parseEsmImports(businessSrc).filter((i) =>
+    isPrimitivesImport(i.specifier),
+  );
+  const importedNames = new Set();
+  for (const imp of imports) {
+    for (const n of imp.names) {
+      if (n === "*") {
+        // 命名空间导入：把它视为全量，后续 call-site 校验还会要求调用存在
+        for (const api of Object.values(PRIMITIVE_RUNTIME_API).flat()) {
+          importedNames.add(api);
+        }
+      } else {
+        importedNames.add(n);
+      }
+    }
+  }
+
+  const missingImport = [];
+  const missingCall = [];
+  for (const primitive of required) {
+    const apis = apisFor(primitive);
+    const importedApi = apis.find((api) => importedNames.has(api));
+    if (!importedApi) {
+      missingImport.push(`${primitive} (期望 import 至少一个: ${apis.join(" / ")})`);
+      continue;
+    }
+    // 被 import 的 API 必须至少被调用一次
+    const callRe = new RegExp(`\\b${escapeReg(importedApi)}\\s*\\(`);
+    if (!callRe.test(businessSrc)) {
+      missingCall.push(`${primitive}.${importedApi}`);
+    }
+  }
+
+  if (missingImport.length > 0) {
+    fail(
+      `[runtime] ${missingImport.length}/${required.size} 个 runtime-backed primitive 未 import: ${missingImport.slice(0, 6).join("; ")}`,
+    );
+  }
+  if (missingCall.length > 0) {
+    fail(
+      `[runtime] ${missingCall.length} 个 runtime API 已 import 但未调用: ${missingCall.slice(0, 6).join(", ")}（只有调用才能触发 before/after trace）`,
+    );
+  }
+  if (missingImport.length === 0 && missingCall.length === 0) {
+    ok(`[runtime] 全部 ${required.size} 个 runtime-backed primitive 均已 import + 调用`);
   }
 }
 

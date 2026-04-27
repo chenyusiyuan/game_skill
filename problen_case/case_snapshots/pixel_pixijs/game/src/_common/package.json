@@ -1,0 +1,5 @@
+{
+  "type": "module",
+  "private": true,
+  "description": "ESM marker for shared engine layer. Keep zero dependencies."
+}

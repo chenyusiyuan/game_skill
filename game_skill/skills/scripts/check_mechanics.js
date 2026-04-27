@@ -507,7 +507,7 @@ function runScenario(mech, sc, reducers) {
         if (typeof red.resolveAction !== "function") continue;
         const action = red.resolveAction(node, ev, state);
         if (!action) continue;
-        const result = red.step({}, action, node.params || {});
+        const result = red.step(state, action, node.params || {});
         // P1-2：history 保留 reducer.step() 完整返回，不与 action 混合，
         // 以保证 reducer.checkInvariants 能拿到它自己声明的契约字段
         pushHist(node.node, shallow(result));

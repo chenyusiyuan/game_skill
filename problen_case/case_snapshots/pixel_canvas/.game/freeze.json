@@ -1,0 +1,14 @@
+{
+  "frozenAt": "2026-04-27T09:47:35.721Z",
+  "caseDir": "cases/pixel_canvas",
+  "fingerprint": {
+    "docs/game-prd.md": "a949d28cfdd952c4f295b0b1dd4347ad70a1b408f41ebea9d2cf91e128cca909",
+    "specs/assets.yaml": "224df80779a55b09e86e4d8e69644363b793521ce75944e5e3fe4a4139ed6797",
+    "specs/data.yaml": "345c3e67dda88de2928e8ebc3a7a277d8c77e7ce192cfebcd093d0a12d8dfb33",
+    "specs/event-graph.yaml": "e4e28789e1bfdd95c61dd51f6e22d91a3884f1ecfd687e61e13c1032be1e1b29",
+    "specs/implementation-contract.yaml": "ba46170bf93032f67b379d7e6fb147010f41ef6e2ce757575b88815d50fe3aac",
+    "specs/mechanics.yaml": "1b5aa7119646e165755000cf530c8e8b1a886ce75f91f90b15ea334c046f139c",
+    "specs/rule.yaml": "c9f0f512c9f25b84628dc025bf5b4d9165383a3f0aca939fc54981ba1312a69f",
+    "specs/scene.yaml": "0afd27ce8661f4758c87ab73d194c1987ff3c63bf73be5b77d25c42d3993bdd0"
+  }
+}

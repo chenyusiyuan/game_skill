@@ -1,0 +1,441 @@
+# Event Graph: pixel_dom_ui
+# 描述模块间事件连接关系，codegen 据此生成 glue code
+
+version: 1
+engine: dom-ui
+
+# ============ 模块定义 ============
+# 每个模块声明其监听的事件和发出的事件
+# primitive-node-ref 指向 mechanics.yaml 中对应的 mechanics node
+modules:
+  # ── 输入处理 ──
+  - id: system.input
+    description: "输入事件分发"
+    listens: []
+    emits: [input.click-start, input.click-pig, input.click-retry, input.click-next]
+    primitive-node-ref: none
+    primitive-node-ref-reason: "纯 UI 输入层，不涉及玩法 primitive"
+
+  # ── 传送带容量控制 ──
+  - id: system.conveyor-capacity
+    description: "传送带容量门控（最多 4 只小猪同时在传送带上）"
+    listens: [input.click-pig]
+    emits: [capacity.admitted, capacity.blocked, capacity.released]
+    primitive-node-ref: conveyor-capacity
+    spec-clarification-ref: "传送带容量 = 4 格（每边 1 格）"
+
+  # ── 小猪派出 ──
+  - id: system.pig-deploy
+    description: "小猪从等待槽派出到传送带"
+    listens: [capacity.admitted]
+    emits: [pig.deployed, pig.on-track]
+    primitive-node-ref: wait-slots
+    spec-clarification-ref: "等待槽数量 = 5 格"
+
+  # ── 传送带移动 ──
+  - id: system.conveyor-move
+    description: "小猪沿传送带周期性移动（矩形轨道）"
+    listens: [pig.on-track]
+    emits: [track.enter-segment, track.loop-complete]
+    primitive-node-ref: conveyor-track
+
+  # ── 位置索敌 ──
+  - id: system.attack-raycast
+    description: "根据小猪位置和方向投射，寻找正对方向的第一个目标块"
+    listens: [track.enter-segment]
+    emits: [ray.hit-candidate, ray.miss]
+    primitive-node-ref: attack-raycast
+    spec-clarification-ref: "攻击判定触发时机：小猪每移动到新的传送带格子时检查一次"
+    constraint-ref: "@constraint(no-auto-aim), @constraint(single-target), @constraint(no-penetration)"
+
+  # ── 颜色匹配判定 ──
+  - id: system.color-match
+    description: "判断小猪颜色与目标块颜色是否匹配"
+    listens: [ray.hit-candidate]
+    emits: [match.hit, match.miss]
+    primitive-node-ref: color-match
+
+  # ── 攻击消耗 ──
+  - id: system.attack-consume
+    description: "执行攻击：消耗弹药、减少目标块耐久"
+    listens: [match.hit]
+    emits: [resource.consumed, resource.agent-zero, resource.target-zero]
+    primitive-node-ref: attack-consume
+
+  # ── 方块消除 ──
+  - id: system.block-destroy
+    description: "目标块耐久归零后从棋盘移除"
+    listens: [resource.target-zero]
+    emits: [board.cell-removed, board.empty]
+    primitive-node-ref: board
+
+  # ── 得分系统 ──
+  - id: system.scoring
+    description: "消除方块得分累计"
+    listens: [resource.target-zero]
+    emits: [score.updated]
+    primitive-node-ref: scoring
+
+  # ── 小猪耗尽离场 ──
+  - id: system.pig-exhaust
+    description: "弹药耗尽的小猪离场消失"
+    listens: [resource.agent-zero]
+    emits: [lifecycle.entered.dead, capacity.released]
+    primitive-node-ref: pig-exhaust
+
+  # ── 小猪回收 ──
+  - id: system.pig-recycle
+    description: "未耗尽小猪完成一圈后回收到等待槽"
+    listens: [track.loop-complete]
+    emits: [lifecycle.entered.returning, pool.bound, capacity.released]
+    primitive-node-ref: pig-recycle
+    spec-clarification-ref: "等待槽数量 = 5 格"
+
+  # ── 胜负判定 ──
+  - id: system.winlose
+    description: "检查胜利/失败条件"
+    listens: [board.cell-removed, resource.agent-zero]
+    emits: [win, lose]
+    primitive-node-ref: end-check
+
+  # ── 场景管理 ──
+  - id: system.scene-manager
+    description: "场景切换与转场控制"
+    listens: [input.click-start, win, lose, input.click-retry, input.click-next]
+    emits: [scene.enter, scene.exit]
+    primitive-node-ref: none
+    primitive-node-ref-reason: "纯 UI 场景管理，不涉及玩法 primitive"
+
+  # ── 反馈系统 ──
+  - id: system.feedback
+    description: "视觉和音效反馈"
+    listens: [match.hit, match.miss, board.cell-removed, win, lose]
+    emits: [animation.play, sfx.play]
+    primitive-node-ref: none
+    primitive-node-ref-reason: "纯 presentation 层反馈动画"
+
+# ============ 事件流图 ============
+# 描述模块间的事件连接关系（边）
+edges:
+  # ── 游戏启动流 ──
+  - from: system.input
+    to: system.scene-manager
+    event: input.click-start
+    label: "点击开始"
+
+  - from: system.scene-manager
+    to: system.pig-deploy
+    event: scene.enter
+    label: "进入 play 场景，初始化等待槽"
+
+  # ── 小猪派出流 ──
+  - from: system.input
+    to: system.conveyor-capacity
+    event: input.click-pig
+    label: "点击等待槽"
+
+  - from: system.conveyor-capacity
+    to: system.pig-deploy
+    event: capacity.admitted
+    label: "容量检查通过"
+
+  - from: system.pig-deploy
+    to: system.conveyor-move
+    event: pig.on-track
+    label: "小猪加入传送带"
+
+  # ── 传送带移动流 ──
+  - from: system.conveyor-move
+    to: system.attack-raycast
+    event: track.enter-segment
+    label: "进入新格子，触发索敌"
+    spec-clarification-ref: "攻击判定触发时机：小猪每移动到新的传送带格子时检查一次"
+
+  - from: system.conveyor-move
+    to: system.pig-recycle
+    event: track.loop-complete
+    label: "完成一圈"
+
+  # ── 攻击判定流 ──
+  - from: system.attack-raycast
+    to: system.color-match
+    event: ray.hit-candidate
+    label: "发现目标块"
+    spec-clarification-ref: "目标选择：只处理正对方向的第一个未消除目标块"
+
+  - from: system.attack-raycast
+    to: system.feedback
+    event: ray.miss
+    label: "无目标"
+
+  - from: system.color-match
+    to: system.attack-consume
+    event: match.hit
+    label: "颜色匹配，执行攻击"
+
+  - from: system.color-match
+    to: system.feedback
+    event: match.miss
+    label: "颜色不匹配，跳过"
+
+  # ── 攻击结果流 ──
+  - from: system.attack-consume
+    to: system.block-destroy
+    event: resource.target-zero
+    label: "目标块耐久归零"
+
+  - from: system.attack-consume
+    to: system.scoring
+    event: resource.target-zero
+    label: "消除得分 +10"
+
+  - from: system.attack-consume
+    to: system.pig-exhaust
+    event: resource.agent-zero
+    label: "弹药耗尽"
+
+  - from: system.attack-consume
+    to: system.feedback
+    event: resource.consumed
+    label: "攻击命中反馈"
+
+  # ── 小猪回收流 ──
+  - from: system.pig-recycle
+    to: system.conveyor-capacity
+    event: capacity.released
+    label: "释放传送带槽位"
+
+  - from: system.pig-exhaust
+    to: system.conveyor-capacity
+    event: capacity.released
+    label: "释放传送带槽位"
+
+  # ── 胜负判定流 ──
+  - from: system.block-destroy
+    to: system.winlose
+    event: board.cell-removed
+    label: "检查胜利条件"
+
+  - from: system.pig-exhaust
+    to: system.winlose
+    event: resource.agent-zero
+    label: "检查失败条件"
+
+  - from: system.winlose
+    to: system.scene-manager
+    event: win
+    label: "棋盘清空，胜利"
+
+  - from: system.winlose
+    to: system.scene-manager
+    event: lose
+    label: "资源耗尽，失败"
+
+  # ── 结算页流 ──
+  - from: system.input
+    to: system.scene-manager
+    event: input.click-retry
+    label: "重试当前关"
+
+  - from: system.input
+    to: system.scene-manager
+    event: input.click-next
+    label: "进入下一关"
+
+# ============ 异步边界 ============
+# codegen 必须在这些点加锁/解锁，防止状态混乱
+async-boundaries:
+  - id: attack-flow
+    description: "攻击判定 → 动画播放 → 状态更新"
+    entry-lock: "state.isProcessing = true"
+    exit-unlock: "state.isProcessing = false"
+    async-steps:
+      - "颜色匹配判定（同步）"
+      - "攻击动画（tween/CSS transition）~300ms"
+      - "消除动画（scale-down + fade-out）~200ms"
+      - "得分飘字动画 ~400ms"
+    danger: "如果动画播放期间用户可以点击派出新小猪，可能导致传送带状态混乱"
+    modules-involved: [system.color-match, system.attack-consume, system.block-destroy, system.feedback]
+
+  - id: pig-recycle-flow
+    description: "小猪完成一圈 → 回收动画 → 等待槽更新"
+    entry-lock: "state.isProcessing = true"
+    exit-unlock: "state.isProcessing = false"
+    async-steps:
+      - "回收动画（小猪移动到等待槽）~500ms"
+      - "等待槽 UI 更新（同步）"
+    danger: "如果回收动画期间用户点击该槽位，可能导致重复派出"
+    modules-involved: [system.pig-recycle, system.feedback]
+
+  - id: scene-transition-flow
+    description: "场景切换 → 淡出动画 → 清理旧场景 → 加载新场景 → 淡入动画"
+    entry-lock: "state.isProcessing = true"
+    exit-unlock: "state.isProcessing = false"
+    async-steps:
+      - "exit-transition animation ~300ms"
+      - "cleanup old scene objects"
+      - "enter-transition animation ~300ms"
+    danger: "转场中途如果用户点击，会触发已销毁的对象"
+    modules-involved: [system.scene-manager]
+
+# ============ 测试钩子 ============
+# 需要暴露给 Playwright 测试的 API（DOM 引擎可用 Playwright click 真实 DOM，但以下 API 简化测试编写）
+test-hooks:
+  required:
+    - name: "window.gameTest.clickStartButton"
+      description: "模拟点击开始按钮，触发 phase ready → playing"
+      module: system.input
+
+    - name: "window.gameTest.clickWaitSlot(index)"
+      description: "模拟点击指定等待槽，派出小猪"
+      module: system.input
+
+    - name: "window.gameTest.getGameState()"
+      description: "返回当前 gameState 快照（phase, score, blocksRemaining 等）"
+      module: system.scene-manager
+
+    - name: "window.gameTest.getPigsOnTrack()"
+      description: "返回当前传送带上的小猪列表"
+      module: system.conveyor-move
+
+    - name: "window.gameTest.getBlocks()"
+      description: "返回当前棋盘上的目标块列表"
+      module: system.block-destroy
+
+  recommended:
+    - name: "window.gameTest.simulateAttack(pigId, blockId)"
+      description: "模拟指定小猪攻击指定目标块（跳过传送带移动）"
+      module: system.attack-consume
+
+    - name: "window.gameTest.simulateRecycle(pigId)"
+      description: "模拟指定小猪完成一圈并回收"
+      module: system.pig-recycle
+
+    - name: "window.gameTest.getWaitSlots()"
+      description: "返回等待槽状态"
+      module: system.pig-deploy
+
+    - name: "window.gameTest.skipToResult(isWin)"
+      description: "直接跳到结算页（用于测试结算逻辑）"
+      module: system.scene-manager
+
+# ============ 事件完整性检查 ============
+# 每个模块 listens 的事件必须有对应模块 emits（input.* 和 scene.* 除外）
+integrity-check:
+  # 外部输入事件（无需 emits 来源）
+  external-events: [input.click-start, input.click-pig, input.click-retry, input.click-next]
+
+  # 内部事件必须有来源
+  internal-events:
+    - event: capacity.admitted
+      source: system.conveyor-capacity
+      consumers: [system.pig-deploy]
+    - event: capacity.blocked
+      source: system.conveyor-capacity
+      consumers: [system.feedback]
+    - event: capacity.released
+      source: [system.conveyor-capacity, system.pig-recycle, system.pig-exhaust]
+      consumers: [system.conveyor-capacity]
+    - event: pig.on-track
+      source: system.pig-deploy
+      consumers: [system.conveyor-move]
+    - event: track.enter-segment
+      source: system.conveyor-move
+      consumers: [system.attack-raycast]
+    - event: track.loop-complete
+      source: system.conveyor-move
+      consumers: [system.pig-recycle]
+    - event: ray.hit-candidate
+      source: system.attack-raycast
+      consumers: [system.color-match]
+    - event: ray.miss
+      source: system.attack-raycast
+      consumers: [system.feedback]
+    - event: match.hit
+      source: system.color-match
+      consumers: [system.attack-consume]
+    - event: match.miss
+      source: system.color-match
+      consumers: [system.feedback]
+    - event: resource.consumed
+      source: system.attack-consume
+      consumers: [system.feedback]
+    - event: resource.agent-zero
+      source: system.attack-consume
+      consumers: [system.pig-exhaust, system.winlose]
+    - event: resource.target-zero
+      source: system.attack-consume
+      consumers: [system.block-destroy, system.scoring]
+    - event: board.cell-removed
+      source: system.block-destroy
+      consumers: [system.winlose]
+    - event: board.empty
+      source: system.block-destroy
+      consumers: []
+    - event: score.updated
+      source: system.scoring
+      consumers: []
+    - event: lifecycle.entered.returning
+      source: system.pig-recycle
+      consumers: [system.feedback]
+    - event: lifecycle.entered.dead
+      source: system.pig-exhaust
+      consumers: [system.feedback]
+    - event: pool.bound
+      source: system.pig-recycle
+      consumers: []
+    - event: win
+      source: system.winlose
+      consumers: [system.scene-manager, system.feedback]
+    - event: lose
+      source: system.winlose
+      consumers: [system.scene-manager, system.feedback]
+    - event: scene.enter
+      source: system.scene-manager
+      consumers: []
+    - event: scene.exit
+      source: system.scene-manager
+      consumers: []
+    - event: animation.play
+      source: system.feedback
+      consumers: []
+    - event: sfx.play
+      source: system.feedback
+      consumers: []
+
+# ============ Spec 澄清消费记录 ============
+# 记录 event-graph 对 spec-clarifications.md 中决策的落实
+spec-clarification-consumption:
+  - ref: "传送带容量 = 4 格（每边 1 格）"
+    implemented-in: "system.conveyor-capacity.capacity=4"
+    edge-impact: "capacity.admitted / capacity.blocked 事件边界"
+
+  - ref: "等待槽数量 = 5 格"
+    implemented-in: "system.pig-deploy, system.pig-recycle"
+    edge-impact: "pool.bound 事件触发等待槽 UI 更新"
+
+  - ref: "攻击判定触发时机：小猪每移动到新的传送带格子时检查一次"
+    implemented-in: "edge: system.conveyor-move → system.attack-raycast (track.enter-segment)"
+    edge-impact: "每次 enter-segment 触发一次索敌，不是连续检测"
+
+  - ref: "目标选择：只处理正对方向的第一个未消除目标块"
+    implemented-in: "system.attack-raycast (stop-on: first-hit)"
+    edge-impact: "ray.hit-candidate 只返回一个目标，不会批量攻击"
+
+# ============ PRD Constraint 落实记录 ============
+constraint-implementation:
+  - ref: "@constraint(no-auto-aim)"
+    implemented-in: "system.attack-raycast.direction.mode = normal-to-track"
+    edge-impact: "事件流严格依赖 track.enter-segment，无全局索敌"
+
+  - ref: "@constraint(single-target)"
+    implemented-in: "system.attack-raycast.stop-on = first-hit"
+    edge-impact: "ray.hit-candidate 最多返回一个目标"
+
+  - ref: "@constraint(no-penetration)"
+    implemented-in: "system.attack-raycast.invariant = no-penetration"
+    edge-impact: "异色块会阻断 ray，不会触发后方同色块的 match.hit"
+
+  - ref: "@constraint(not-match3)"
+    implemented-in: "整体事件流设计"
+    edge-impact: "无三消连锁反应，每次攻击只消除一个方块"

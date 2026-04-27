@@ -1,0 +1,198 @@
+{
+  "basePath": "../../../assets/library_2d",
+  "images": [
+    {
+      "id": "pig",
+      "type": "graphics-generated"
+    },
+    {
+      "id": "block",
+      "type": "graphics-generated"
+    },
+    {
+      "id": "btn-start",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0013.png"
+    },
+    {
+      "id": "btn-start-center",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0014.png"
+    },
+    {
+      "id": "btn-start-right",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0015.png"
+    },
+    {
+      "id": "btn-retry",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0013.png"
+    },
+    {
+      "id": "btn-retry-center",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0014.png"
+    },
+    {
+      "id": "btn-retry-right",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0015.png"
+    },
+    {
+      "id": "btn-next",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0013.png"
+    },
+    {
+      "id": "btn-next-center",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0014.png"
+    },
+    {
+      "id": "btn-next-right",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0015.png"
+    },
+    {
+      "id": "panel-dark-tl",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0022.png"
+    },
+    {
+      "id": "panel-dark-top",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0023.png"
+    },
+    {
+      "id": "panel-dark-tr",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0024.png"
+    },
+    {
+      "id": "panel-dark-left",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0025.png"
+    },
+    {
+      "id": "panel-dark-center",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0026.png"
+    },
+    {
+      "id": "panel-dark-right",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0027.png"
+    },
+    {
+      "id": "panel-dark-bl",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0028.png"
+    },
+    {
+      "id": "panel-dark-bottom",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0029.png"
+    },
+    {
+      "id": "panel-dark-br",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0030.png"
+    },
+    {
+      "id": "digit-0",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0063.png"
+    },
+    {
+      "id": "digit-1",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0064.png"
+    },
+    {
+      "id": "digit-2",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0065.png"
+    },
+    {
+      "id": "digit-3",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0066.png"
+    },
+    {
+      "id": "digit-4",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0067.png"
+    },
+    {
+      "id": "digit-5",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0068.png"
+    },
+    {
+      "id": "digit-6",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0069.png"
+    },
+    {
+      "id": "digit-7",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0070.png"
+    },
+    {
+      "id": "digit-8",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0071.png"
+    },
+    {
+      "id": "digit-9",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0072.png"
+    },
+    {
+      "id": "board-bg",
+      "type": "graphics-generated"
+    },
+    {
+      "id": "conveyor-track",
+      "type": "graphics-generated"
+    },
+    {
+      "id": "wait-slot-bg",
+      "type": "graphics-generated"
+    }
+  ],
+  "spritesheets": [],
+  "audio": [
+    {
+      "id": "sfx-click",
+      "type": "local-file",
+      "src": "audio/ui-clicks/click1.ogg"
+    },
+    {
+      "id": "sfx-dispatch",
+      "type": "local-file",
+      "src": "audio/ui-interface/select_003.ogg"
+    },
+    {
+      "id": "sfx-attack",
+      "type": "local-file",
+      "src": "audio/sfx/sfx_bump.ogg"
+    },
+    {
+      "id": "sfx-clear",
+      "type": "local-file",
+      "src": "audio/ui-interface/confirmation_002.ogg"
+    },
+    {
+      "id": "sfx-win",
+      "type": "local-file",
+      "src": "audio/ui-interface/confirmation_001.ogg"
+    },
+    {
+      "id": "sfx-lose",
+      "type": "local-file",
+      "src": "audio/ui-interface/error_004.ogg"
+    }
+  ]
+}

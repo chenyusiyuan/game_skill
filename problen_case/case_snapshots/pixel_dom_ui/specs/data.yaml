@@ -1,0 +1,305 @@
+# gameState 初始值定义（codegen 必须完整搬入，不得遗漏字段）
+initial-state:
+  # 游戏状态
+  phase: "ready"                    # ready | playing | win | lose
+  currentScene: "start"             # start | play | result
+  level: 1                          # 当前关卡编号
+  score: 0                          # 累计得分
+
+  # 棋盘状态
+  boardSize: { rows: 6, cols: 6 }   # 棋盘尺寸（关卡可变）
+  blocks: []                        # 目标块列表，每项 {id, row, col, color, hp, eliminated}
+  blocksRemaining: 0                # 剩余未消除块数（用于胜负判定）
+
+  # 传送带状态
+  conveyorSlots: []                 # 传送带槽位，每项 {position, occupant: pig|null}
+  conveyorCapacity: 4               # 传送带容量上限（每边1格，共4格）
+
+  # 等待槽状态
+  waitSlots: []                     # 等待槽，每项 {index, pig: {color, ammo}|null}
+  waitSlotCount: 5                  # 等待槽数量
+
+  # 小猪单位管理
+  pigs: []                          # 所有小猪实例列表
+  pigsOnConveyor: []                # 当前在传送带上的小猪id列表
+  pigsInWait: []                    # 当前在等待槽的小猪id列表
+  pigsExhausted: []                 # 已耗尽离场的小猪id列表
+  availablePigs: 0                  # 可用小猪数（等待槽+传送带上的总数）
+
+  # 动画与交互锁
+  isProcessing: false               # 异步锁，防止重复点击
+  elapsedTime: 0                    # 游戏时长（秒）
+
+  # 关卡配置缓存
+  levelConfig:
+    colors: 2                       # 该关卡颜色数量
+    pigCount: 8                     # 该关卡小猪总数
+    movementSpeed: 1                # 小猪移动速度（格/秒）
+    initialAmmo: { min: 3, max: 5 } # 弹药初始值范围
+
+# 关卡数据配置
+levels:
+  # ── 第一关：入门 ──
+  - id: level-1
+    name: "第一关 - 入门"
+    difficulty: easy
+    params:
+      colors: 2                     # 2种颜色：红、蓝
+      boardSize: { rows: 6, cols: 6 }
+      pigCount: 8
+      movementSpeed: 1              # 每秒1格
+      initialAmmo: 4                # 每只小猪初始弹药
+
+    # 棋盘布局：2色6x6，均匀分布
+    blocks:
+      # 红色块 (color: "red") - 8块
+      - { row: 0, col: 1, color: "red", hp: 1 }
+      - { row: 0, col: 4, color: "red", hp: 1 }
+      - { row: 1, col: 2, color: "red", hp: 1 }
+      - { row: 2, col: 0, color: "red", hp: 1 }
+      - { row: 3, col: 5, color: "red", hp: 1 }
+      - { row: 4, col: 1, color: "red", hp: 1 }
+      - { row: 5, col: 3, color: "red", hp: 1 }
+      - { row: 5, col: 4, color: "red", hp: 1 }
+      # 蓝色块 (color: "blue") - 8块
+      - { row: 0, col: 2, color: "blue", hp: 1 }
+      - { row: 1, col: 0, color: "blue", hp: 1 }
+      - { row: 2, col: 3, color: "blue", hp: 1 }
+      - { row: 2, col: 4, color: "blue", hp: 1 }
+      - { row: 3, col: 1, color: "blue", hp: 1 }
+      - { row: 4, col: 2, color: "blue", hp: 1 }
+      - { row: 4, col: 5, color: "blue", hp: 1 }
+      - { row: 5, col: 0, color: "blue", hp: 1 }
+
+    # 小猪配置：8只，2色各4只
+    pigs:
+      - { color: "red", ammo: 4 }
+      - { color: "red", ammo: 4 }
+      - { color: "red", ammo: 4 }
+      - { color: "red", ammo: 4 }
+      - { color: "blue", ammo: 4 }
+      - { color: "blue", ammo: 4 }
+      - { color: "blue", ammo: 4 }
+      - { color: "blue", ammo: 4 }
+
+  # ── 第二关：进阶 ──
+  - id: level-2
+    name: "第二关 - 进阶"
+    difficulty: medium
+    params:
+      colors: 3                     # 3种颜色：红、蓝、黄
+      boardSize: { rows: 6, cols: 6 }
+      pigCount: 10
+      movementSpeed: 1
+      initialAmmo: 4
+
+    # 棋盘布局：3色6x6
+    blocks:
+      # 红色块 - 6块
+      - { row: 0, col: 0, color: "red", hp: 1 }
+      - { row: 1, col: 3, color: "red", hp: 1 }
+      - { row: 2, col: 1, color: "red", hp: 1 }
+      - { row: 3, col: 4, color: "red", hp: 1 }
+      - { row: 4, col: 2, color: "red", hp: 1 }
+      - { row: 5, col: 5, color: "red", hp: 1 }
+      # 蓝色块 - 6块
+      - { row: 0, col: 2, color: "blue", hp: 1 }
+      - { row: 1, col: 5, color: "blue", hp: 1 }
+      - { row: 2, col: 3, color: "blue", hp: 1 }
+      - { row: 3, col: 0, color: "blue", hp: 1 }
+      - { row: 4, col: 4, color: "blue", hp: 1 }
+      - { row: 5, col: 1, color: "blue", hp: 1 }
+      # 黄色块 - 6块
+      - { row: 0, col: 4, color: "yellow", hp: 1 }
+      - { row: 1, col: 1, color: "yellow", hp: 1 }
+      - { row: 2, col: 5, color: "yellow", hp: 1 }
+      - { row: 3, col: 2, color: "yellow", hp: 1 }
+      - { row: 4, col: 0, color: "yellow", hp: 1 }
+      - { row: 5, col: 3, color: "yellow", hp: 1 }
+
+    # 小猪配置：10只，3色分配
+    pigs:
+      - { color: "red", ammo: 4 }
+      - { color: "red", ammo: 4 }
+      - { color: "red", ammo: 4 }
+      - { color: "blue", ammo: 4 }
+      - { color: "blue", ammo: 4 }
+      - { color: "blue", ammo: 4 }
+      - { color: "yellow", ammo: 4 }
+      - { color: "yellow", ammo: 4 }
+      - { color: "yellow", ammo: 3 }
+      - { color: "yellow", ammo: 3 }
+
+  # ── 第三关：挑战 ──
+  - id: level-3
+    name: "第三关 - 挑战"
+    difficulty: hard
+    params:
+      colors: 4                     # 4种颜色：红、蓝、黄、绿
+      boardSize: { rows: 7, cols: 7 }
+      pigCount: 12
+      movementSpeed: 1.2            # 略快
+      initialAmmo: 4
+      hasReinforcedBlocks: true     # 包含强化块
+
+    # 棋盘布局：4色7x7 + 强化块
+    blocks:
+      # 红色块 - 5块普通 + 1块强化
+      - { row: 0, col: 1, color: "red", hp: 1 }
+      - { row: 1, col: 4, color: "red", hp: 1 }
+      - { row: 2, col: 2, color: "red", hp: 1 }
+      - { row: 3, col: 6, color: "red", hp: 1 }
+      - { row: 5, col: 0, color: "red", hp: 1 }
+      - { row: 6, col: 3, color: "red", hp: 2 }      # 强化块
+
+      # 蓝色块 - 5块普通 + 1块强化
+      - { row: 0, col: 3, color: "blue", hp: 1 }
+      - { row: 1, col: 0, color: "blue", hp: 1 }
+      - { row: 2, col: 5, color: "blue", hp: 1 }
+      - { row: 4, col: 1, color: "blue", hp: 1 }
+      - { row: 5, col: 4, color: "blue", hp: 1 }
+      - { row: 6, col: 2, color: "blue", hp: 2 }     # 强化块
+
+      # 黄色块 - 5块普通 + 1块强化
+      - { row: 0, col: 5, color: "yellow", hp: 1 }
+      - { row: 2, col: 0, color: "yellow", hp: 1 }
+      - { row: 3, col: 3, color: "yellow", hp: 1 }
+      - { row: 4, col: 6, color: "yellow", hp: 1 }
+      - { row: 6, col: 1, color: "yellow", hp: 1 }
+      - { row: 1, col: 2, color: "yellow", hp: 2 }   # 强化块
+
+      # 绿色块 - 4块普通
+      - { row: 0, col: 6, color: "green", hp: 1 }
+      - { row: 3, col: 0, color: "green", hp: 1 }
+      - { row: 4, col: 3, color: "green", hp: 1 }
+      - { row: 5, col: 5, color: "green", hp: 1 }
+
+    # 小猪配置：12只，4色分配
+    pigs:
+      - { color: "red", ammo: 4 }
+      - { color: "red", ammo: 4 }
+      - { color: "red", ammo: 4 }
+      - { color: "blue", ammo: 4 }
+      - { color: "blue", ammo: 4 }
+      - { color: "blue", ammo: 4 }
+      - { color: "yellow", ammo: 4 }
+      - { color: "yellow", ammo: 4 }
+      - { color: "yellow", ammo: 3 }
+      - { color: "green", ammo: 4 }
+      - { color: "green", ammo: 4 }
+      - { color: "green", ammo: 3 }
+
+# 数值平衡校验（codegen 阶段和 verify 阶段都必须检查）
+balance-check:
+  levels:
+    # ── 第一关平衡校验 ──
+    - id: level-1
+      supply:
+        description: "8只小猪 x 每只4弹药 = 32次总攻击"
+        formula: "sum(pig.ammo for pig in level.pigs)"
+        value: 32
+      demand:
+        description: "16个目标块 x 每块1血量 = 16次总消耗"
+        formula: "sum(block.hp for block in level.blocks)"
+        value: 16
+      ratio: 2.0                      # supply / demand = 32/16 = 2.0
+      verdict: "PASS: supply(32) >= demand(16) * 1.2(19.2)"
+      margin: "100% 余量，容错充足"
+
+    # ── 第二关平衡校验 ──
+    - id: level-2
+      supply:
+        description: "10只小猪 x 平均3.8弹药 = 38次总攻击"
+        formula: "sum(pig.ammo for pig in level.pigs)"
+        value: 38
+      demand:
+        description: "18个目标块 x 每块1血量 = 18次总消耗"
+        formula: "sum(block.hp for block in level.blocks)"
+        value: 18
+      ratio: 2.11                     # supply / demand = 38/18 ≈ 2.11
+      verdict: "PASS: supply(38) >= demand(18) * 1.2(21.6)"
+      margin: "111% 余量，容错充足"
+
+    # ── 第三关平衡校验 ──
+    - id: level-3
+      supply:
+        description: "12只小猪 x 平均3.83弹药 = 46次总攻击"
+        formula: "sum(pig.ammo for pig in level.pigs)"
+        value: 45
+      demand:
+        description: "22个目标块含3块强化块(HP=2)，总血量=25"
+        formula: "sum(block.hp for block in level.blocks)"
+        value: 25
+      ratio: 1.84                      # supply / demand = 45/25 = 1.8
+      verdict: "PASS: supply(46) >= demand(25) * 1.2(30)"
+      margin: "80% 余量，有挑战但可通关"
+
+# 颜色配置（与 PRD color-scheme 一致）
+colors:
+  - id: red
+    hex: "#ef4444"
+    name: "红色"
+  - id: blue
+    hex: "#3b82f6"
+    name: "蓝色"
+  - id: yellow
+    hex: "#facc15"
+    name: "黄色"
+  - id: green
+    hex: "#22c55e"
+    name: "绿色"
+
+# 游戏配置常量（来自 spec-clarifications.md）
+game-config:
+  conveyorCapacity: 4               # 传送带容量
+  waitSlotCount: 5                  # 等待槽数量
+  movementSpeed: 1                  # 默认移动速度（格/秒）
+  defaultInitialAmmo: 4             # 默认初始弹药
+  attackCheckPerGrid: true          # 每个传送带格子触发攻击判定
+
+# 资源数据结构定义
+resources:
+  - id: level-1-data
+    schema:
+      blocks:
+        type: array
+        items:
+          row: number
+          col: number
+          color: string
+          hp: number
+      pigs:
+        type: array
+        items:
+          color: string
+          ammo: number
+
+  - id: level-2-data
+    schema:
+      blocks:
+        type: array
+        items:
+          row: number
+          col: number
+          color: string
+          hp: number
+      pigs:
+        type: array
+        items:
+          color: string
+          ammo: number
+
+  - id: level-3-data
+    schema:
+      blocks:
+        type: array
+        items:
+          row: number
+          col: number
+          color: string
+          hp: number
+      pigs:
+        type: array
+        items:
+          color: string
+          ammo: number

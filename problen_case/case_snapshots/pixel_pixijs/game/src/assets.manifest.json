@@ -1,0 +1,289 @@
+{
+  "basePath": "../../../assets/library_2d",
+  "images": [
+    {
+      "id": "pig-base",
+      "type": "local-file",
+      "src": "sprites/puzzle/ballGrey.png"
+    },
+    {
+      "id": "pig-walk-1",
+      "type": "local-file",
+      "src": "sprites/puzzle/ballGrey.png"
+    },
+    {
+      "id": "pig-walk-2",
+      "type": "local-file",
+      "src": "sprites/puzzle/ballGrey.png"
+    },
+    {
+      "id": "block-base",
+      "type": "graphics-generated"
+    },
+    {
+      "id": "panel-top-left",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0000.png"
+    },
+    {
+      "id": "panel-top",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0001.png"
+    },
+    {
+      "id": "panel-top-right",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0002.png"
+    },
+    {
+      "id": "panel-left",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0003.png"
+    },
+    {
+      "id": "panel-center",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0004.png"
+    },
+    {
+      "id": "panel-right",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0005.png"
+    },
+    {
+      "id": "panel-bottom-left",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0006.png"
+    },
+    {
+      "id": "panel-bottom",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0007.png"
+    },
+    {
+      "id": "panel-bottom-right",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0008.png"
+    },
+    {
+      "id": "button-left",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0013.png"
+    },
+    {
+      "id": "button-center",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0014.png"
+    },
+    {
+      "id": "button-right",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0015.png"
+    },
+    {
+      "id": "button-shadow-left",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0016.png"
+    },
+    {
+      "id": "button-shadow-center",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0017.png"
+    },
+    {
+      "id": "button-shadow-right",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0018.png"
+    },
+    {
+      "id": "button-pressed-left",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0019.png"
+    },
+    {
+      "id": "button-pressed-center",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0020.png"
+    },
+    {
+      "id": "button-pressed-right",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0021.png"
+    },
+    {
+      "id": "panel-dark-center",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0026.png"
+    },
+    {
+      "id": "bar-bg-left",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0034.png"
+    },
+    {
+      "id": "bar-bg-center",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0035.png"
+    },
+    {
+      "id": "bar-bg-right",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0036.png"
+    },
+    {
+      "id": "bar-fill-left",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0037.png"
+    },
+    {
+      "id": "bar-fill-center",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0038.png"
+    },
+    {
+      "id": "bar-fill-right",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0039.png"
+    },
+    {
+      "id": "icon-coin",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0040.png"
+    },
+    {
+      "id": "icon-star",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0042.png"
+    },
+    {
+      "id": "arrow-left",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0044.png"
+    },
+    {
+      "id": "arrow-right",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0045.png"
+    },
+    {
+      "id": "digit-0",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0063.png"
+    },
+    {
+      "id": "digit-1",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0064.png"
+    },
+    {
+      "id": "digit-2",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0065.png"
+    },
+    {
+      "id": "digit-3",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0066.png"
+    },
+    {
+      "id": "digit-4",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0067.png"
+    },
+    {
+      "id": "digit-5",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0068.png"
+    },
+    {
+      "id": "digit-6",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0069.png"
+    },
+    {
+      "id": "digit-7",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0070.png"
+    },
+    {
+      "id": "digit-8",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0071.png"
+    },
+    {
+      "id": "digit-9",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0072.png"
+    },
+    {
+      "id": "icon-flag",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0073.png"
+    },
+    {
+      "id": "icon-lock-closed",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0074.png"
+    },
+    {
+      "id": "icon-lock-open",
+      "type": "local-file",
+      "src": "ui-pixel/tile_0075.png"
+    },
+    {
+      "id": "bg-game",
+      "type": "graphics-generated"
+    },
+    {
+      "id": "conveyor-track",
+      "type": "graphics-generated"
+    },
+    {
+      "id": "board-cell",
+      "type": "graphics-generated"
+    }
+  ],
+  "spritesheets": [],
+  "audio": [
+    {
+      "id": "sfx-click",
+      "type": "local-file",
+      "src": "audio/ui-clicks/click1.ogg"
+    },
+    {
+      "id": "sfx-hover",
+      "type": "local-file",
+      "src": "audio/ui-clicks/rollover1.ogg"
+    },
+    {
+      "id": "sfx-confirm",
+      "type": "local-file",
+      "src": "audio/ui-interface/confirmation_002.ogg"
+    },
+    {
+      "id": "sfx-error",
+      "type": "local-file",
+      "src": "audio/ui-interface/error_004.ogg"
+    },
+    {
+      "id": "sfx-attack",
+      "type": "local-file",
+      "src": "audio/sfx/sfx_hurt.ogg"
+    },
+    {
+      "id": "sfx-remove",
+      "type": "local-file",
+      "src": "audio/sfx/sfx_disappear.ogg"
+    },
+    {
+      "id": "sfx-win",
+      "type": "local-file",
+      "src": "audio/ui-interface/maximize_008.ogg"
+    },
+    {
+      "id": "sfx-lose",
+      "type": "local-file",
+      "src": "audio/ui-interface/minimize_003.ogg"
+    }
+  ]
+}

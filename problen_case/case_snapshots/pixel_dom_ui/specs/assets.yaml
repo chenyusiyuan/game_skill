@@ -1,0 +1,235 @@
+# ============================================================
+# pixel_dom_ui - Assets Specification
+# ============================================================
+# Asset Strategy: generated-only
+# PRD rationale:
+#   - 颜色匹配是核心判定条件，玩家必须快速分辨 4 种颜色
+#   - 使用 DOM+CSS 可以用纯色方块+emoji/SVG 实现视觉
+#   - 小猪用 emoji，目标块用 CSS 渲染的彩色方块，无需外部素材库
+# ============================================================
+
+genre: board-grid
+color-scheme:
+  palette-id: pixel-retro
+  theme-keywords: [像素, 传送带, 清板, 益智, 策略, 颜色匹配, 小猪, 棋盘]
+  primary: "#ef4444"
+  secondary: "#facc15"
+  accent: "#22c55e"
+  background: "#1a1a2e"
+  surface: "#16213e"
+  text: "#e2e8f0"
+  text-muted: "#94a3b8"
+  success: "#22c55e"
+  error: "#ef4444"
+  border: "#334155"
+  font-family: '"Press Start 2P", "VT323", monospace'
+  border-radius: "0"
+  shadow: "2px 2px 0 #000"
+  fx-hint: pixel
+
+asset-style: pixel-retro
+
+# ── 图片资源 ──
+# generated-only 模式：所有核心实体都是程序化生成
+images:
+  # ── 核心实体：目标块（色块）──
+  - id: block
+    source: generated
+    type: generated
+    binding-to: block
+    visual-primitive: color-block
+    color-source: entity.color
+    usage: "目标块 - 纯色方块，颜色来自 @entity(block).color，由 CSS 渲染"
+
+  # ── 核心实体：小猪（颜色单位）──
+  - id: pig
+    source: inline-emoji
+    type: generated
+    binding-to: pig
+    visual-primitive: color-unit
+    color-source: entity.color
+    emoji: "\U0001F437"
+    usage: "小猪单位 - 使用 emoji 🐷，颜色通过 CSS filter/tint 动态改变"
+
+  # ── UI 背景 ──
+  - id: bg-gradient
+    source: inline-css
+    type: generated
+    binding-to: decor
+    usage: "游戏背景 - CSS 渐变，使用 color-scheme.background"
+
+  # ── 传送带轨道 ──
+  - id: conveyor-track
+    source: inline-css
+    type: generated
+    binding-to: conveyor
+    visual-primitive: track
+    usage: "传送带轨道 - CSS 渲染的环形轨道"
+
+# ── 音频资源 ──
+# generated-only 模式下可选使用合成音效
+audio:
+  - id: sfx-click
+    source: synthesized
+    type: synthesized
+    binding-to: decor
+    format: webaudio
+    usage: "按钮点击音效 - WebAudio 合成短促音"
+
+  - id: sfx-match
+    source: synthesized
+    type: synthesized
+    binding-to: decor
+    format: webaudio
+    usage: "颜色匹配成功音效 - WebAudio 合成"
+
+  - id: sfx-deploy
+    source: synthesized
+    type: synthesized
+    binding-to: decor
+    format: webaudio
+    usage: "派出小猪音效 - WebAudio 合成"
+
+  - id: sfx-recycle
+    source: synthesized
+    type: synthesized
+    binding-to: decor
+    format: webaudio
+    usage: "小猪回收音效 - WebAudio 合成"
+
+  - id: sfx-win
+    source: synthesized
+    type: synthesized
+    binding-to: decor
+    format: webaudio
+    usage: "胜利音效 - WebAudio 合成"
+
+  - id: sfx-lose
+    source: synthesized
+    type: synthesized
+    binding-to: decor
+    format: webaudio
+    usage: "失败音效 - WebAudio 合成"
+
+# ── 字体 ──
+# PRD 指定像素风格字体，使用系统字体 fallback
+fonts:
+  - family: "Press Start 2P"
+    source: google-fonts
+    binding-to: decor
+    usage: "像素风格标题字体"
+  - family: "VT323"
+    source: google-fonts
+    binding-to: decor
+    usage: "像素风格正文字体"
+
+# ── 精灵表 ──
+# generated-only 模式不需要精灵表
+spritesheets: []
+
+# ── 色板（从 color-scheme 复制）──
+color-palette:
+  primary: "#ef4444"      # 红色 - 红色块/红色小猪
+  secondary: "#facc15"    # 黄色 - 黄色块/黄色小猪
+  accent: "#22c55e"       # 绿色 - 绿色块/绿色小猪
+  tertiary: "#3b82f6"     # 蓝色 - 蓝色块/蓝色小猪（扩展色）
+  background: "#1a1a2e"   # 深蓝背景
+  surface: "#16213e"      # 表面色
+  text: "#e2e8f0"         # 主文字色
+  text-muted: "#94a3b8"   # 次要文字色
+  success: "#22c55e"      # 成功/胜利色
+  error: "#ef4444"        # 失败/错误色
+  border: "#334155"       # 边框色
+
+# ── 素材选型报告 ──
+selection-report:
+  genre: board-grid
+  asset-strategy-mode: generated-only
+  rationale: |
+    PRD 明确指定 generated-only 模式：
+    1. 颜色匹配是核心判定条件，玩家必须快速分辨 4 种颜色
+    2. 使用 DOM+CSS 可以用纯色方块+emoji 实现视觉
+    3. 小猪用 emoji 🐷，目标块用 CSS 渲染的彩色方块
+    4. 无需外部素材库，降低加载依赖
+
+  candidate-packs:
+    - id: ui-pixel-adventure
+      used: false
+      reason: "PRD 选择 generated-only，无需外部 UI 素材包"
+    - id: sprites-puzzle
+      used: false
+      reason: "PRD 选择 generated-only，色块由程序化生成"
+    - id: audio-ui-clicks
+      used: false
+      reason: "PRD 选择 generated-only，音效由 WebAudio 合成"
+    - id: audio-ui-interface
+      used: false
+      reason: "PRD 选择 generated-only，音效由 WebAudio 合成"
+
+  local-file-ratio:
+    images: 0.00
+    audio: 0.00
+    threshold:
+      images: 0.30
+      audio: 0.30
+    note: "generated-only 模式下 local-file 比例为 0 是符合预期的"
+
+  fallback-reasons:
+    - id: block
+      type: generated
+      reason: "抽象 color-block 需要程序化生成，颜色来自玩法字段 entity.color"
+    - id: pig
+      type: generated
+      reason: "使用 emoji 作为视觉基础，颜色通过 CSS filter/tint 动态改变"
+    - id: bg-gradient
+      type: generated
+      reason: "CSS 渐变背景，无需图片素材"
+    - id: conveyor-track
+      type: generated
+      reason: "CSS 渲染的环形轨道，无需图片素材"
+    - id: sfx-click
+      type: synthesized
+      reason: "generated-only 模式，使用 WebAudio 合成音效"
+    - id: sfx-match
+      type: synthesized
+      reason: "generated-only 模式，使用 WebAudio 合成音效"
+    - id: sfx-deploy
+      type: synthesized
+      reason: "generated-only 模式，使用 WebAudio 合成音效"
+    - id: sfx-recycle
+      type: synthesized
+      reason: "generated-only 模式，使用 WebAudio 合成音效"
+    - id: sfx-win
+      type: synthesized
+      reason: "generated-only 模式，使用 WebAudio 合成音效"
+    - id: sfx-lose
+      type: synthesized
+      reason: "generated-only 模式，使用 WebAudio 合成音效"
+
+  visual-core-entities:
+    - id: pig
+      implementation: "emoji + CSS filter/tint"
+      color-source: "entity.color (red/yellow/green/blue)"
+      rationale: "小猪颜色决定攻击目标，必须清晰可辨"
+    - id: block
+      implementation: "CSS 纯色方块 + 耐久角标"
+      color-source: "entity.color (red/yellow/green/blue)"
+      rationale: "目标块颜色是核心匹配条件，必须与 pig 颜色一致"
+
+  visual-peripheral:
+    - id: hud-timer
+      implementation: "Tailwind CSS 样式"
+      rationale: "纯文本显示，无需素材"
+    - id: hud-score
+      implementation: "Tailwind CSS 样式"
+      rationale: "纯文本显示，无需素材"
+    - id: conveyor
+      implementation: "CSS 绝对定位 + animation"
+      rationale: "环形轨道用 CSS 渲染"
+    - id: wait-slots
+      implementation: "CSS Grid + Tailwind"
+      rationale: "底部槽位布局，小猪 emoji 渲染"
+
+  style-coherence:
+    level: flexible
+    note: "核心用 emoji + CSS 方块，背景用 CSS 渐变，像素风格字体统一视觉"
