@@ -51,8 +51,10 @@ eval/
 ### 某个 Phase 刚跑完，我要判断能不能进下一 Phase
 
 → 读 `reviews/phase_gate_reviewer.md`
-→ 同会话可用（不用开新对话），只需告诉 reviewer "CASE slug" + "Phase 编号"。
-→ Reviewer 会返回 Blocker 清单 / Debt 清单 / Next Action verdict。
+→ **驻留式独立会话**：case 开跑前先开会话 B 一次性注入 DRIVER MESSAGE，agent
+  读完 INTENT/DEBT/failures 后驻留待命。
+→ 之后会话 A 每完成一个 Phase，你只在会话 B 发一句 "Phase N 完成"，
+  agent 返回 Blocker 清单 / Debt 清单 / Next Action verdict。
 
 ### 某个 Phase 连续失败 3+ 次
 
