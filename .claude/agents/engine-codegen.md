@@ -88,9 +88,14 @@ tools: Read, Write, Edit, Bash, Glob, Grep
    - `state`：按 `@entity` 和 `@state` 定义完整对象。state 暴露通过共享层：
      ```js
      import { exposeTestHooks } from '<相对路径>/_common/test-hook.js';
-    exposeTestHooks({ state, hooks: { clickStartButton, ... } });
+    exposeTestHooks({
+      state,
+      observers: { getSnapshot, getTrace, getAssetUsage },
+      drivers: { clickStartButton, clickRetryButton, ... },
+      probes: { resetWithScenario, stepTicks, seedRng },
+    });
      ```
-     `window.gameTest.*` 只能作为验证辅助入口，不能替代真实 UI 输入。所有 `@input(click-*)` 必须绑定到真实可点击对象，Phase 5 会用 profile 的 `action: click` 验证事件链路。
+    `window.gameTest.drivers.*` 只能作为验证辅助入口，不能替代真实 UI 输入。所有 `@input(click-*)` 必须绑定到真实可点击对象，Phase 5 会用 profile 的 `action: click` 验证事件链路。
    - **素材加载统一走 registry adapter**：
      ```js
      import { createRegistry } from './adapters/<engine>-registry.js';
@@ -120,7 +125,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
    - 每条 `@constraint(kind: hard-rule)` 在对应代码位置加 `// @hard-rule(<id>): <简短说明>`
    - 每条 `must-have-feature` 最好加 `// @must-have(<id>): ...`
    - DOM UI 的渲染必须是 keyed update：初始化静态 shell 后只更新 changed cell/slot 的 class/style/text。禁止在 `setInterval` / `requestAnimationFrame` tick 中反复 `app.innerHTML = ...` 重建整棵 UI，否则会闪烁并丢事件绑定。
-   - Phaser/PixiJS 必须首屏可见：StartScene/入口必须渲染标题或开始按钮，`pointerdown/click` 后能进入 playing，并暴露 `window.gameTest.clickStartButton()`。
+   - Phaser/PixiJS 必须首屏可见：StartScene/入口必须渲染标题或开始按钮，`pointerdown/click` 后能进入 playing，并暴露 `window.gameTest.drivers.clickStartButton()`。
 9. 自检：
    ```bash
    grep -q "<!-- ENGINE:" <目标目录>/index.html

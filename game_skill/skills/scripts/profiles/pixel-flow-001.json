@@ -16,7 +16,7 @@
       "kind": "interaction",
       "description": "开始页检查 - 点击开始按钮",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ]
     },
@@ -26,7 +26,7 @@
       "kind": "interaction",
       "description": "主循环可玩 - 点击开始后进入playing状态",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 1000 }
       ]
     },
@@ -36,7 +36,7 @@
       "kind": "interaction",
       "description": "小猪派出检查 - 点击等待槽小猪派出",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
         { "action": "click", "x": 200, "y": 500 },
         { "action": "wait", "ms": 500 }
@@ -48,7 +48,7 @@
       "kind": "interaction",
       "description": "颜色匹配检查 - 验证小猪和目标块颜色",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ]
     },
@@ -58,7 +58,7 @@
       "kind": "interaction",
       "description": "单目标攻击检查 - 棋盘有目标块",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ]
     },
@@ -68,7 +68,7 @@
       "kind": "interaction",
       "description": "禁止全屏索敌检查 - 验证位置属性",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ]
     },
@@ -78,7 +78,7 @@
       "kind": "interaction",
       "description": "小猪回收检查 - 等待槽容量",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ]
     },
@@ -88,7 +88,7 @@
       "kind": "interaction",
       "description": "胜利条件检查 - 验证isWin字段",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ]
     },
@@ -98,7 +98,7 @@
       "kind": "interaction",
       "description": "失败条件检查 - 验证isLose字段",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ]
     },
@@ -108,7 +108,7 @@
       "kind": "interaction",
       "description": "关卡递进 - 验证初始关卡",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ]
     }

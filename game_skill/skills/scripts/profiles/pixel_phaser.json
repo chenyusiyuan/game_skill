@@ -41,7 +41,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",
@@ -49,7 +49,7 @@
         },
         {
           "action": "eval",
-          "code": "const beforeCount = window.gameTest.getGameState().conveyorPigCount; window.gameTest.drivers.deployPig(0); beforeCount"
+          "code": "const beforeCount = window.gameTest.observers.getGameState().conveyorPigCount; window.gameTest.drivers.deployPig(0); beforeCount"
         },
         {
           "action": "wait",
@@ -80,7 +80,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",
@@ -96,7 +96,7 @@
         },
         {
           "action": "eval",
-          "code": "const snapshot = window.gameTest.getGameState(); snapshot.successfulAttacks >= 1"
+          "code": "const snapshot = window.gameTest.observers.getGameState(); snapshot.successfulAttacks >= 1"
         },
         {
           "action": "click",
@@ -117,7 +117,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",
@@ -154,7 +154,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",
@@ -187,7 +187,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",
@@ -203,7 +203,7 @@
         },
         {
           "action": "eval",
-          "code": "const snapshot = window.gameTest.getGameState(); snapshot.gameOver === true || snapshot.phase === 'lose' || snapshot.phase === 'win'"
+          "code": "const snapshot = window.gameTest.observers.getGameState(); snapshot.gameOver === true || snapshot.phase === 'lose' || snapshot.phase === 'win'"
         },
         {
           "action": "click",
@@ -224,7 +224,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",
@@ -261,7 +261,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",
@@ -269,7 +269,7 @@
         },
         {
           "action": "eval",
-          "code": "const snapshot = window.gameTest.getGameState(); Array.isArray(snapshot.unlockedLevels) && snapshot.unlockedLevels.includes(1)"
+          "code": "const snapshot = window.gameTest.observers.getGameState(); Array.isArray(snapshot.unlockedLevels) && snapshot.unlockedLevels.includes(1)"
         },
         {
           "action": "click",
@@ -290,7 +290,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",
@@ -329,7 +329,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",
@@ -368,7 +368,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",
@@ -407,7 +407,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",
@@ -444,7 +444,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",
@@ -481,7 +481,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",
@@ -518,7 +518,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.hooks.clickStartButton()"
+          "code": "window.gameTest.drivers.clickStartButton()"
         },
         {
           "action": "wait",

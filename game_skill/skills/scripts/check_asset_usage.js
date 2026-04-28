@@ -383,9 +383,13 @@ async function readRuntimeUsage(page) {
 
 async function tryStartGame(page) {
   await page.evaluate(() => {
-    const drivers = window?.gameTest?.drivers ?? {};
-    if (typeof drivers.clickStartButton === "function") return drivers.clickStartButton();
-    if (typeof window?.gameTest?.clickStartButton === "function") return window.gameTest.clickStartButton();
+    if (typeof window?.gameTest?.drivers?.clickStartButton === "function") {
+      return window.gameTest.drivers.clickStartButton();
+    }
+    if (typeof window?.gameTest?.clickStartButton === "function") {
+      console.warn("[deprecated] flat window.gameTest.clickStartButton fallback");
+      return window.gameTest.clickStartButton();
+    }
     const selectors = [
       "[data-testid='start-button']",
       "[data-role='start']",

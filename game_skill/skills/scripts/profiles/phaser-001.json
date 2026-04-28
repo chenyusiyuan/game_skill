@@ -22,7 +22,7 @@
       "description": "主循环可玩",
       "setup": [
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 800 },
         { "action": "click", "x": 240, "y": 300 }
       ]
@@ -34,7 +34,7 @@
       "description": "颜色匹配攻击正确",
       "setup": [
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 800 },
         { "action": "click", "x": 140, "y": 560 },
         { "action": "wait", "ms": 2000 }
@@ -47,7 +47,7 @@
       "description": "等待槽回收正确",
       "setup": [
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 800 },
         { "action": "click", "x": 140, "y": 560 },
         { "action": "wait", "ms": 3000 }
@@ -60,7 +60,7 @@
       "description": "禁止全屏索敌验证",
       "setup": [
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 800 },
         { "action": "click", "x": 140, "y": 560 },
         { "action": "wait", "ms": 2000 }
@@ -73,9 +73,9 @@
       "description": "胜负判定正确",
       "setup": [
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 800 },
-        { "action": "eval", "code": "window.gameTest.simulateWin && window.gameTest.simulateWin()" },
+        { "action": "eval", "code": "window.gameTest.drivers.simulateWin && window.gameTest.drivers.simulateWin()" },
         { "action": "wait", "ms": 500 },
         { "action": "click", "x": 240, "y": 400 }
       ]
@@ -87,9 +87,9 @@
       "description": "关卡递进正确",
       "setup": [
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 800 },
-        { "action": "eval", "code": "window.gameTest.simulateWin && window.gameTest.simulateWin()" },
+        { "action": "eval", "code": "window.gameTest.drivers.simulateWin && window.gameTest.drivers.simulateWin()" },
         { "action": "wait", "ms": 500 },
         { "action": "click", "x": 240, "y": 400 },
         { "action": "wait", "ms": 500 }
@@ -104,7 +104,7 @@
       "description": "禁止全屏自动索敌",
       "setup": [
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 800 },
         { "action": "click", "x": 240, "y": 300 }
       ]
@@ -116,7 +116,7 @@
       "description": "禁止一次攻击多个同色块",
       "setup": [
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 800 },
         { "action": "click", "x": 240, "y": 300 }
       ]
@@ -128,7 +128,7 @@
       "description": "禁止穿透攻击",
       "setup": [
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 800 },
         { "action": "click", "x": 240, "y": 300 }
       ]
@@ -140,7 +140,7 @@
       "description": "禁止整行整列清除",
       "setup": [
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 800 },
         { "action": "click", "x": 240, "y": 300 }
       ]

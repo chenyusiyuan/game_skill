@@ -64,6 +64,9 @@ const hardRuleAssertions = Array.isArray(profile.hard_rule_assertions) ? profile
 const allAssertions = [...profileAssertions, ...hardRuleAssertions];
 const profileShapeErrors = [];
 const profileShapeWarnings = [];
+const DEPRECATED_FLAT_PROFILE_DEADLINE = "2026-06-01";
+const deprecatedFlatProfileDeadline = new Date(DEPRECATED_FLAT_PROFILE_DEADLINE);
+const deprecatedFlatProfileEnforced = new Date() >= deprecatedFlatProfileDeadline;
 
 // T5: profile 只能是驱动脚本；expect 会让 profile 重新变成"自带答案"。
 const hasExpectField = allAssertions.some((a) => a.expect !== undefined);
@@ -183,7 +186,21 @@ for (const a of allAssertions) {
     if (h.namespace === "legacy-flat") {
       const violation = "deprecated-flat-gameTest-hook";
       recordHookNamespace(a, h.namespace, violation, h.match);
-      profileShapeWarnings.push(`[PROFILE][test-hooks] assertion "${a.id}" 使用旧平铺 ${h.match}；请迁移到 observers/drivers/probes 三分类命名空间`);
+      log.entry({
+        type: "deprecated-flat-gameTest-hook",
+        phase: "verify",
+        step: "profile-hook-namespace",
+        script: "check_playthrough.js",
+        assertionId: a.id ?? "<unknown>",
+        deadline: DEPRECATED_FLAT_PROFILE_DEADLINE,
+        enforced: deprecatedFlatProfileEnforced,
+        match: h.match,
+      });
+      if (deprecatedFlatProfileEnforced) {
+        profileShapeErrors.push(`[PROFILE][test-hooks] deprecated-flat-gameTest-hook 死线 ${DEPRECATED_FLAT_PROFILE_DEADLINE} 已过；assertion "${a.id}" 必须迁移到 observers/drivers/probes`);
+      } else {
+        profileShapeWarnings.push(`[PROFILE][test-hooks] assertion "${a.id}" 使用旧平铺 ${h.match}；请在 ${DEPRECATED_FLAT_PROFILE_DEADLINE} 前迁移到 observers/drivers/probes 三分类命名空间`);
+      }
     }
   }
 

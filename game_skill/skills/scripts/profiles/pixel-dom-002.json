@@ -33,7 +33,7 @@
       "kind": "state",
       "description": "点击等待槽中的小猪派出到传送带",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
         { "action": "wait", "ms": 100 },
         { "action": "click", "selector": "[data-action='start']" },
         { "action": "wait", "ms": 300 },
@@ -51,7 +51,7 @@
       "kind": "state",
       "description": "小猪沿传送带移动",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
         { "action": "wait", "ms": 100 },
         { "action": "click", "selector": "[data-action='start']" },
         { "action": "wait", "ms": 300 },
@@ -69,7 +69,7 @@
       "kind": "hard-rule",
       "description": "按位置索敌：只能攻击正对方向的第一个同色块",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
         { "action": "wait", "ms": 100 },
         { "action": "click", "selector": "[data-action='start']" },
         { "action": "wait", "ms": 300 },
@@ -87,7 +87,7 @@
       "kind": "hard-rule",
       "description": "禁止穿透攻击：不能跳过前方异色块攻击后方目标",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
         { "action": "wait", "ms": 100 },
         { "action": "click", "selector": "[data-action='start']" },
         { "action": "wait", "ms": 300 },
@@ -105,7 +105,7 @@
       "kind": "hard-rule",
       "description": "单次攻击：每次攻击只消耗1点弹药，只处理1个目标块",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
         { "action": "wait", "ms": 100 },
         { "action": "click", "selector": "[data-action='start']" },
         { "action": "wait", "ms": 300 },
@@ -123,7 +123,7 @@
       "kind": "state",
       "description": "弹药未耗尽的小猪回到等待槽",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
         { "action": "wait", "ms": 100 },
         { "action": "click", "selector": "[data-action='start']" },
         { "action": "wait", "ms": 300 },
@@ -141,7 +141,7 @@
       "kind": "state",
       "description": "清空所有目标块判定胜利",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
         { "action": "wait", "ms": 100 },
         { "action": "click", "selector": "[data-action='start']" },
         { "action": "wait", "ms": 300 },
@@ -159,7 +159,7 @@
       "kind": "state",
       "description": "小猪耗尽且棋盘未清空判定失败",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
         { "action": "wait", "ms": 100 },
         { "action": "click", "selector": "[data-action='start']" },
         { "action": "wait", "ms": 300 },
@@ -177,7 +177,7 @@
       "kind": "state",
       "description": "关卡递进：胜利后可进入下一关",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
         { "action": "wait", "ms": 100 },
         { "action": "click", "selector": "[data-action='start']" },
         { "action": "wait", "ms": 300 },

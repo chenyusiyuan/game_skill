@@ -264,7 +264,7 @@ renderer.setClearColor(scene.fog.color);
 ## window.gameState / window.app / window.gameTest 暴露位置
 
 - `src/state.js`：`window.gameState = state`（phase/score/isProcessing）
-- `src/main.js`：`window.app = { renderer, camera, active }`、`window.gameTest = { clickStartButton, clickRetryButton, ... }`
+- `src/main.js`：`window.app = { renderer, camera, active }`、`window.gameTest = { observers, drivers, probes }`
 - Scene 切换时同步 `state.phase / state.scene`
 
 ## Playwright 断言示例
@@ -272,7 +272,7 @@ renderer.setClearColor(scene.fog.color);
 ```js
 await page.goto(launchUrl);
 await page.waitForFunction(() => window.app?.renderer && window.gameState?.phase === "ready");
-await page.evaluate(() => window.gameTest.clickStartButton());
+await page.evaluate(() => window.gameTest.drivers.clickStartButton());
 await page.waitForFunction(() => window.gameState.phase === "playing");
 expect(await page.evaluate(() => window.gameState.phase)).toBe("playing");
 ```

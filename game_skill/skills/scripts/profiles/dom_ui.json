@@ -126,7 +126,7 @@
         },
         {
           "action": "eval",
-          "code": "window.gameTest.forceWin()"
+          "code": "window.gameTest.drivers.forceWin()"
         },
         {
           "action": "wait",

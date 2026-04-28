@@ -23,7 +23,7 @@
       "kind": "state",
       "description": "存在棋盘目标块（tiles 是二维数组）",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": { "selector": "Array.isArray(window.gameState.tiles) && window.gameState.tiles.length === 6", "op": "truthy", "value": true }
@@ -33,7 +33,7 @@
       "kind": "state",
       "description": "底部等待槽有小猪（waitingPigs 数组存在且非空）",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": { "selector": "Array.isArray(window.gameState.waitingPigs) && window.gameState.waitingPigs.filter(p => p !== null).length > 0", "op": "truthy", "value": true }
@@ -43,7 +43,7 @@
       "kind": "interaction",
       "description": "点击开始按钮可以进入游戏",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": { "selector": "window.gameState.phase", "op": "eq", "value": "playing" }
@@ -53,9 +53,9 @@
       "kind": "interaction",
       "description": "点击等待槽小猪可以派出到传送带",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.clickPig(0)" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickPig(0)" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": { "selector": "window.gameState.conveyorPigs.length > 0", "op": "truthy", "value": true }
@@ -65,9 +65,9 @@
       "kind": "product",
       "description": "传送带可见 - 传送带上有小猪在移动",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.clickPig(0)" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickPig(0)" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": { "selector": "window.gameState.conveyorPigs && window.gameState.conveyorPigs.some(p => p.side !== undefined && p.position !== undefined)", "op": "truthy", "value": true }
@@ -77,9 +77,9 @@
       "kind": "interaction",
       "description": "位置索敌攻击 - 小猪只攻击当前方向第一个同色块",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "const gs = window.gameState; const firstPig = gs.waitingPigs && gs.waitingPigs.filter(p => p)[0]; if (firstPig && firstPig.color) { window.__pigColor = firstPig.color; window.gameTest.clickPig(0); }" },
+        { "action": "eval", "js": "const gs = window.gameState; const firstPig = gs.waitingPigs && gs.waitingPigs.filter(p => p)[0]; if (firstPig && firstPig.color) { window.__pigColor = firstPig.color; window.gameTest.drivers.clickPig(0); }" },
         { "action": "wait", "ms": 1000 }
       ],
       "expect": { "selector": "window.gameState.conveyorPigs.length >= 0", "op": "truthy", "value": true }
@@ -89,9 +89,9 @@
       "kind": "interaction",
       "description": "等待槽回收 - 未耗尽弹药的小猪返回等待槽",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "const gs = window.gameState; window.__initialPigs = gs.waitingPigs ? gs.waitingPigs.filter(p => p).length : 0; window.gameTest.clickPig(0);" },
+        { "action": "eval", "js": "const gs = window.gameState; window.__initialPigs = gs.waitingPigs ? gs.waitingPigs.filter(p => p).length : 0; window.gameTest.drivers.clickPig(0);" },
         { "action": "wait", "ms": 3000 }
       ],
       "expect": { "selector": "window.gameState.waitingPigs && window.gameState.waitingPigs.filter(p => p).length >= 0", "op": "truthy", "value": true }
@@ -101,11 +101,11 @@
       "kind": "hard-rule",
       "description": "强约束：禁止全屏自动索敌 - 小猪只能攻击当前方向第一个同色块",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
         {
           "action": "eval",
-          "js": "const gs = window.gameState; const tile = gs.tiles && gs.tiles[0] && gs.tiles[0][3]; if (tile) { window.__testTileColor = tile.color; } window.gameTest.clickPig(0);"
+          "js": "const gs = window.gameState; const tile = gs.tiles && gs.tiles[0] && gs.tiles[0][3]; if (tile) { window.__testTileColor = tile.color; } window.gameTest.drivers.clickPig(0);"
         },
         { "action": "wait", "ms": 800 }
       ],
@@ -165,7 +165,7 @@
       "kind": "state",
       "description": "失败条件：资源耗尽时触发失败",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": { "selector": "typeof window.gameState.waitingPigs === 'object'", "op": "truthy", "value": true }
@@ -175,7 +175,7 @@
       "kind": "state",
       "description": "测试 API 已暴露",
       "setup": [],
-      "expect": { "selector": "typeof window.gameTest === 'object' && typeof window.gameTest.clickStartButton === 'function'", "op": "truthy", "value": true }
+      "expect": { "selector": "typeof window.gameTest === 'object' && typeof window.gameTest.drivers.clickStartButton === 'function'", "op": "truthy", "value": true }
     }
   ]
 }

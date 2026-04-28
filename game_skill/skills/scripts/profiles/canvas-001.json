@@ -14,7 +14,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig('red')" },
         { "action": "wait", "ms": 500 },
         { "action": "eval", "code": "window.gameState.conveyor.pigList.length > 0" }
       ]
@@ -27,7 +27,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig('red')" },
         { "action": "wait", "ms": 8000 },
         { "action": "eval", "code": "window.__trace.filter(t => t.rule === 'attack-check' || t.rule === 'attack-execute').length > 0 || window.__trace.length > 3" }
       ]
@@ -51,7 +51,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig('red')" },
         { "action": "wait", "ms": 14000 },
         { "action": "eval", "code": "window.__trace.filter(t => t.rule === 'return-pig').length > 0 || window.gameState.slot.slotPigs.length > 0" }
       ]
@@ -64,7 +64,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.forceWin()" },
+        { "action": "eval", "code": "window.gameTest.drivers.forceWin()" },
         { "action": "wait", "ms": 300 },
         { "action": "eval", "code": "window.gameState.phase === 'win'" }
       ]
@@ -77,7 +77,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.forceLose()" },
+        { "action": "eval", "code": "window.gameTest.drivers.forceLose()" },
         { "action": "wait", "ms": 300 },
         { "action": "eval", "code": "window.gameState.phase === 'lose'" }
       ]
@@ -103,7 +103,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig('red')" },
         { "action": "wait", "ms": 10000 },
         { "action": "eval", "code": "window.__trace.length > 0" }
       ]
@@ -116,7 +116,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig('red')" },
         { "action": "wait", "ms": 10000 },
         { "action": "eval", "code": "window.__trace.length > 0" }
       ]
@@ -129,7 +129,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig('red')" },
         { "action": "wait", "ms": 10000 },
         { "action": "eval", "code": "window.__trace.length > 0" }
       ]
@@ -142,7 +142,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 240, "y": 374 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig('red')" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig('red')" },
         { "action": "wait", "ms": 10000 },
         { "action": "eval", "code": "window.__trace.length > 0" }
       ]

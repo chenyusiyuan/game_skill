@@ -30,9 +30,9 @@
       "kind": "interaction",
       "description": "@check(playable-loop) 主循环可玩 - 点击开始后能派出小猪",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.deployPig(0)" },
+        { "action": "eval", "js": "window.gameTest.drivers.deployPig(0)" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": { "selector": "window.gameState.phase === 'playing' && Array.isArray(window.gameState.conveyorPigs) && window.gameState.conveyorPigs.length > 0", "op": "truthy", "value": true }
@@ -42,9 +42,9 @@
       "kind": "interaction",
       "description": "@check(position-targeting) 位置索敌正确 - 小猪只能攻击当前位置方向的目标",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "js": "window.gameTest.deployPig(0)" },
+        { "action": "eval", "js": "window.gameTest.drivers.deployPig(0)" },
         { "action": "wait", "ms": 1000 }
       ],
       "expect": { "selector": "window.gameState.score > 0", "op": "truthy", "value": true }
@@ -54,7 +54,7 @@
       "kind": "interaction",
       "description": "@check(waiting-slot-recycle) 等待槽回收 - 小猪弹药未耗尽则返回等待槽",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 200 }
       ],
       "expect": { "selector": "window.gameState.waitingSlots.some(s => s !== null)", "op": "truthy", "value": true }
@@ -64,7 +64,7 @@
       "kind": "interaction",
       "description": "@check(win-condition) 胜利条件 - 清空棋盘后进入胜利状态",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.forceWin()" },
+        { "action": "eval", "js": "window.gameTest.drivers.forceWin()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": { "selector": "window.gameState.phase === 'win'", "op": "truthy", "value": true }
@@ -74,7 +74,7 @@
       "kind": "interaction",
       "description": "@check(lose-condition) 失败条件 - 小猪耗尽后进入失败状态",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.forceLose()" },
+        { "action": "eval", "js": "window.gameTest.drivers.forceLose()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": { "selector": "window.gameState.phase === 'lose'", "op": "truthy", "value": true }
@@ -84,7 +84,7 @@
       "kind": "hard-rule",
       "description": "@constraint(no-global-autoaim) 禁止全屏自动索敌 - 使用位置索敌",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 200 }
       ],
       "expect": { "selector": "Array.isArray(window.gameState.conveyorPigs)", "op": "truthy", "value": true }
@@ -94,7 +94,7 @@
       "kind": "hard-rule",
       "description": "@constraint(single-block-attack) 禁止一次攻击多块",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 200 }
       ],
       "expect": { "selector": "true", "op": "truthy", "value": true }

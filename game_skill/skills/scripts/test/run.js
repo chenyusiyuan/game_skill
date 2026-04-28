@@ -527,6 +527,24 @@ test("exposeTestHooks 旧入参 hooks 平铺到 gameTest.<name>", async () => {
   }
 });
 
+test("exposeTestHooks 旧入参 simulators 仍挂 window 且 mirror 到 drivers", async () => {
+  const { mod, win, restore } = await loadTestHookWithWindow();
+  try {
+    const simulateCorrectMatch = () => "match";
+    mod.exposeTestHooks({
+      state: { s: 1 },
+      simulators: { simulateCorrectMatch },
+    });
+    assert(typeof win.simulateCorrectMatch === "function", "旧 window.simulateCorrectMatch 应可访问");
+    assert(
+      typeof win.gameTest.drivers.simulateCorrectMatch === "function",
+      "simulators 应自动 mirror 到 drivers.simulateCorrectMatch",
+    );
+  } finally {
+    restore();
+  }
+});
+
 test("exposeTestHooks probes 只挂命名空间，不平铺", async () => {
   const { mod, win, restore } = await loadTestHookWithWindow();
   try {
@@ -675,7 +693,7 @@ console.log("\n[P0.1] _profile_anti_cheat: detectAntiCheatHits");
     assert(hits.some((h) => /probes/.test(h.kind)), `应命中 probes`);
   });
 
-  test("旧 API window.gameTest.clickStartButton() → 不命中（兼容路径）", () => {
+  test("旧 API 过渡兼容路径 — 仍应兼容但记 deprecation warning", () => {
     const a = {
       id: "legacy-ok",
       setup: [
@@ -685,6 +703,18 @@ console.log("\n[P0.1] _profile_anti_cheat: detectAntiCheatHits");
     };
     const hits = detectAntiCheatHits(a);
     assert(hits.length === 0, `兼容旧 driver 调用不应命中 anti-cheat，实际=${JSON.stringify(hits)}`);
+  });
+
+  test("新 API drivers.clickStartButton() → 应走新路径", () => {
+    const a = {
+      id: "drivers-ok",
+      setup: [
+        { action: "click", selector: "#start" },
+        { action: "eval", js: "window.gameTest.drivers.clickStartButton()" },
+      ],
+    };
+    const hits = detectAntiCheatHits(a);
+    assert(hits.length === 0, `新 drivers 调用不应命中 anti-cheat，实际=${JSON.stringify(hits)}`);
   });
 
   test("Object.assign 批量改 gameState → 命中", () => {

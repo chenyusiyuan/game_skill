@@ -75,7 +75,7 @@
       "description": "配对规则正确：正确配对得分增加",
       "kind": "interaction",
       "setup": [
-        { "action": "eval", "js": "window.gameState.score = 0; window.gameState.cards = [{id:'en-0',pairId:'pair-0',type:'en',text:'apple',matched:false},{id:'cn-0',pairId:'pair-0',type:'cn',text:'苹果',matched:false}]; window.simulateCorrectMatch();" },
+        { "action": "eval", "js": "window.gameState.score = 0; window.gameState.cards = [{id:'en-0',pairId:'pair-0',type:'en',text:'apple',matched:false},{id:'cn-0',pairId:'pair-0',type:'cn',text:'苹果',matched:false}]; window.gameTest.drivers.simulateCorrectMatch();" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": {
@@ -89,7 +89,7 @@
       "description": "失败规则正确：错误配对扣时间",
       "kind": "interaction",
       "setup": [
-        { "action": "eval", "js": "window.__beforeTime = window.gameState.timeLeft; window.simulateWrongMatch();" },
+        { "action": "eval", "js": "window.__beforeTime = window.gameState.timeLeft; window.gameTest.drivers.simulateWrongMatch();" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": {
@@ -103,7 +103,7 @@
       "description": "连击系统：连续成功配对增加 combo",
       "kind": "interaction",
       "setup": [
-        { "action": "eval", "js": "window.gameState.combo = 0; window.gameState.score = 0; window.gameState.cards = [{id:'en-0',pairId:'pair-0',type:'en',text:'apple',matched:false},{id:'cn-0',pairId:'pair-0',type:'cn',text:'苹果',matched:false},{id:'en-1',pairId:'pair-1',type:'en',text:'book',matched:false},{id:'cn-1',pairId:'pair-1',type:'cn',text:'书',matched:false}]; window.simulateCorrectMatch(); window.simulateCorrectMatch();" },
+        { "action": "eval", "js": "window.gameState.combo = 0; window.gameState.score = 0; window.gameState.cards = [{id:'en-0',pairId:'pair-0',type:'en',text:'apple',matched:false},{id:'cn-0',pairId:'pair-0',type:'cn',text:'苹果',matched:false},{id:'en-1',pairId:'pair-1',type:'en',text:'book',matched:false},{id:'cn-1',pairId:'pair-1',type:'cn',text:'书',matched:false}]; window.gameTest.drivers.simulateCorrectMatch(); window.gameTest.drivers.simulateCorrectMatch();" },
         { "action": "wait", "ms": 600 }
       ],
       "expect": {

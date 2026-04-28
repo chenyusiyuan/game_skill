@@ -14,7 +14,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 320, "y": 345 },
         { "action": "wait", "ms": 800 },
-        { "action": "eval", "code": "window.gameTest.isPlaying()" }
+        { "action": "eval", "code": "window.gameTest.observers.isPlaying()" }
       ]
     },
     {
@@ -27,7 +27,7 @@
         { "action": "wait", "ms": 800 },
         { "action": "click", "selector": "#game", "x": 140, "y": 584 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.getPigCount() >= 1" }
+        { "action": "eval", "code": "window.gameTest.observers.getPigCount() >= 1" }
       ]
     },
     {
@@ -38,7 +38,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 320, "y": 345 },
         { "action": "wait", "ms": 800 },
-        { "action": "eval", "code": "window.gameTest.getBlockCount() > 0" }
+        { "action": "eval", "code": "window.gameTest.observers.getBlockCount() > 0" }
       ]
     },
     {
@@ -49,7 +49,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 320, "y": 345 },
         { "action": "wait", "ms": 800 },
-        { "action": "eval", "code": "window.gameTest.hasPigsInSlot()" }
+        { "action": "eval", "code": "window.gameTest.observers.hasPigsInSlot()" }
       ]
     },
     {
@@ -60,7 +60,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 320, "y": 345 },
         { "action": "wait", "ms": 800 },
-        { "action": "eval", "code": "window.gameTest.getLevel() === 1" }
+        { "action": "eval", "code": "window.gameTest.observers.getLevel() === 1" }
       ]
     },
     {
@@ -71,7 +71,7 @@
       "setup": [
         { "action": "click", "selector": "#game", "x": 320, "y": 345 },
         { "action": "wait", "ms": 800 },
-        { "action": "eval", "code": "window.gameTest.hasPigsInSlot()" }
+        { "action": "eval", "code": "window.gameTest.observers.hasPigsInSlot()" }
       ]
     },
     {
@@ -90,7 +90,7 @@
         { "action": "wait", "ms": 200 },
         { "action": "click", "selector": "#game", "x": 308, "y": 584 },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.getConveyorCapacity() === 4" }
+        { "action": "eval", "code": "window.gameTest.observers.getConveyorCapacity() === 4" }
       ]
     },
     {
@@ -103,7 +103,7 @@
         { "action": "wait", "ms": 800 },
         { "action": "click", "selector": "#game", "x": 140, "y": 584 },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.getFirstPigGridPosition() !== null" }
+        { "action": "eval", "code": "window.gameTest.observers.getFirstPigGridPosition() !== null" }
       ]
     }
   ]

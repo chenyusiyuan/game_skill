@@ -23,14 +23,14 @@
       "kind": "state",
       "description": "测试 API 已暴露",
       "setup": [],
-      "expect": { "selector": "typeof window.gameTest === 'object' && typeof window.gameTest.clickStartButton === 'function'", "op": "truthy", "value": true }
+      "expect": { "selector": "typeof window.gameTest === 'object' && typeof window.gameTest.drivers.clickStartButton === 'function'", "op": "truthy", "value": true }
     },
     {
       "id": "start-game",
       "kind": "interaction",
       "description": "点击开始按钮进入职业选择",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": { "selector": "window.gameState.scene === 'ClassSelectScene' || window.gameState.phase === 'selecting'", "op": "truthy", "value": true }
@@ -40,8 +40,8 @@
       "kind": "interaction",
       "description": "职业选择功能 (@check: class-selection)",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": { "selector": "window.gameState.scene === 'ClassSelectScene' || window.gameState.phase === 'selecting'", "op": "truthy", "value": true }
@@ -51,10 +51,10 @@
       "kind": "interaction",
       "description": "战士职业选择 (@hard-rule: three-classes)",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "js": "window.gameTest.selectClass('warrior')" },
+        { "action": "eval", "js": "window.gameTest.drivers.selectClass('warrior')" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": { "selector": "window.gameState.player.class === 'warrior' && window.gameState.player.str >= 10", "op": "truthy", "value": true }
@@ -64,10 +64,10 @@
       "kind": "interaction",
       "description": "法师职业选择 (@hard-rule: three-classes)",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "js": "window.gameTest.selectClass('mage')" },
+        { "action": "eval", "js": "window.gameTest.drivers.selectClass('mage')" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": { "selector": "window.gameState.player.class === 'mage' && window.gameState.player.int >= 10", "op": "truthy", "value": true }
@@ -77,10 +77,10 @@
       "kind": "interaction",
       "description": "射手职业选择 (@hard-rule: three-classes)",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "js": "window.gameTest.selectClass('archer')" },
+        { "action": "eval", "js": "window.gameTest.drivers.selectClass('archer')" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": { "selector": "window.gameState.player.class === 'archer' && window.gameState.player.dex >= 10", "op": "truthy", "value": true }
@@ -90,10 +90,10 @@
       "kind": "interaction",
       "description": "技能系统 - 每职业6技能 (@hard-rule: skills-per-class)",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "js": "window.gameTest.selectClass('warrior')" },
+        { "action": "eval", "js": "window.gameTest.drivers.selectClass('warrior')" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": { "selector": "Array.isArray(window.gameState.player.skills) && window.gameState.player.skills.length >= 6", "op": "truthy", "value": true }
@@ -103,28 +103,28 @@
       "kind": "hard-rule",
       "description": "伤害公式存在 (@hard-rule: damage-formula-strict)",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "js": "window.gameTest.selectClass('warrior')" },
+        { "action": "eval", "js": "window.gameTest.drivers.selectClass('warrior')" },
         { "action": "wait", "ms": 500 }
       ],
-      "expect": { "selector": "typeof window.gameTest.calculateDamage === 'function'", "op": "truthy", "value": true }
+      "expect": { "selector": "typeof window.gameTest.observers.calculateDamage === 'function'", "op": "truthy", "value": true }
     },
     {
       "id": "combat-basic",
       "kind": "interaction",
       "description": "基础战斗 (@check: combat-basic)",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.resetGame()" },
-        { "action": "eval", "js": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "js": "window.gameTest.drivers.resetGame()" },
+        { "action": "eval", "js": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "js": "window.gameTest.selectClass('warrior')" },
+        { "action": "eval", "js": "window.gameTest.drivers.selectClass('warrior')" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "js": "window.gameTest.killAllEnemies()" },
-        { "action": "eval", "js": "window.gameTest.spawnEnemy({type: 'tank', x: 400, y: 300, hp: 50})" },
+        { "action": "eval", "js": "window.gameTest.drivers.killAllEnemies()" },
+        { "action": "eval", "js": "window.gameTest.drivers.spawnEnemy({type: 'tank', x: 400, y: 300, hp: 50})" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "js": "window.gameTest.simulateAttack()" },
+        { "action": "eval", "js": "window.gameTest.drivers.simulateAttack()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": { "selector": "window.gameState.enemies.length === 0 || window.gameState.enemies[0].hp < 50", "op": "truthy", "value": true }
@@ -134,7 +134,7 @@
       "kind": "interaction",
       "description": "敌人生成",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.spawnEnemy({type: 'tank', x: 400, y: 300})" },
+        { "action": "eval", "js": "window.gameTest.drivers.spawnEnemy({type: 'tank', x: 400, y: 300})" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": { "selector": "window.gameState.enemies.length >= 1", "op": "truthy", "value": true }
@@ -144,8 +144,8 @@
       "kind": "interaction",
       "description": "Boss多阶段 (@hard-rule: boss-multi-phase)",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.killAllEnemies()" },
-        { "action": "eval", "js": "window.gameTest.spawnBoss({type: 'demon', x: 400, y: 300, hp: 100})" },
+        { "action": "eval", "js": "window.gameTest.drivers.killAllEnemies()" },
+        { "action": "eval", "js": "window.gameTest.drivers.spawnBoss({type: 'demon', x: 400, y: 300, hp: 100})" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": { "selector": "window.gameState.enemies.some(e => e.isBoss === true)", "op": "truthy", "value": true }
@@ -169,10 +169,10 @@
       "kind": "interaction",
       "description": "装备掉落 (@check: equipment-drop)",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.killAllEnemies()" },
-        { "action": "eval", "js": "window.gameTest.spawnEnemy({type: 'tank', x: 400, y: 300, hp: 1})" },
+        { "action": "eval", "js": "window.gameTest.drivers.killAllEnemies()" },
+        { "action": "eval", "js": "window.gameTest.drivers.spawnEnemy({type: 'tank', x: 400, y: 300, hp: 1})" },
         { "action": "wait", "ms": 200 },
-        { "action": "eval", "js": "window.gameTest.simulateAttack()" },
+        { "action": "eval", "js": "window.gameTest.drivers.simulateAttack()" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": { "selector": "window.gameState.pickups !== undefined", "op": "truthy", "value": true }
@@ -182,10 +182,10 @@
       "kind": "interaction",
       "description": "战斗反馈 (@check: combat-feedback)",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.killAllEnemies()" },
-        { "action": "eval", "js": "window.gameTest.spawnEnemy({type: 'tank', x: 400, y: 300, hp: 10})" },
+        { "action": "eval", "js": "window.gameTest.drivers.killAllEnemies()" },
+        { "action": "eval", "js": "window.gameTest.drivers.spawnEnemy({type: 'tank', x: 400, y: 300, hp: 10})" },
         { "action": "wait", "ms": 200 },
-        { "action": "eval", "js": "window.gameTest.simulateCriticalHit()" },
+        { "action": "eval", "js": "window.gameTest.drivers.simulateCriticalHit()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": { "selector": "window.gameState.lastDamageIsCrit === true || window.gameState.feedbackTriggered === true || true", "op": "truthy", "value": true }
@@ -195,7 +195,7 @@
       "kind": "interaction",
       "description": "胜利条件 (@check: win-condition)",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.triggerVictory()" },
+        { "action": "eval", "js": "window.gameTest.drivers.triggerVictory()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": { "selector": "window.gameState.phase === 'victory' || window.gameState.result === 'win'", "op": "truthy", "value": true }
@@ -205,7 +205,7 @@
       "kind": "interaction",
       "description": "失败条件 (@check: defeat-condition)",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.triggerDefeat()" },
+        { "action": "eval", "js": "window.gameTest.drivers.triggerDefeat()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": { "selector": "window.gameState.phase === 'defeat' || window.gameState.result === 'lose'", "op": "truthy", "value": true }
@@ -215,7 +215,7 @@
       "kind": "interaction",
       "description": "楼层推进 (@check: floor-progression)",
       "setup": [
-        { "action": "eval", "js": "window.gameTest.advanceFloor()" },
+        { "action": "eval", "js": "window.gameTest.drivers.advanceFloor()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": { "selector": "window.gameState.currentFloor >= 1", "op": "truthy", "value": true }

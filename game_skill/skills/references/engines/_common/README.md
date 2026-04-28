@@ -80,8 +80,8 @@ references/engines/
 
 ### 契约 3：test hook
 
-- 纯 JS，无 adapter。导出 `exposeTestHooks({ state, hooks })`，负责把 `window.gameState` / `window.gameTest.*` 按规范挂到 window。
-- 替代 codegen 手写的 `window.gameState = state; window.simulateCorrectMatch = ...`
+- 纯 JS，无 adapter。导出 `exposeTestHooks({ state, observers, drivers, probes })`，负责把 `window.gameState` / `window.gameTest.{observers,drivers,probes}.*` 按规范挂到 window。
+- 替代 codegen 手写的 `window.gameState = state; window.gameTest.clickStartButton = ...`；旧 `hooks` / `simulators` 入参仍保留并 mirror 到 `drivers.*`。
 
 ## 对 codegen 子 agent 的影响
 

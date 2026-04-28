@@ -41,6 +41,21 @@ tick();
 // ===== Window hooks for test harness =====
 window.app = { renderer, camera, active };
 window.gameTest = {
-  clickStartButton: () => active.startGame(),
-  clickRetryButton: () => active.retry(),
+  observers: {
+    getSnapshot: () => JSON.parse(JSON.stringify(window.gameState)),
+    getTrace: () => [...(window.__trace || [])],
+    getAssetUsage: () => [...(window.__assetUsage || [])],
+  },
+  drivers: {
+    clickStartButton: () => active.startGame(),
+    clickRetryButton: () => active.retry(),
+  },
+  probes: {
+    resetWithScenario: () => {
+      console.warn("probes.resetWithScenario: stub - codegen needs to implement this");
+    },
+    stepTicks: () => {
+      console.warn("probes.stepTicks: stub - codegen needs to implement this");
+    },
+  },
 };

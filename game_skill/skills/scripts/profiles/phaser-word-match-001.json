@@ -40,9 +40,9 @@
       "kind": "interactive",
       "description": "主循环可玩 - 点击开始完成配对",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "eval", "code": "window.gameTest.drivers.simulateCorrectMatch()" },
         { "action": "wait", "ms": 800 }
       ],
       "expect": {
@@ -57,9 +57,9 @@
       "kind": "interactive",
       "description": "正确配对得分增加",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "const s = window.gameState; s._beforeScore = s.score; window.gameTest.simulateCorrectMatch()" },
+        { "action": "eval", "code": "const s = window.gameState; s._beforeScore = s.score; window.gameTest.drivers.simulateCorrectMatch()" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": {
@@ -74,9 +74,9 @@
       "kind": "interactive",
       "description": "错误配对扣时",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "const s = window.gameState; s._beforeTime = s.timeLeft; window.gameTest.simulateWrongMatch()" },
+        { "action": "eval", "code": "const s = window.gameState; s._beforeTime = s.timeLeft; window.gameTest.drivers.simulateWrongMatch()" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": {
@@ -91,7 +91,7 @@
       "kind": "interactive",
       "description": "时间耗尽进入失败",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
         { "action": "eval", "code": "window.gameState.timeLeft = 1" },
         { "action": "wait", "ms": 1500 }
@@ -108,7 +108,7 @@
       "kind": "interactive",
       "description": "关卡递进 - 完成关卡后可进入下一关",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
         { "action": "eval", "code": "window.gameState.currentLevel" },
         { "action": "wait", "ms": 200 }

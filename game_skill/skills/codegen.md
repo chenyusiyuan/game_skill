@@ -304,11 +304,11 @@ exposeTestHooks({
   state,  // 挂到 window.gameState
   // 旧入参（保留；自动 mirror 到新 drivers 命名空间）
   hooks: { clickStartButton, clickRetryButton, ... },  // 挂到 window.gameTest.*；只能辅助测试，不能替代真实 UI 输入
-  simulators: { simulateCorrectMatch, simulateWrongMatch },  // 兼容旧风格断言
+  simulators: { simulateCorrectMatch, simulateWrongMatch },  // 兼容旧 window.* 断言，也会 mirror 到 drivers.*
 
   // 新三分类（推荐；check_runtime_semantics.js 依赖 probes）
   observers: { getSnapshot, getTrace, getAssetUsage },  // 挂到 window.gameTest.observers.*，只读
-  drivers:   { clickStartButton, clickRetryButton },   // 挂到 window.gameTest.drivers.*，真实用户输入映射；可和 hooks 同名，drivers 显式传的覆盖 hooks mirror
+  drivers:   { clickStartButton, clickRetryButton, simulateCorrectMatch, simulateWrongMatch }, // 挂到 window.gameTest.drivers.*，真实用户输入映射；可和 hooks/simulators 同名，drivers 显式传的覆盖 mirror
   probes:    { resetWithScenario, stepTicks, seedRng }, // 挂到 window.gameTest.probes.*，仅确定性语义测试可用；profile 若调用 probes.* 会被 check_playthrough 直接 fail
 });
 ```

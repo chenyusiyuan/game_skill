@@ -15,9 +15,9 @@
         { "action": "wait", "ms": 300 },
         { "action": "click", "selector": "canvas" },
         { "action": "wait", "ms": 100 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig(0)" },
         { "action": "wait", "ms": 800 }
       ]
     },
@@ -30,9 +30,9 @@
         { "action": "wait", "ms": 300 },
         { "action": "click", "selector": "canvas" },
         { "action": "wait", "ms": 100 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig(0)" },
         { "action": "wait", "ms": 3000 }
       ]
     },
@@ -45,9 +45,9 @@
         { "action": "wait", "ms": 300 },
         { "action": "click", "selector": "canvas" },
         { "action": "wait", "ms": 100 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig(0)" },
         { "action": "wait", "ms": 3000 }
       ]
     },
@@ -60,9 +60,9 @@
         { "action": "wait", "ms": 300 },
         { "action": "click", "selector": "canvas" },
         { "action": "wait", "ms": 100 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig(0)" },
         { "action": "wait", "ms": 8000 }
       ]
     },
@@ -75,9 +75,9 @@
         { "action": "wait", "ms": 300 },
         { "action": "click", "selector": "canvas" },
         { "action": "wait", "ms": 100 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "for (let i = 0; i < 8; i++) { window.gameTest.dispatchPig(0); }" },
+        { "action": "eval", "code": "for (let i = 0; i < 8; i++) { window.gameTest.drivers.dispatchPig(0); }" },
         { "action": "wait", "ms": 15000 }
       ]
     },
@@ -90,7 +90,7 @@
         { "action": "wait", "ms": 300 },
         { "action": "click", "selector": "canvas" },
         { "action": "wait", "ms": 100 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 }
       ]
     },
@@ -103,9 +103,9 @@
         { "action": "wait", "ms": 300 },
         { "action": "click", "selector": "canvas" },
         { "action": "wait", "ms": 100 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "for (let i = 0; i < 5; i++) { window.gameTest.dispatchPig(0); }" },
+        { "action": "eval", "code": "for (let i = 0; i < 5; i++) { window.gameTest.drivers.dispatchPig(0); }" },
         { "action": "wait", "ms": 1000 }
       ]
     }
@@ -118,9 +118,9 @@
       "description": "禁止全屏自动索敌",
       "setup": [
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig(0)" },
         { "action": "wait", "ms": 3000 }
       ]
     },
@@ -131,9 +131,9 @@
       "description": "禁止一次攻击多个同色块",
       "setup": [
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig(0)" },
         { "action": "wait", "ms": 3000 }
       ]
     },
@@ -144,9 +144,9 @@
       "description": "禁止穿透攻击",
       "setup": [
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig(0)" },
         { "action": "wait", "ms": 3000 }
       ]
     },
@@ -157,9 +157,9 @@
       "description": "禁止整行整列清除",
       "setup": [
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.dispatchPig(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.dispatchPig(0)" },
         { "action": "wait", "ms": 3000 }
       ]
     }

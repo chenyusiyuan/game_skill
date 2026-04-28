@@ -29,7 +29,7 @@
       "setup": [
         { "action": "click", "selector": "canvas", "x": 320, "y": 350 },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.simulateCorrectMatch()" },
+        { "action": "eval", "code": "window.gameTest.drivers.simulateCorrectMatch()" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": {
@@ -63,11 +63,11 @@
       "setup": [
         { "action": "click", "selector": "canvas", "x": 320, "y": 350 },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.simulateCorrectMatch()" },
+        { "action": "eval", "code": "window.gameTest.drivers.simulateCorrectMatch()" },
         { "action": "wait", "ms": 400 },
-        { "action": "eval", "code": "window.simulateCorrectMatch()" },
+        { "action": "eval", "code": "window.gameTest.drivers.simulateCorrectMatch()" },
         { "action": "wait", "ms": 400 },
-        { "action": "eval", "code": "window.__scoreBefore = window.gameState.score; window.simulateCorrectMatch()" },
+        { "action": "eval", "code": "window.__scoreBefore = window.gameState.score; window.gameTest.drivers.simulateCorrectMatch()" },
         { "action": "wait", "ms": 400 }
       ],
       "expect": {

@@ -9,13 +9,16 @@
  *     hooks:      { clickStartButton, clickRetryButton, getCards },
  *     simulators: { simulateCorrectMatch },
  *   });
- *   → window.gameState / window.gameTest.clickStartButton / window.simulateCorrectMatch
+ *   → window.gameState
+ *     window.gameTest.clickStartButton（legacy flat）
+ *     window.simulateCorrectMatch（legacy flat）
+ *     window.gameTest.drivers.simulateCorrectMatch
  *
  * 新 API（三分类，check_runtime_semantics.js 依赖）：
  *   exposeTestHooks({
  *     state,
  *     observers: { getSnapshot, getTrace, getAssetUsage },
- *     drivers:   { clickStartButton, clickRetryButton },
+ *     drivers:   { clickStartButton, clickRetryButton, simulateCorrectMatch },
  *     probes:    { resetWithScenario, stepTicks, seedRng },
  *   });
  *   → window.gameTest.observers.getSnapshot
@@ -25,8 +28,9 @@
  * 兼容映射（一次 expose 调用兼容两种形态）：
  *   - hooks 的每个函数自动 mirror 到 window.gameTest.drivers.<name>
  *   - hooks 的每个函数 **仍**平铺到 window.gameTest.<name>（兼容旧 profile）
- *   - probes **不平铺**，只能通过 window.gameTest.probes.* 访问
+ *   - simulators 的每个函数自动 mirror 到 window.gameTest.drivers.<name>，且仍挂到 window.<name>（兼容旧 profile）
  *   - observers **不平铺**，只能通过 window.gameTest.observers.* 访问
+ *   - probes **不平铺**，只能通过 window.gameTest.probes.* 访问
  */
 
 // 启发式：hook 名看起来像 probe 就警告（鼓励迁移到 probes 入参）
@@ -80,6 +84,12 @@ export function exposeTestHooks({
   const driversNs = (ns.drivers ??= {});
   // hooks mirror into drivers so new-API consumers can find the same entrypoints
   for (const [k, fn] of Object.entries(hooks)) {
+    if (typeof fn !== "function") continue;
+    if (!(k in driversNs)) driversNs[k] = fn;
+  }
+  // simulators mirror into drivers so migrated profiles can use drivers.* even
+  // when older codegen still passes simulator functions via the legacy bucket.
+  for (const [k, fn] of Object.entries(simulators)) {
     if (typeof fn !== "function") continue;
     if (!(k in driversNs)) driversNs[k] = fn;
   }

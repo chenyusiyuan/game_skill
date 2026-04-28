@@ -25,7 +25,7 @@
       "description": "主循环可运行",
       "setup": [
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 1000 },
         { "action": "eval", "code": "window.gameState.phase === 'playing'" }
       ]
@@ -36,9 +36,9 @@
       "kind": "interaction",
       "description": "点击派出小猪",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInSlot(0)" },
         { "action": "wait", "ms": 1000 },
         { "action": "eval", "code": "window.gameState.conveyor.pigs.length > 0" }
       ]
@@ -49,9 +49,9 @@
       "kind": "interaction",
       "description": "按位置攻击验证",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInSlot(0)" },
         { "action": "wait", "ms": 3000 },
         { "action": "eval", "code": "window.__trace && window.__trace.some(t => t.rule === 'attack-hit')" }
       ]
@@ -62,9 +62,9 @@
       "kind": "interaction",
       "description": "等待槽回收验证",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInSlot(0)" },
         { "action": "wait", "ms": 5000 },
         { "action": "eval", "code": "window.__trace && window.__trace.some(t => t.rule === 'slot-recycle')" }
       ]
@@ -75,9 +75,9 @@
       "kind": "interaction",
       "description": "胜利条件验证",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.forceWin()" },
+        { "action": "eval", "code": "window.gameTest.drivers.forceWin()" },
         { "action": "wait", "ms": 1000 },
         { "action": "eval", "code": "window.gameState.phase === 'win'" }
       ]
@@ -88,9 +88,9 @@
       "kind": "interaction",
       "description": "失败条件验证",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.forceLose()" },
+        { "action": "eval", "code": "window.gameTest.drivers.forceLose()" },
         { "action": "wait", "ms": 1000 },
         { "action": "eval", "code": "window.gameState.phase === 'lose'" }
       ]
@@ -101,12 +101,12 @@
       "kind": "interaction",
       "description": "关卡递进验证",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
         { "action": "eval", "code": "window.gameState.level === 1" },
-        { "action": "eval", "code": "window.gameTest.forceWin()" },
+        { "action": "eval", "code": "window.gameTest.drivers.forceWin()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickNextButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickNextButton()" },
         { "action": "wait", "ms": 1000 },
         { "action": "eval", "code": "window.gameState.level === 2" }
       ]
@@ -119,9 +119,9 @@
       "kind": "hard-rule",
       "description": "禁止全屏自动索敌 - 攻击只能命中当前位置方向第一个目标",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInSlot(0)" },
         { "action": "wait", "ms": 3000 },
         { "action": "eval", "code": "(() => { const attacks = (window.__trace || []).filter(t => t.rule === 'attack-hit'); return attacks.every(a => a.after && a.after.targetCount === 1); })()" }
       ]
@@ -132,9 +132,9 @@
       "kind": "hard-rule",
       "description": "禁止一次攻击多个同色块",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInSlot(0)" },
         { "action": "wait", "ms": 3000 },
         { "action": "eval", "code": "(() => { const attacks = (window.__trace || []).filter(t => t.rule === 'attack-hit'); return attacks.every(a => !a.after || a.after.targetsHit <= 1); })()" }
       ]
@@ -145,9 +145,9 @@
       "kind": "hard-rule",
       "description": "禁止穿透前方异色块攻击后方目标",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInSlot(0)" },
         { "action": "wait", "ms": 3000 },
         { "action": "eval", "code": "(() => { const attacks = (window.__trace || []).filter(t => t.rule === 'attack-hit'); return attacks.every(a => !a.after || a.after.penetration === false); })()" }
       ]
@@ -158,9 +158,9 @@
       "kind": "hard-rule",
       "description": "禁止整行整列清除",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInSlot(0)" },
         { "action": "wait", "ms": 3000 },
         { "action": "eval", "code": "(() => { const attacks = (window.__trace || []).filter(t => t.rule === 'attack-hit'); return attacks.every(a => !a.after || a.after.clearType !== 'row' && a.after.clearType !== 'column'); })()" }
       ]
@@ -171,15 +171,15 @@
       "kind": "hard-rule",
       "description": "必须体现核心玩法 - 四周传送带+按位置攻击+等待槽回收",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInSlot(0)" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInSlot(0)" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickPigInSlot(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInSlot(0)" },
         { "action": "wait", "ms": 5000 },
-        { "action": "eval", "code": "window.gameTest.forceWin()" },
+        { "action": "eval", "code": "window.gameTest.drivers.forceWin()" },
         { "action": "wait", "ms": 500 },
         { "action": "eval", "code": "!!window.gameState.blocks && !!window.gameState.slot.pigs" }
       ]

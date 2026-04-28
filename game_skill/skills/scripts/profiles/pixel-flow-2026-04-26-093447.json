@@ -12,9 +12,9 @@
       "kind": "interaction",
       "description": "小猪派出检查",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickPig(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPig(0)" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": {
@@ -29,9 +29,9 @@
       "kind": "interaction",
       "description": "攻击规则检查 - 派出小猪后攻击目标块",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.clickPig(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPig(0)" },
         { "action": "wait", "ms": 2000 }
       ],
       "expect": {
@@ -46,7 +46,7 @@
       "kind": "state",
       "description": "胜利条件检查 - 验证胜利状态可达",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": {
@@ -61,7 +61,7 @@
       "kind": "state",
       "description": "失败条件检查 - 验证失败状态可达",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": {
@@ -76,7 +76,7 @@
       "kind": "state",
       "description": "颜色匹配检查 - 小猪只能攻击同色目标",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": {
@@ -91,7 +91,7 @@
       "kind": "state",
       "description": "回收机制检查 - 等待槽状态",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": {
@@ -106,7 +106,7 @@
       "kind": "state",
       "description": "禁止自动索敌验证 - 攻击必须基于位置",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": {
@@ -123,7 +123,7 @@
       "kind": "hard-rule",
       "description": "禁止全屏自动索敌 - 验证攻击逻辑基于位置",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": {
@@ -138,7 +138,7 @@
       "kind": "hard-rule",
       "description": "核心玩法验证 - 传送带+等待槽+攻击",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 }
       ],
       "expect": {

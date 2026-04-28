@@ -12,9 +12,9 @@
       "kind": "interaction",
       "description": "点击配对成功",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.simulateCorrectMatch()" },
+        { "action": "eval", "code": "window.gameTest.drivers.simulateCorrectMatch()" },
         { "action": "wait", "ms": 500 }
       ],
       "expect": {
@@ -29,10 +29,10 @@
       "kind": "interaction",
       "description": "错误配对扣时间",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
         { "action": "eval", "code": "window.gameState._testInitialTime = window.gameState.timeLeft" },
-        { "action": "eval", "code": "window.gameTest.simulateWrongMatch()" },
+        { "action": "eval", "code": "window.gameTest.drivers.simulateWrongMatch()" },
         { "action": "wait", "ms": 500 },
         { "action": "eval", "code": "window.gameState._testTimeAfter = window.gameState.timeLeft" }
       ],
@@ -48,7 +48,7 @@
       "kind": "interaction",
       "description": "关卡通关 - 手动设置获胜状态",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
         { "action": "eval", "code": "window.gameState.matchedPairs = window.gameState.totalPairs; window.gameState.phase = 'win'" },
         { "action": "wait", "ms": 200 }
@@ -65,7 +65,7 @@
       "kind": "interaction",
       "description": "时间耗尽",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
         { "action": "eval", "code": "window.gameState.timeLeft = 0.05" },
         { "action": "wait", "ms": 300 }
@@ -82,7 +82,7 @@
       "kind": "interaction",
       "description": "关卡递进 - 验证关卡变化",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
         { "action": "eval", "code": "window.gameState.level = 2" },
         { "action": "wait", "ms": 100 }
@@ -101,9 +101,9 @@
       "kind": "hard-rule",
       "description": "同侧互斥选择",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "const cards = window.gameTest.getCards(); const leftCards = cards.filter(c => c.side === 'left' && !c.matched); if(leftCards.length >= 2) { window.gameTest.selectCard(leftCards[0].id); window.gameTest.selectCard(leftCards[1].id); }" },
+        { "action": "eval", "code": "const cards = window.gameTest.observers.getCards(); const leftCards = cards.filter(c => c.side === 'left' && !c.matched); if(leftCards.length >= 2) { window.gameTest.drivers.selectCard(leftCards[0].id); window.gameTest.drivers.selectCard(leftCards[1].id); }" },
         { "action": "wait", "ms": 100 }
       ],
       "expect": {

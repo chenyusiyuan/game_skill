@@ -84,7 +84,7 @@
       "kind": "hard-rule",
       "description": "禁止全屏自动索敌",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.verifyNoGlobalAutoaim && window.gameTest.verifyNoGlobalAutoaim()" }
+        { "action": "eval", "code": "window.gameTest.observers.verifyNoGlobalAutoaim && window.gameTest.observers.verifyNoGlobalAutoaim()" }
       ]
     },
     {
@@ -102,7 +102,7 @@
       "kind": "hard-rule",
       "description": "禁止穿透攻击",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.verifyNoPenetration && window.gameTest.verifyNoPenetration()" }
+        { "action": "eval", "code": "window.gameTest.observers.verifyNoPenetration && window.gameTest.observers.verifyNoPenetration()" }
       ]
     },
     {
@@ -120,21 +120,21 @@
       "kind": "hard-rule",
       "description": "禁止做成其他类型 - 并触发完整游戏流程以收集trace",
       "setup": [
-        { "action": "eval", "code": "window.gameTest.clickStartButton && window.gameTest.clickStartButton()" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickStartButton && window.gameTest.drivers.clickStartButton()" },
         { "action": "wait", "ms": 1500 },
-        { "action": "eval", "code": "window.gameTest.clickPigInWaitSlot && window.gameTest.clickPigInWaitSlot(0)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInWaitSlot && window.gameTest.drivers.clickPigInWaitSlot(0)" },
         { "action": "wait", "ms": 8000 },
-        { "action": "eval", "code": "window.gameTest.clickPigInWaitSlot && window.gameTest.clickPigInWaitSlot(1)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInWaitSlot && window.gameTest.drivers.clickPigInWaitSlot(1)" },
         { "action": "wait", "ms": 8000 },
-        { "action": "eval", "code": "window.gameTest.clickPigInWaitSlot && window.gameTest.clickPigInWaitSlot(2)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInWaitSlot && window.gameTest.drivers.clickPigInWaitSlot(2)" },
         { "action": "wait", "ms": 8000 },
-        { "action": "eval", "code": "window.gameTest.clickPigInWaitSlot && window.gameTest.clickPigInWaitSlot(3)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInWaitSlot && window.gameTest.drivers.clickPigInWaitSlot(3)" },
         { "action": "wait", "ms": 8000 },
-        { "action": "eval", "code": "window.gameTest.clickPigInWaitSlot && window.gameTest.clickPigInWaitSlot(4)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInWaitSlot && window.gameTest.drivers.clickPigInWaitSlot(4)" },
         { "action": "wait", "ms": 8000 },
-        { "action": "eval", "code": "window.gameTest.clickPigInWaitSlot && window.gameTest.clickPigInWaitSlot(5)" },
+        { "action": "eval", "code": "window.gameTest.drivers.clickPigInWaitSlot && window.gameTest.drivers.clickPigInWaitSlot(5)" },
         { "action": "wait", "ms": 25000 },
-        { "action": "eval", "code": "window.gameTest.forceLose && window.gameTest.forceLose()" },
+        { "action": "eval", "code": "window.gameTest.drivers.forceLose && window.gameTest.drivers.forceLose()" },
         { "action": "wait", "ms": 500 },
         { "action": "eval", "code": "const gs = window.gameState; gs.blocks && Array.isArray(gs.blocks)" }
       ]
