@@ -1,7 +1,7 @@
 contract-version: 1
 runtime:
   engine: dom-ui
-  run-mode: file
+  run-mode: local-http
 boot:
   entry-scene: start
   ready-condition: window.gameState.phase === 'ready'
@@ -188,5 +188,7 @@ verification:
     - required-local-assets-loaded
     - required-local-assets-consumed
   required-test-hooks:
-    - clickStartButton
+    observers: [getSnapshot, getTrace, getAssetUsage, getGameState, getPigsOnTrack, getBlocks, getWaitSlots]
+    drivers: [clickStartButton, clickWaitSlot, dispatchPig]
+    probes: [resetWithScenario, resetPig, stepTicks]
   report-policy: verifier-json-only

@@ -27,6 +27,7 @@ import {
   isRuntimeBacked,
   isEngineEnforced,
   apisFor,
+  applicablePrimitivesFor,
   parseEsmImports,
   isPrimitivesImport,
 } from "./_primitive_runtime_map.js";
@@ -375,12 +376,13 @@ function checkPrimitiveImplementationCoverage(sourceBlob) {
   }
 }
 
-// P1.4: 所有引擎必须 import 且调用对应的 primitive runtime API。
-// 只校验 mechanics.yaml 中出现且已有 P1.1 runtime wrapper 的 primitive。
+// P1.4: enrolled engines must import and call applicable primitive runtime APIs.
+// 只校验 mechanics.yaml 中出现、已有 runtime wrapper、且适用于当前 engine 的 primitive。
 function checkRuntimePrimitiveImports(c, businessSrc) {
   const engine = String(c.runtime?.engine ?? "").toLowerCase();
+  const applicable = applicablePrimitivesFor(engine);
   if (!isEngineEnforced(engine)) {
-    ok(`[runtime] 引擎=${engine || "<未指定>"} 不在 enforced 列表，跳过 runtime primitive import 校验`);
+    ok(`[runtime] 引擎=${engine || "<未指定>"} 尚未纳入 runtime primitive contract，跳过 runtime primitive import 校验`);
     return;
   }
   if (!existsSync(mechanicsPath)) {
@@ -395,14 +397,21 @@ function checkRuntimePrimitiveImports(c, businessSrc) {
   }
   const nodes = Array.isArray(mech.mechanics) ? mech.mechanics : [];
   const required = new Set();
+  const skipped = new Set();
   for (const node of nodes) {
-    if (node?.primitive && isRuntimeBacked(node.primitive)) {
+    if (!node?.primitive || !isRuntimeBacked(node.primitive)) continue;
+    if (applicable.has(node.primitive)) {
       required.add(node.primitive);
+    } else {
+      skipped.add(node.primitive);
     }
   }
   if (required.size === 0) {
-    ok("[runtime] 本 case mechanics 未引用任何 runtime-backed primitive，跳过");
+    ok(`[runtime] 本 case mechanics 未引用 ${engine} 适用的 runtime-backed primitive，跳过`);
     return;
+  }
+  if (skipped.size > 0) {
+    ok(`[runtime] engine=${engine} 跳过 ${skipped.size} 个不适用 primitive: ${[...skipped].sort().join(", ")}`);
   }
 
   const imports = parseEsmImports(businessSrc).filter((i) =>
@@ -449,7 +458,7 @@ function checkRuntimePrimitiveImports(c, businessSrc) {
     );
   }
   if (missingImport.length === 0 && missingCall.length === 0) {
-    ok(`[runtime] runtime primitive import 完整：全部 ${required.size} 个 runtime-backed primitive 均已 import + 调用`);
+    ok(`[runtime] runtime primitive import 完整：全部 ${required.size} 个适用 runtime-backed primitive 均已 import + 调用`);
   }
 }
 

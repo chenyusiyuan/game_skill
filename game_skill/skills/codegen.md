@@ -23,8 +23,8 @@ description: "Phase 4: 代码生成。读取 GamePRD 的 runtime，经 reference
 - 必须暴露 `window.gameState`（Playwright 验证桥，见 verify-hooks.md）
 - **必须在每条 `@rule` 触发时产出 `window.__trace` 证据**（T3 硬约束）：
   - 初始化时 `window.__trace = window.__trace || [];`
-  - canvas / pixijs / phaser3 的 primitive-backed rule 必须把 `rule` / `node` 传给 `_common/primitives/*.runtime.mjs`，由 runtime 自动 push `{ primitive, rule, node, before, after }`
-  - dom-ui / three 过渡期、以及非 primitive 规则，才允许在执行 effect 后手写：`window.__trace.push({ rule: "<rule-id>", before: {...}, after: {...}, t: Date.now() });`
+  - canvas / pixijs / phaser3 的全部 primitive-backed rule，以及 dom-ui 的逻辑/资源/状态/生命周期 primitive，必须把 `rule` / `node` 传给 `_common/primitives/*.runtime.mjs`，由 runtime 自动 push `{ primitive, rule, node, before, after }`
+  - three 过渡期、dom-ui 暂不适用的空间/运动 primitive、以及非 primitive 规则，才允许在执行 effect 后手写：`window.__trace.push({ rule: "<rule-id>", before: {...}, after: {...}, t: Date.now() });`
   - `before` / `after` 至少包含 `event-graph.yaml` 里 `rule-traces.<rule-id>.actions` 声明的 `subject.field` 值
   - 目的：`check_playthrough.js` 用 trace 覆盖率（≥80%）判定玩法是否真的跑起来，profile 不再承担 expect
 - **不得静默删除** `must-have-features`
@@ -42,8 +42,8 @@ has been blocked by CORS policy
 
 因此不能把“单文件”当成所有引擎的统一硬规则。当前默认是：
 
-- 轻量 `dom-ui` / 简单 `canvas`：`run-mode=file`
-- `phaser3` / `pixijs`：`run-mode=local-http`
+- 简单 `canvas`、且不需要 runtime primitive import 的纯静态 `dom-ui`：`run-mode=file`
+- `phaser3` / `pixijs` / primitive-backed `dom-ui`：`run-mode=local-http`
 - 复杂 DOM / Canvas 项目：也允许升级到 `local-http`
 
 `local-http` 可通过 `python3 -m http.server` 或临时静态服务器解决模块加载问题，同时保留多文件工程结构。
@@ -89,7 +89,8 @@ RUNTIME=$(grep "^runtime:" docs/game-prd.md | head -1 | awk '{print $2}')
 2. `_index.json.default-run-mode`
 3. 兜底默认：
    - `phaser3` / `pixijs` / `three` → `local-http`
-   - `canvas` / `dom-ui` → `file`
+   - `dom-ui` → `local-http`（primitive-backed 模板默认）
+   - `canvas` → `file`
 
 ### Step 2：multi_read 引擎规范 + template
 
@@ -205,7 +206,7 @@ RUNTIME=$(grep "^runtime:" docs/game-prd.md | head -1 | awk '{print $2}')
 cp -R ${SKILL_DIR}/references/${ENGINE_TEMPLATE}/. game/
 
 # 共享层（含 primitives runtime）拷进 game/src/_common/；
-# canvas / pixijs / phaser3 业务代码通过 './_common/...' 或 '../_common/...' import
+# canvas / pixijs / phaser3 / dom-ui(local-http) 业务代码通过 './_common/...' 或 '../_common/...' import
 mkdir -p game/src/_common
 cp -R ${SKILL_DIR}/references/engines/_common/. game/src/_common/
 
@@ -330,7 +331,7 @@ window.__assetUsage = window.__assetUsage || [];
 
 **codegen 的职责**：
 1. **保留**模板中已有的 `window.__trace` / `window.__assetUsage` 初始化，不要删除
-2. **不手写** `window.__trace.push(...)` —— 由 `_common/primitives/*.runtime.mjs` 自动推送（canvas/pixijs/phaser3）；dom-ui/three 过渡期仍需手写
+2. **不手写**适用 primitive 的 `window.__trace.push(...)` —— 由 `_common/primitives/*.runtime.mjs` 自动推送（canvas/pixijs/phaser3 全量；dom-ui 逻辑/资源/状态/生命周期子集）；three 过渡期与 dom-ui 空间/运动 primitive 仍需手写
 3. **填充** `window.gameTest.drivers` 的具体方法，映射到真实 UI 操作：
    ```js
    window.gameTest.drivers = {
@@ -361,15 +362,17 @@ window.__assetUsage = window.__assetUsage || [];
 - [ ] `window.gameTest.drivers` 至少有 `clickStartButton`
 - [ ] `window.gameTest.probes.resetWithScenario` 已实现（不是 console.warn stub）
 
-### Step 4.0.6：强制 import primitive runtime（P1-1 新增；canvas + pixijs + phaser3）
+### Step 4.0.6：强制 import primitive runtime（P1-1 新增；canvas + pixijs + phaser3 + dom-ui 子集）
 
 `specs/mechanics.yaml` 里引用的每个 primitive 都对应一个 **浏览器 runtime 模块**，位于
 `${SKILL_DIR}/references/engines/_common/primitives/` 并由 Step 4 的
 `cp -R _common/. game/src/_common/` 一并同步到 `game/src/_common/primitives/`。
-业务代码（canvas / pixijs / phaser3）**必须**从该库 import 对应 API，
-**禁止**再手写 ray-cast / resource-consume / predicate-match / fsm-transition /
-win-lose-check / score-accum / parametric-track / grid-step / grid-board /
-neighbor-query 的实现。
+业务代码（canvas / pixijs / phaser3 全量；dom-ui 适用子集）**必须**从该库 import
+对应 API。canvas / pixijs / phaser3 **禁止**再手写 ray-cast /
+resource-consume / predicate-match / fsm-transition / win-lose-check /
+score-accum / parametric-track / grid-step / grid-board / neighbor-query 的实现。
+dom-ui 只强制纯逻辑层 primitive；空间/运动类 primitive 因 DOM 节点布局没有统一
+positional 语义，暂不纳入强制 runtime。
 
 **runtime 映射表**（`engines/_common/primitives/index.mjs` 聚合导出）：
 
@@ -385,6 +388,19 @@ neighbor-query 的实现。
 | `fsm-transition@v1` | `fireTrigger(ctx)` | `fsm-transition.reducer.mjs` |
 | `win-lose-check@v1` | `checkWinLose(ctx)` | `win-lose-check.reducer.mjs` |
 | `score-accum@v1` | `accumulateScore(ctx)` | `score-accum.reducer.mjs` |
+| `slot-pool@v1` | `bindSlot(ctx)` / `unbindSlot(ctx)` | `slot-pool.reducer.mjs` |
+| `capacity-gate@v1` | `requestCapacity(ctx)` / `releaseCapacity(ctx)` | `capacity-gate.reducer.mjs` |
+| `entity-lifecycle@v1` | `transitionLifecycle(ctx)` | `entity-lifecycle.reducer.mjs` |
+| `cooldown-dispatch@v1` | `requestDispatch(ctx)` | `cooldown-dispatch.reducer.mjs` |
+
+**engine-aware 适用表**（`check_implementation_contract.js` 从
+`scripts/_primitive_runtime_map.js` 读取，不允许写 if-else 魔数）：
+
+| engine | mandatory primitive runtime |
+|---|---|
+| `canvas` / `pixijs` / `phaser3` | 上表全部 primitive |
+| `dom-ui` | `predicate-match@v1` / `resource-consume@v1` / `fsm-transition@v1` / `win-lose-check@v1` / `score-accum@v1` / `slot-pool@v1` / `capacity-gate@v1` / `entity-lifecycle@v1` / `cooldown-dispatch@v1` |
+| `three` | 过渡期整引擎豁免，Deliverable C 只纳入逻辑层子集 |
 
 **调用约定**：
 
@@ -451,8 +467,10 @@ function onPigTickIntoSegment(pig) {
 
 **LLM 不再负责**：primitive 内部算法、trace 推送、before/after 快照。
 
-**引擎例外**：dom-ui / three 过渡期允许不 import runtime；等后续 runtime
-适配做完再纳入。canvas / pixijs / phaser3 无例外。
+**引擎例外**：three 过渡期允许不 import runtime；Deliverable C 会改成只豁免
+空间几何 primitive。dom-ui 已纳入逻辑层 mandatory runtime，只有
+`parametric-track@v1` / `ray-cast@v1` / `grid-step@v1` / `grid-board@v1` /
+`neighbor-query@v1` 暂不适用。canvas / pixijs / phaser3 无例外。
 
 ### Step 4.1：识别需要的通用系统模块
 
@@ -876,7 +894,7 @@ node game_skill/skills/scripts/check_asset_usage.js   cases/{slug}/
 
 | runtime | 必须做的事 |
 |---|---|
-| dom-ui | 单向 state→render，禁止事件处理直接改 DOM；轻量项目默认 `run-mode=file` |
+| dom-ui | 单向 state→render，禁止事件处理直接改 DOM；primitive-backed 模板默认 `run-mode=local-http`；无 runtime import 的纯静态页才可 `file` |
 | canvas | `update(state, dt)` 与 `draw(ctx, state)` 严格分离；简单项目默认 `run-mode=file` |
 | phaser3 | 默认 `run-mode=local-http`；CDN pin `phaser@3`；`window.game` 暴露；Container 交互必须 `setSize` 或显式 hitArea |
 | pixijs | 默认 `run-mode=local-http`；`await app.init()`；`app.canvas` 非 `app.view` |
@@ -886,13 +904,14 @@ node game_skill/skills/scripts/check_asset_usage.js   cases/{slug}/
 
 这些规则来自 mechanics 层，不是可选建议。**canvas / pixijs / phaser3** 上这些规则由
 `_common/primitives/*.runtime.mjs` runtime 库强制实现，业务代码只做 wiring（见 §4.0.6）；
-其它引擎仍由 LLM 手写（过渡期）。
+**dom-ui** 上逻辑/资源/状态/生命周期 primitive 也必须走 runtime，空间/运动 primitive
+仍由业务代码按 DOM 布局手写并保留 trace 证据；three 仍在过渡期。
 
 - `parametric-track.shape=rect-loop`：画棋盘四周的直角闭环。Canvas 禁用 `ctx.arc()` 画轨道；DOM/Phaser/Pixi 禁用圆形 path 代替外圈。
 - `parametric-track + grid-projection`：每个运动 agent 必须维护 `gridPosition`，并随 `t/segmentId` 更新。canvas/pixijs/phaser3 用 `tickTrack({ agent, dt, params })` 推进。
 - `ray-cast.coord-system=grid`：射线从 `source.gridPosition + direction` 开始逐格扫描；禁止只根据 `segmentId` 从整行/整列固定起点扫。canvas/pixijs/phaser3 必须 `import { rayCastGridFirstHit } from './_common/primitives/index.mjs'`（或 `'../_common/...'`），禁止手写扫描循环。
-- `predicate-match(fields:[color])`：ray-cast 只返回第一个阻挡候选，颜色匹配在 predicate 层做；禁止先全局找同色块再攻击。canvas/pixijs/phaser3 必须用 `predicateMatch({ left, right, params })`。
-- `resource-consume`：扣除 `agent-field` 与 `target-field` 后再发事件，不能只改视觉。canvas/pixijs/phaser3 必须用 `consumeResource({ agent, target, params })`，禁止手写 `agent.ammo--`。
+- `predicate-match(fields:[color])`：ray-cast 只返回第一个阻挡候选，颜色匹配在 predicate 层做；禁止先全局找同色块再攻击。canvas/pixijs/phaser3/dom-ui 必须用 `predicateMatch({ left, right, params })`。
+- `resource-consume`：扣除 `agent-field` 与 `target-field` 后再发事件，不能只改视觉。canvas/pixijs/phaser3/dom-ui 必须用 `consumeResource({ agent, target, params })`，禁止手写 `agent.ammo--`。
 - DOM UI：只初始化静态 shell 一次，tick 中做 keyed update；禁止在 `setInterval` / `requestAnimationFrame` 中整页 `innerHTML = ...`，否则会闪烁和丢事件绑定。
 - Phaser/Pixi：首屏必须真实可见，StartScene/入口要有标题或开始按钮，点击后进入 playing；不能只创建空 canvas 等待测试 hook。
 - Phaser：任何 `Container` 绑定 `pointerdown` 前必须 `setSize(w,h)` 或显式 `setInteractive(hitArea, callback)`。禁止对由 `createXxx()` 返回的 Container 在调用方直接 `setInteractive({ useHandCursor: true })`，因为真实点击会出现 hitAreaCallback 错误或无响应。

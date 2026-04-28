@@ -115,8 +115,8 @@ cases/{project-slug}/
 
 运行模式规则：
 
-- `dom-ui`、轻量 `canvas`：默认 `RUN: file`
-- `phaser3`、`pixijs`：默认 `RUN: local-http`
+- 轻量 `canvas`、且不需要 runtime primitive import 的纯静态 `dom-ui`：可用 `RUN: file`
+- `phaser3`、`pixijs`、primitive-backed `dom-ui`：默认 `RUN: local-http`
 - 复杂 DOM / Canvas 项目也**允许**切到 `RUN: local-http`
 
 约束含义：

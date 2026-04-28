@@ -1558,6 +1558,32 @@ console.log("\n[P1.1 full] engines/_common/primitives: 聚合导出与 smoke 测
     }
   });
 
+  test("fireTrigger: reducer state 字段对齐，ready → playing", () => {
+    const fakeWindow = {};
+    const saved = globalThis.window;
+    globalThis.window = fakeWindow;
+    try {
+      const next = idx.fireTrigger({
+        rule: "start-game",
+        node: "phase-fsm",
+        currentState: "ready",
+        trigger: "click-start",
+        params: {
+          initial: "ready",
+          states: ["ready", "playing"],
+          transitions: [{ from: "ready", on: "click-start", to: "playing" }],
+        },
+      });
+      assert(next === "playing", `应切到 playing，实际 ${next}`);
+      const ev = fakeWindow.__trace.at(-1);
+      assert(ev.primitive === "fsm-transition@v1");
+      assert(ev.after.currentState === "playing");
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
   test("tickTrack: 推进 t 并在 segment 切换时 push trace", () => {
     const fakeWindow = {};
     const saved = globalThis.window;
@@ -1602,15 +1628,43 @@ console.log("\n[P1.4] _primitive_runtime_map: parseEsmImports + isPrimitivesImpo
     isRuntimeBacked,
     apisFor,
     isEngineEnforced,
+    applicablePrimitivesFor,
   } = await import("../_primitive_runtime_map.js");
 
-  test("isEngineEnforced: all supported engines → true；空 engine → false", () => {
+  test("isEngineEnforced: enrolled engines → true；three/空 engine → false", () => {
     assert(isEngineEnforced("canvas"), "canvas enforced");
     assert(isEngineEnforced("pixijs"), "pixijs enforced");
     assert(isEngineEnforced("phaser3"), "phaser3 enforced");
     assert(isEngineEnforced("dom-ui"), "dom-ui enforced");
-    assert(isEngineEnforced("three"), "three enforced");
+    assert(!isEngineEnforced("three"), "three not yet enforced until 3D gap audit");
     assert(!isEngineEnforced(""), "空 engine not enforced");
+  });
+
+  test("applicablePrimitivesFor: dom-ui 只强制逻辑/资源/状态/生命周期子集", () => {
+    const dom = applicablePrimitivesFor("dom-ui");
+    for (const p of [
+      "predicate-match@v1",
+      "resource-consume@v1",
+      "fsm-transition@v1",
+      "win-lose-check@v1",
+      "score-accum@v1",
+      "slot-pool@v1",
+      "capacity-gate@v1",
+      "entity-lifecycle@v1",
+      "cooldown-dispatch@v1",
+    ]) {
+      assert(dom.has(p), `dom-ui should enforce ${p}`);
+    }
+    for (const p of [
+      "parametric-track@v1",
+      "ray-cast@v1",
+      "grid-step@v1",
+      "grid-board@v1",
+      "neighbor-query@v1",
+    ]) {
+      assert(!dom.has(p), `dom-ui should not enforce ${p}`);
+    }
+    assert(applicablePrimitivesFor("phaser3").has("ray-cast@v1"), "phaser3 keeps full set");
   });
 
   test("isRuntimeBacked + apisFor 覆盖所有 P1.1 + P1.2 primitive", () => {
@@ -2610,7 +2664,7 @@ console.log("\n[P0+P1 集成] mini-pixel-flow: visual-primitive + runtime import
   test("集成: --stage codegen — runtime import 校验通过", () => {
     const out = (codegenCheck.stdout || "") + (codegenCheck.stderr || "");
     assert(
-      /\[runtime\].*全部 3 个 runtime-backed primitive 均已 import \+ 调用/.test(out),
+      /\[runtime\].*全部 3 个(?:适用 )?runtime-backed primitive 均已 import \+ 调用/.test(out),
       `应报 3 个 runtime import ok\n${out}`,
     );
   });

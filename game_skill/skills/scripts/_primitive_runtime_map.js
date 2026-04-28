@@ -5,15 +5,16 @@
  * to the runtime API function names business code must import.
  *
  * Consumed by:
- *   - check_implementation_contract.js (P1.4 gate: canvas/pixijs must import these)
+ *   - check_implementation_contract.js (P1.4 gate: enrolled engines must import these)
  *   - future codegen tooling that materializes the runtime wiring
  *
  * Engine scope:
- *   All engines in ENFORCED_ENGINES must import runtime primitives.
- *   The runtime wrappers in engines/_common/primitives/ are engine-agnostic (pure JS + trace push).
+ *   Runtime wrappers are engine-agnostic (pure JS + trace push), but not every
+ *   primitive is semantically applicable to every renderer. DOM UI has no
+ *   native positional canvas/world model, so only logic/resource/state/lifecycle
+ *   primitives are mandatory there. Spatial/motion primitives stay handwritten
+ *   until an engine-specific runtime exists.
  */
-
-export const ENFORCED_ENGINES = Object.freeze(["canvas", "pixijs", "phaser3", "phaser", "dom-ui", "dom", "three"]);
 
 /**
  * Keys are primitive ids as they appear in mechanics.yaml.
@@ -40,6 +41,38 @@ export const PRIMITIVE_RUNTIME_API = Object.freeze({
   "cooldown-dispatch@v1": ["requestDispatch"],
 });
 
+export const FULL_RUNTIME_PRIMITIVES = Object.freeze(Object.keys(PRIMITIVE_RUNTIME_API));
+
+export const DOM_UI_RUNTIME_PRIMITIVES = Object.freeze([
+  "predicate-match@v1",
+  "resource-consume@v1",
+  "fsm-transition@v1",
+  "win-lose-check@v1",
+  "score-accum@v1",
+  "slot-pool@v1",
+  "capacity-gate@v1",
+  "entity-lifecycle@v1",
+  "cooldown-dispatch@v1",
+]);
+
+/**
+ * Data-table for engine-aware primitive applicability.
+ *
+ * canvas/pixijs/phaser3 run 2D game loops with explicit geometry and can use
+ * the full P1 runtime set. dom-ui only enforces pure logic/resource/progression
+ * and lifecycle primitives; geometry/motion remain business-code specific.
+ * three is intentionally absent until the 3D gap audit enrolls its logic subset.
+ */
+export const ENGINE_RUNTIME_PRIMITIVES = Object.freeze({
+  canvas: FULL_RUNTIME_PRIMITIVES,
+  pixijs: FULL_RUNTIME_PRIMITIVES,
+  pixi: FULL_RUNTIME_PRIMITIVES,
+  phaser3: FULL_RUNTIME_PRIMITIVES,
+  phaser: FULL_RUNTIME_PRIMITIVES,
+  "dom-ui": DOM_UI_RUNTIME_PRIMITIVES,
+  dom: DOM_UI_RUNTIME_PRIMITIVES,
+});
+
 /**
  * Primitive ids for which the runtime library is available in P1.1.
  * Used by callers to distinguish "enforced" vs "still LLM-hand-written" primitives.
@@ -57,7 +90,16 @@ export function apisFor(primitiveId) {
 }
 
 export function isEngineEnforced(engine) {
-  return ENFORCED_ENGINES.includes(String(engine || "").toLowerCase());
+  return applicablePrimitivesFor(engine).size > 0;
+}
+
+export function applicablePrimitivesFor(engine) {
+  const key = String(engine || "").toLowerCase();
+  return new Set(ENGINE_RUNTIME_PRIMITIVES[key] ?? []);
+}
+
+export function isPrimitiveApplicableToEngine(primitiveId, engine) {
+  return applicablePrimitivesFor(engine).has(primitiveId);
 }
 
 /**

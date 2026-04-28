@@ -242,6 +242,27 @@ edges:
     event: input.click-next
     label: "进入下一关"
 
+rule-traces:
+  - rule-id: conveyor-capacity
+    primitive-node-ref: conveyor-capacity
+    actions:
+      - subject: conveyor
+        field: activeCount
+  - rule-id: match-attack
+    primitive-node-ref: attack-raycast
+    actions:
+      - subject: pig
+        field: gridPosition
+      - subject: ray
+        field: returnedHits
+  - rule-id: match-attack-hit
+    primitive-node-ref: attack-consume
+    actions:
+      - subject: pig
+        field: ammo
+      - subject: block
+        field: hp
+
 # ============ 异步边界 ============
 # codegen 必须在这些点加锁/解锁，防止状态混乱
 async-boundaries:

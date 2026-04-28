@@ -10,7 +10,7 @@
  * 必须在 head 里 import fx 的 CSS（见 `ensureStyles`，首次调用时自动注入）。
  */
 
-import { resolveFxParams } from "../../../_common/fx.spec.js";
+import { resolveFxParams } from "../_common/fx.spec.js";
 
 const STYLE_ID = "__fx_styles";
 const CSS = `

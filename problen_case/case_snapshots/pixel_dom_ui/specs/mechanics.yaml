@@ -94,7 +94,7 @@ mechanics:
   # ============ 位置依赖索敌 ============
   - node: attack-raycast
     primitive: ray-cast@v1
-    trigger-on: [track.enter-segment]
+    trigger-on: [track.attack-position]
     params:
       source: { from: pig }
       coord-system: grid

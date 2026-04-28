@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<!-- ENGINE: dom-ui | VERSION: tailwind-v4 | RUN: file -->
+<!-- ENGINE: dom-ui | VERSION: tailwind-v4 | RUN: local-http -->
 <meta charset="UTF-8">
 <title>DOM Template Game</title>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
@@ -9,12 +9,33 @@
 <body class="bg-slate-50 min-h-screen flex items-center justify-center">
   <div id="app" class="max-w-xl w-full mx-auto p-6"></div>
 
-  <script>
-    // Default run mode for dom-ui is file, so this template keeps logic inline.
-    // If the game grows large, you can switch the marker to `RUN: local-http`
-    // and split the code into ./src/*.js modules.
+  <script type="module">
+    // Primitive-backed DOM UI uses local-http because browser ESM imports
+    // ./src/_common/primitives/*.mjs and game/mechanics/*.reducer.mjs.
+    import {
+      accumulateScore,
+      checkWinLose,
+      fireTrigger,
+    } from './src/_common/primitives/index.mjs';
 
     // ===== state =====
+    const PHASE_FSM_PARAMS = {
+      initial: "ready",
+      states: ["ready", "playing", "win", "lose"],
+      transitions: [
+        { from: "ready", on: "click-start", to: "playing" },
+        { from: "playing", on: "finish-win", to: "win" },
+        { from: "playing", on: "finish-lose", to: "lose" },
+        { from: "win", on: "retry", to: "ready" },
+        { from: "lose", on: "retry", to: "ready" },
+      ],
+    };
+    const SCORE_PARAMS = { rules: [{ on: "input.score", delta: 1 }] };
+    const WIN_LOSE_PARAMS = {
+      win: [{ kind: "score-reaches", field: "score", threshold: 3 }],
+      lose: [],
+    };
+
     const state = {
       phase: "ready",           // ready | playing | win | lose
       score: 0,
@@ -41,7 +62,13 @@
             </button>
           </div>`;
         document.getElementById("btn-start").onclick = () => {
-          state.phase = "playing";
+          state.phase = fireTrigger({
+            rule: "start-game",
+            node: "phase-fsm",
+            currentState: state.phase,
+            trigger: "click-start",
+            params: PHASE_FSM_PARAMS,
+          });
           render();
         };
       } else if (state.phase === "playing") {
@@ -51,8 +78,41 @@
             <button id="btn-score" class="px-4 py-2 bg-emerald-600 text-white rounded">+1</button>
             <button id="btn-win" class="px-4 py-2 bg-slate-200 rounded">End</button>
           </div>`;
-        document.getElementById("btn-score").onclick = () => { state.score += 1; render(); };
-        document.getElementById("btn-win").onclick = () => { state.phase = "win"; render(); };
+        document.getElementById("btn-score").onclick = () => {
+          state.score = accumulateScore({
+            rule: "score-click",
+            node: "scoring",
+            currentScore: state.score,
+            eventPayload: "input.score",
+            params: SCORE_PARAMS,
+          });
+          const verdict = checkWinLose({
+            rule: "score-click",
+            node: "end-check",
+            state: { fields: { score: state.score } },
+            params: WIN_LOSE_PARAMS,
+          });
+          if (verdict === "win") {
+            state.phase = fireTrigger({
+              rule: "score-click",
+              node: "phase-fsm",
+              currentState: state.phase,
+              trigger: "finish-win",
+              params: PHASE_FSM_PARAMS,
+            });
+          }
+          render();
+        };
+        document.getElementById("btn-win").onclick = () => {
+          state.phase = fireTrigger({
+            rule: "finish-game",
+            node: "phase-fsm",
+            currentState: state.phase,
+            trigger: "finish-win",
+            params: PHASE_FSM_PARAMS,
+          });
+          render();
+        };
       } else {
         app.innerHTML = `
           <div class="text-center space-y-4">
@@ -61,7 +121,13 @@
             <button id="btn-retry" class="px-6 py-3 bg-sky-600 text-white rounded-lg">Retry</button>
           </div>`;
         document.getElementById("btn-retry").onclick = () => {
-          state.phase = "ready";
+          state.phase = fireTrigger({
+            rule: "retry-game",
+            node: "phase-fsm",
+            currentState: state.phase,
+            trigger: "retry",
+            params: PHASE_FSM_PARAMS,
+          });
           state.score = 0;
           render();
         };

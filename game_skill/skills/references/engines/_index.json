@@ -40,7 +40,7 @@
       "name": "DOM + Tailwind v4",
       "version-pin": "@tailwindcss/browser@4",
       "current-stable": "4.x",
-      "default-run-mode": "file",
+      "default-run-mode": "local-http",
       "template": "engines/dom/template/",
       "guide": "engines/dom/guide.md",
       "best-fit": ["规则问答型", "剧情互动型", "教育练习型"],

@@ -10,7 +10,7 @@ const DEFAULT_RUN_MODE_BY_ENGINE = {
   pixijs: "local-http",
   three: "local-http",
   canvas: "file",
-  "dom-ui": "file",
+  "dom-ui": "local-http",
 };
 
 const MIME_TYPES = {

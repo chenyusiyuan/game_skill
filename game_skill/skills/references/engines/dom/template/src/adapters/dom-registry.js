@@ -10,7 +10,8 @@
  *   el.style.backgroundImage = `url(${url})`;
  */
 
-import { validateManifest, buildStats } from "../../../_common/registry.spec.js";
+import { validateManifest, buildStats } from "../_common/registry.spec.js";
+import { recordAssetUsage } from "../_common/asset-usage.js";
 
 export async function createRegistry(manifest) {
   const { ok, errors } = validateManifest(manifest);
@@ -18,6 +19,9 @@ export async function createRegistry(manifest) {
 
   const base = manifest.basePath || "";
   const entries = new Map();
+  const manifestImageById = new Map((manifest.images ?? []).map((it) => [it.id, it]));
+  const manifestSheetById = new Map((manifest.spritesheets ?? []).map((it) => [it.id, it]));
+  const manifestAudioById = new Map((manifest.audio ?? []).map((it) => [it.id, it]));
 
   for (const item of manifest.images ?? []) {
     let url = null;
@@ -41,27 +45,31 @@ export async function createRegistry(manifest) {
   }
 
   return {
-    getTexture(id) {
+    getTexture(id, extra = null) {
       // DOM 没有 "texture" 概念。保持接口一致性返回 HTMLImageElement。
       const e = entries.get(id);
       if (!e || !e.url) { console.warn(`[registry] missing id: ${id}`); return null; }
       const img = new Image();
       img.src = e.url;
+      recordAssetUsage({ id, section: "images", kind: "texture", manifestItem: manifestImageById.get(id), extra });
       return img;
     },
-    getTextureUrl(id) {
+    getTextureUrl(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
+      recordAssetUsage({ id, section: "images", kind: "texture-url", manifestItem: manifestImageById.get(id), extra });
       return e.url ?? null;
     },
-    getSpritesheet(id) {
+    getSpritesheet(id, extra = null) {
       const e = entries.get(id);
       if (!e) return null;
+      recordAssetUsage({ id, section: "spritesheets", kind: "spritesheet", manifestItem: manifestSheetById.get(id), extra });
       return { url: e.url, frameWidth: e.frameWidth, frameHeight: e.frameHeight };
     },
-    getAudio(id) {
+    getAudio(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
+      recordAssetUsage({ id, section: "audio", kind: "audio", manifestItem: manifestAudioById.get(id), extra });
       if (e.kind === "audio-url") return new Audio(e.url);
       if (e.kind === "synth-meta") return { synthParams: e.value };
       return null;

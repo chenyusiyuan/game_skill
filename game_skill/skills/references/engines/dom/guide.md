@@ -26,20 +26,22 @@ description: "DOM + Tailwind v4 引擎规范。适用于规则问答型 / 剧情
 
 ## 最小骨架代码
 
-**默认 file 模式：**
+**primitive-backed 默认 local-http 模式：**
 
 ```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<!-- ENGINE: dom-ui | VERSION: tailwind-v4 | RUN: file -->
+<!-- ENGINE: dom-ui | VERSION: tailwind-v4 | RUN: local-http -->
 <meta charset="UTF-8">
 <title>{GAME_TITLE}</title>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-slate-50 min-h-screen">
   <div id="app" class="max-w-xl mx-auto p-6"></div>
-  <script>
+  <script type="module">
+    import { accumulateScore } from './src/_common/primitives/index.mjs';
+
     const state = { phase: "ready", score: 0 };
     window.gameState = state;
     const app = document.getElementById("app");
@@ -47,9 +49,19 @@ description: "DOM + Tailwind v4 引擎规范。适用于规则问答型 / 剧情
     function render() {
       app.innerHTML = state.phase === "ready"
         ? '<button id="btn-start">开始</button>'
-        : `<div>score: ${state.score}</div>`;
+        : `<div>score: ${state.score}</div><button id="btn-score">+1</button>`;
       document.getElementById("btn-start")?.addEventListener("click", () => {
         state.phase = "playing";
+        render();
+      });
+      document.getElementById("btn-score")?.addEventListener("click", () => {
+        state.score = accumulateScore({
+          rule: "score-click",
+          node: "scoring",
+          currentScore: state.score,
+          eventPayload: "input.score",
+          params: { rules: [{ on: "input.score", delta: 1 }] },
+        });
         render();
       });
     }
@@ -60,11 +72,11 @@ description: "DOM + Tailwind v4 引擎规范。适用于规则问答型 / 剧情
 </html>
 ```
 
-**升级到 local-http 时：**
+**纯静态展示且没有 runtime-backed mechanics 时，可保留 file 模式：**
 
 ```html
-<!-- ENGINE: dom-ui | VERSION: tailwind-v4 | RUN: local-http -->
-<script type="module" src="./src/main.js"></script>
+<!-- ENGINE: dom-ui | VERSION: tailwind-v4 | RUN: file -->
+<script>/* inline classic script only; do not import local modules in file mode */</script>
 ```
 
 ## LLM 易错点
@@ -74,7 +86,7 @@ description: "DOM + Tailwind v4 引擎规范。适用于规则问答型 / 剧情
 | 写成 React/Vue | 本模板是纯 vanilla JS |
 | 在事件处理里直接拼 DOM 补丁 | 一律走 `mutate(state); render();` |
 | 忘记 `window.gameState` | 必须暴露 |
-| `run-mode=file` 还用本地 module src | 要么内联，要么切 `local-http` |
+| `run-mode=file` 还用本地 module src | primitive runtime 需要 `RUN: local-http`；file 模式只能内联 classic script |
 | 混用 Tailwind v3 的 `@apply` | v4 浏览器 CDN 只用 utility class |
 | 每次 render() 用 innerHTML 全量重建后直接查 DOM | **先绑定事件再操作**（见下方说明） |
 | querySelector 获取元素后 render() 导致引用失效 | **动画期间禁止触发 render()**（见下方说明） |
