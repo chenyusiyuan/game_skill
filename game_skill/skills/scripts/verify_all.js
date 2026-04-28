@@ -36,6 +36,8 @@ const checks = [];
 console.log(`verify_all: ${caseDir}`);
 
 runCheck("mechanics", ["check_mechanics.js", caseDir]);
+runCheck("asset_selection", ["check_asset_selection.js", caseDir, ...logArgs()]);
+runCheck("implementation_contract", ["check_implementation_contract.js", caseDir, "--stage", "codegen", ...logArgs()]);
 runCheck("boot", ["check_game_boots.js", gameDir, ...logArgs()]);
 runCheck("project", ["check_project.js", gameDir, ...logArgs()]);
 

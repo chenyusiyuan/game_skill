@@ -318,13 +318,12 @@ function checkPrimitiveImplementationCoverage(sourceBlob) {
   }
 }
 
-// P1.4: canvas / pixijs 引擎必须 import 且调用对应的 primitive runtime API。
-// 只校验 mechanics.yaml 中出现且已有 P1.1 runtime wrapper 的 primitive；
-// 其它引擎（phaser / dom-ui / three）过渡期跳过，不 fail。
+// P1.4: 所有引擎必须 import 且调用对应的 primitive runtime API。
+// 只校验 mechanics.yaml 中出现且已有 P1.1 runtime wrapper 的 primitive。
 function checkRuntimePrimitiveImports(c, businessSrc) {
   const engine = String(c.runtime?.engine ?? "").toLowerCase();
   if (!isEngineEnforced(engine)) {
-    ok(`[runtime] 引擎=${engine || "<未指定>"} 非 canvas/pixijs，跳过 runtime primitive import 校验`);
+    ok(`[runtime] 引擎=${engine || "<未指定>"} 不在 enforced 列表，跳过 runtime primitive import 校验`);
     return;
   }
   if (!existsSync(mechanicsPath)) {

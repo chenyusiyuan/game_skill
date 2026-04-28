@@ -9,11 +9,11 @@
  *   - future codegen tooling that materializes the runtime wiring
  *
  * Engine scope:
- *   P1 only enforces runtime imports on engines in ENFORCED_ENGINES.
- *   Others remain in transition (LLM hand-writes, until P2 lands per-engine runtimes).
+ *   All engines in ENFORCED_ENGINES must import runtime primitives.
+ *   The runtime wrappers in engines/_common/primitives/ are engine-agnostic (pure JS + trace push).
  */
 
-export const ENFORCED_ENGINES = Object.freeze(["canvas", "pixijs"]);
+export const ENFORCED_ENGINES = Object.freeze(["canvas", "pixijs", "phaser3", "phaser", "dom-ui", "dom", "three"]);
 
 /**
  * Keys are primitive ids as they appear in mechanics.yaml.
