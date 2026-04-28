@@ -131,6 +131,9 @@ packs:
     format: glb
     description: "方块风格角色（多种职业/外观）"
     suitable-genres: [all-3d]
+    semantic-tags: [character, player, npc, lowpoly-character]
+    allowed-slots: [color-unit, colored-unit, character]
+    disallowed-slots: [color-block, terrain-cell]
     total-models: 18
     naming: "语义文件名"
     preview: models/blocky-characters/Preview.png
@@ -366,6 +369,9 @@ packs:
     format: glb
     description: "带骨骼动画的主角（characterMedium.glb 为网格，idle/jump/run.glb 为动画剪辑）+ 4 套皮肤贴图 PNG"
     suitable-genres: [platform-physics, 3d-exploration, 3d-racing]
+    semantic-tags: [character, protagonist, animated-character]
+    allowed-slots: [color-unit, colored-unit, character]
+    disallowed-slots: [color-block, terrain-cell]
     total-models: 4
     naming: "语义文件名"
     preview: models/animated-protagonists/Preview.png
@@ -377,6 +383,9 @@ packs:
     format: glb
     description: "带骨骼动画的幸存者/僵尸角色（characterMedium.glb 为网格，idle/jump/run.glb 为动画剪辑）+ 4 套皮肤贴图 PNG"
     suitable-genres: [3d-exploration, strategy-battle]
+    semantic-tags: [character, survivor, enemy, animated-character]
+    allowed-slots: [color-unit, colored-unit, character]
+    disallowed-slots: [color-block, terrain-cell]
     total-models: 4
     naming: "语义文件名"
     preview: models/animated-survivors/Preview.png

@@ -1177,6 +1177,65 @@ test("family 标注合法 asset → 不误伤", () => {
     `合法 binding 不应触发 allowed-slots 冲突:\n${r.stdout}`);
 });
 
+test("pack-level disallowed-slots 命中 → fail", () => {
+  const caseDir = join(tmp, "p05-pack-disallow");
+  mkdirSync(join(caseDir, "docs"), { recursive: true });
+  writeFileSync(join(caseDir, "docs/game-prd.md"), [
+    "---",
+    'game-aprd: "0.1"',
+    "project: p05-pack",
+    "platform: [web]",
+    "runtime: canvas",
+    "is-3d: false",
+    "mode: 单机",
+    "language: zh-CN",
+    "asset-strategy:",
+    "  mode: library-first",
+    `  rationale: "${"角色包只能绑定角色/颜色单位，不能伪装成地形格。".repeat(1)}"`,
+    "  visual-core-entities: [hero]",
+    "  visual-peripheral: []",
+    "  style-coherence: { level: flexible }",
+    "color-scheme:",
+    "  palette-id: pixel-retro",
+    "---",
+    "## 1. 项目概述",
+    "### @game(main) P05 Pack",
+    "> genre: platform-physics",
+    "> platform: [web]",
+    "> runtime: canvas",
+    "> mode: 单机",
+    "> core-loop: test",
+    "> player-goal: test",
+    "",
+    "## 6. 状态与实体",
+    "### @entity(hero) Hero",
+    "> type: unit",
+  ].join("\n"));
+  mkdirSync(join(caseDir, "specs"), { recursive: true });
+  writeFileSync(join(caseDir, "specs/assets.yaml"), [
+    "color-scheme:",
+    "  palette-id: pixel-retro",
+    "genre: platform-physics",
+    "images:",
+    "  - id: hero-wrong-terrain",
+    "    source: assets/library_2d/sprites/platformer-pixel/tile_0000.png",
+    "    type: local-file",
+    "    binding-to: hero",
+    "    visual-primitive: terrain-cell",
+    "audio: []",
+    "spritesheets: []",
+    "fonts: []",
+    "selection-report:",
+    "  candidate-packs: [sprites-platformer-pixel]",
+    "  local-file-ratio: { images: 1/1 }",
+    "  fallback-reasons: []",
+  ].join("\n"));
+  const r = run([join(scriptsDir, "check_asset_selection.js"), caseDir]);
+  assert(r.status !== 0, `pack-level disallowed-slots 命中应 fail，实际 exit=${r.status}\n${r.stdout}`);
+  assert(/pack "sprites-platformer-pixel".*disallowed-slots/.test(r.stdout),
+    `错误信息应指向 pack-level disallowed-slots:\n${r.stdout}`);
+});
+
 // =============================
 // P0.2: _runtime_probes — ray-cast probe 集合 + trace 语义复算
 // =============================

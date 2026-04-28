@@ -157,6 +157,21 @@ function isLocalFileItem(item, section) {
   return normalizeAssetType(item, section) === "local-file";
 }
 
+function readSlotList(obj, key) {
+  return Array.isArray(obj?.[key]) ? obj[key].map((v) => String(v)) : [];
+}
+
+function validateSlotConstraint({ id, sec, source, packId, vp, scope, label, constraint }) {
+  const disallowed = readSlotList(constraint, "disallowed-slots");
+  if (disallowed.includes(vp)) {
+    fail(`[${sec}.${id}] source "${source}" 属于 pack "${packId}" 的 ${scope} "${label}" (disallowed-slots=${disallowed.join(",")})，不能用作 visual-primitive="${vp}"`);
+  }
+  const allowed = readSlotList(constraint, "allowed-slots");
+  if (allowed.length > 0 && !allowed.includes(vp)) {
+    fail(`[${sec}.${id}] source "${source}" 属于 pack "${packId}" 的 ${scope} "${label}" (allowed-slots=${allowed.join(",")})，与声明的 visual-primitive="${vp}" 不符`);
+  }
+}
+
 // ── 1. 载入 assets.yaml ─────────────────────────────────────────
 if (!existsSync(assetsYamlPath)) {
   fail(`specs/assets.yaml 不存在`);
@@ -302,30 +317,40 @@ for (const sec of sections) {
         continue;
       }
       const pack = packById.get(packId);
-      // P0.5: family-level allowed/disallowed-slots 语义冲突检测
-      //   pack 可声明 families: [{pattern, allowed-slots, disallowed-slots}]；
-      //   若 source 命中某 family 的 glob pattern，且该 asset 声明的
-      //   visual-primitive 出现在 disallowed-slots 中，则 fail。
-      //   这层用于挡"素材和玩法语义彻底不匹配"的错配，例如把 dungeon tile
-      //   绑到 pig 单位上，或把 ui-panel 的面板九宫格绑到 button。
+      // P0.5: pack/family-level allowed/disallowed-slots 语义冲突检测。
+      //   pack 可声明 allowed-slots / disallowed-slots 作为整包默认；
+      //   families 可对命中的 glob pattern 做更细约束。family 与 pack
+      //   两层都会生效，用于挡"素材和玩法语义彻底不匹配"的错配。
       const families = Array.isArray(pack?.families) ? pack.families : [];
-      if (families.length > 0) {
-        const vp = String(item["visual-primitive"] ?? "");
-        if (vp) {
-          for (const fam of families) {
-            const pat = String(fam?.pattern ?? "");
-            if (!pat || !matchFamilyPattern(item.source, pat)) continue;
-            const disallowed = Array.isArray(fam["disallowed-slots"]) ? fam["disallowed-slots"] : [];
-            if (disallowed.includes(vp)) {
-              fail(`[${sec}.${id}] source "${item.source}" 属于 pack "${packId}" 的 family "${pat}" (disallowed-slots=${disallowed.join(",")})，不能用作 visual-primitive="${vp}"`);
-            }
-            const allowed = Array.isArray(fam["allowed-slots"]) ? fam["allowed-slots"] : [];
-            if (allowed.length > 0 && !allowed.includes(vp)) {
-              fail(`[${sec}.${id}] source "${item.source}" 属于 pack "${packId}" 的 family "${pat}" (allowed-slots=${allowed.join(",")})，与声明的 visual-primitive="${vp}" 不符`);
-            }
-            // 一条 source 只匹配第一个命中的 family
-            break;
-          }
+      const vp = String(item["visual-primitive"] ?? "");
+      if (vp) {
+        if (readSlotList(pack, "allowed-slots").length > 0 || readSlotList(pack, "disallowed-slots").length > 0) {
+          validateSlotConstraint({
+            id,
+            sec,
+            source: item.source,
+            packId,
+            vp,
+            scope: "pack",
+            label: packId,
+            constraint: pack,
+          });
+        }
+        for (const fam of families) {
+          const pat = String(fam?.pattern ?? "");
+          if (!pat || !matchFamilyPattern(item.source, pat)) continue;
+          validateSlotConstraint({
+            id,
+            sec,
+            source: item.source,
+            packId,
+            vp,
+            scope: "family",
+            label: pat,
+            constraint: fam,
+          });
+          // 一条 source 只匹配第一个命中的 family
+          break;
         }
       }
       // c) asset-style 匹配（3D catalog 通常无 suitable-styles，因此自然跳过）

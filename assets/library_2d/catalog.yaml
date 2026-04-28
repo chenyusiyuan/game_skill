@@ -245,7 +245,45 @@ packs:
     # ui-pixel tile 文件编号按段分语义：面板九宫格/按钮/深色面板/心/进度条 等
     # glob 不支持数字区间，所以按通配整个 ui-pixel/*.png 保守声明
     families:
+      # tile_0013-0021 是按钮段；精确列出，避免误把同包面板/数字也归为按钮
+      - pattern: "assets/library_2d/ui-pixel/tile_0013.png"
+        semantic-tags: [button, ui-control]
+        allowed-slots: [ui-button, button]
+        disallowed-slots: [color-block, target-block, color-unit, terrain-cell]
+      - pattern: "assets/library_2d/ui-pixel/tile_0014.png"
+        semantic-tags: [button, ui-control]
+        allowed-slots: [ui-button, button]
+        disallowed-slots: [color-block, target-block, color-unit, terrain-cell]
+      - pattern: "assets/library_2d/ui-pixel/tile_0015.png"
+        semantic-tags: [button, ui-control]
+        allowed-slots: [ui-button, button]
+        disallowed-slots: [color-block, target-block, color-unit, terrain-cell]
+      - pattern: "assets/library_2d/ui-pixel/tile_0016.png"
+        semantic-tags: [button, ui-control]
+        allowed-slots: [ui-button, button]
+        disallowed-slots: [color-block, target-block, color-unit, terrain-cell]
+      - pattern: "assets/library_2d/ui-pixel/tile_0017.png"
+        semantic-tags: [button, ui-control]
+        allowed-slots: [ui-button, button]
+        disallowed-slots: [color-block, target-block, color-unit, terrain-cell]
+      - pattern: "assets/library_2d/ui-pixel/tile_0018.png"
+        semantic-tags: [button, ui-control]
+        allowed-slots: [ui-button, button]
+        disallowed-slots: [color-block, target-block, color-unit, terrain-cell]
+      - pattern: "assets/library_2d/ui-pixel/tile_0019.png"
+        semantic-tags: [button, ui-control]
+        allowed-slots: [ui-button, button]
+        disallowed-slots: [color-block, target-block, color-unit, terrain-cell]
+      - pattern: "assets/library_2d/ui-pixel/tile_0020.png"
+        semantic-tags: [button, ui-control]
+        allowed-slots: [ui-button, button]
+        disallowed-slots: [color-block, target-block, color-unit, terrain-cell]
+      - pattern: "assets/library_2d/ui-pixel/tile_0021.png"
+        semantic-tags: [button, ui-control]
+        allowed-slots: [ui-button, button]
+        disallowed-slots: [color-block, target-block, color-unit, terrain-cell]
       - pattern: "assets/library_2d/ui-pixel/tile_*.png"
+        semantic-tags: [ui-pixel-mixed]
         disallowed-slots: [color-block, color-unit, terrain-cell]
 
   # ═══════════════════════════════════════════════════════════
@@ -320,6 +358,9 @@ packs:
     description: "像素平台角色（18px 小像素人，4色变体）"
     suitable-styles: [pixel-retro]
     suitable-genres: [platform-physics]
+    semantic-tags: [character, player, enemy, pixel-avatar]
+    allowed-slots: [color-unit, colored-unit, character]
+    disallowed-slots: [color-block, terrain-cell]
     preview: sprites/platformer-pixel/_preview.png
     tilemap: sprites/platformer-pixel/_tilemap.png
     index: sprites/platformer-pixel/_index.yaml
@@ -402,6 +443,7 @@ packs:
     description: "像素地牢瓦片（16px）：地板、墙壁、门、宝箱、角色、怪物、道具、陷阱、装饰"
     suitable-styles: [pixel-retro, dark-neon]
     suitable-genres: [board-grid, strategy-battle, narrative]
+    semantic-tags: [dungeon, terrain, floor, wall, prop]
     preview: tiles/dungeon/_preview.png
     sample: tiles/dungeon/_sample.png
     tilemap: tiles/dungeon/_tilemap.png    # 12列×11行网格
@@ -418,8 +460,9 @@ packs:
     # P0.5 family → slot 约束：dungeon tile 只能作为地形/背景，禁止承担色块 / 色单位 / 按钮
     families:
       - pattern: "assets/library_2d/tiles/dungeon/tile_*.png"
-        allowed-slots: [terrain-cell, background]
-        disallowed-slots: [color-block, color-unit, ui-button, ui-panel]
+        semantic-tags: [dungeon-tile, terrain, background-tile]
+        allowed-slots: [terrain-cell, background, background-tile]
+        disallowed-slots: [color-block, target-block, color-unit, ui-button, button, ui-panel]
 
   - id: tiles-town
     path: tiles/town/
@@ -489,6 +532,9 @@ packs:
     description: "Roguelike 角色精灵表（单张大图，需 16x16 slice）"
     suitable-styles: [pixel-retro, dark-neon]
     suitable-genres: [board-grid, strategy-battle]
+    semantic-tags: [character, enemy, roguelike-unit]
+    allowed-slots: [color-unit, colored-unit, character]
+    disallowed-slots: [color-block, terrain-cell]
     preview: tiles/roguelike-characters/_preview.png
     format: spritesheet
     file: spritesheet.png
