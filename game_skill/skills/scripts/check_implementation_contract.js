@@ -30,6 +30,7 @@ import {
   parseEsmImports,
   isPrimitivesImport,
 } from "./_primitive_runtime_map.js";
+import { selectApplicableProbes } from "./_runtime_probes.js";
 
 const args = process.argv.slice(2);
 const caseDir = resolve(args[0] ?? ".");
@@ -61,6 +62,7 @@ if (bypassAssets) {
 const contract = readYaml(contractPath, "implementation-contract");
 const sceneSpec = readYaml(scenePath, "scene");
 const assetsSpec = (bypassAssets && !existsSync(assetsPath)) ? {} : readYaml(assetsPath, "assets");
+const mechanicsSpec = readOptionalYaml(mechanicsPath, "mechanics");
 
 if (!contract || !sceneSpec || (!bypassAssets && !assetsSpec)) finish();
 
@@ -89,6 +91,16 @@ function readYaml(path, label) {
   }
 }
 
+function readOptionalYaml(path, label) {
+  if (!existsSync(path)) return null;
+  try {
+    return yaml.load(readFileSync(path, "utf-8")) ?? {};
+  } catch (e) {
+    warn(`${label} YAML 解析失败，跳过依赖该文件的过渡校验: ${e.message}`);
+    return null;
+  }
+}
+
 function checkContractShape(c) {
   if (c["contract-version"] !== 1) fail("contract-version 必须为 1");
   else ok("contract-version = 1");
@@ -112,6 +124,51 @@ function checkContractShape(c) {
   if (!c["engine-lifecycle"]?.["asset-loading"]) fail("engine-lifecycle.asset-loading 缺失");
   if (!Array.isArray(c.verification?.["required-runtime-evidence"])) {
     fail("verification.required-runtime-evidence 必须是数组");
+  }
+  checkRequiredTestHooks(c, mechanicsSpec);
+}
+
+function checkRequiredTestHooks(c, mechanics) {
+  const hooks = c.verification?.["required-test-hooks"];
+  // 扁平 string[] 是 B1 过渡期兼容格式，死线 2026-06-01 起改为 fail。
+  const DEPRECATED_FLAT_DEADLINE = "2026-06-01";
+  const flatDeadline = new Date(DEPRECATED_FLAT_DEADLINE);
+  const now = new Date();
+  if (Array.isArray(hooks)) {
+    if (now >= flatDeadline) {
+      fail(`verification.required-test-hooks 仍使用旧 string[] 扁平格式；deprecated 死线 ${DEPRECATED_FLAT_DEADLINE} 已过，必须迁移到 observers/drivers/probes 三桶对象`);
+    } else {
+      warn(`verification.required-test-hooks 使用旧 string[] 扁平格式；deprecated-flat-test-hooks，请在 ${DEPRECATED_FLAT_DEADLINE} 前迁移到 observers/drivers/probes`);
+    }
+    log.entry({
+      type: "deprecated-flat-test-hooks",
+      phase: "verify",
+      step: "implementation-contract",
+      script: "check_implementation_contract.js",
+      deadline: DEPRECATED_FLAT_DEADLINE,
+      enforced: now >= flatDeadline,
+      hooks,
+    });
+    if (now >= flatDeadline) return;
+    return;
+  }
+  if (!hooks || typeof hooks !== "object") {
+    fail("verification.required-test-hooks 必须是 observers/drivers/probes 三桶对象（旧 string[] 仅过渡 warning）");
+    return;
+  }
+  const buckets = ["observers", "drivers", "probes"];
+  for (const bucket of buckets) {
+    if (!Array.isArray(hooks[bucket])) {
+      fail(`verification.required-test-hooks.${bucket} 必须是数组`);
+    }
+  }
+  if (buckets.every((bucket) => Array.isArray(hooks[bucket]))) {
+    ok(`required-test-hooks 三桶齐全: observers=${hooks.observers.length}, drivers=${hooks.drivers.length}, probes=${hooks.probes.length}`);
+  }
+
+  const applicable = mechanics ? selectApplicableProbes(mechanics) : [];
+  if (applicable.length > 0 && Array.isArray(hooks.probes) && !hooks.probes.includes("resetWithScenario")) {
+    fail(`missing-probe-for-runtime-semantics: mechanics 匹配 ${applicable.length} 个 runtime probe，但 required-test-hooks.probes 缺 resetWithScenario`);
   }
 }
 
