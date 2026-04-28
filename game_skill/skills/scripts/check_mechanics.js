@@ -82,6 +82,8 @@ if (errors.length) finish(1);
 checkShape(mech);
 checkInvariantMappings(mech);
 checkGridTrackShape(mech);
+checkAttackTriggerGranularity(mech);
+checkTriggerPayloadCompat(mech, reducers);
 checkConstraintCoverage(mech, caseDir);
 checkPerNodeStatic(mech, reducers);
 checkSpecPrimitiveRefs(mech, caseDir, reducers);
@@ -95,11 +97,16 @@ let anyWin = false;
 for (const sc of scenarios) {
   console.log(`  · scenario: ${sc.name}`);
   const result = runScenario(mech, sc, reducers);
-  if (result.outcome === sc["expected-outcome"]) {
-    ok(`    outcome=${result.outcome} 符合 expected`);
-    if (result.outcome === "win") anyWin = true;
+  const expected = sc["expected-outcome"];
+  const actual = result.outcome;
+  const matches = actual === expected
+    || (expected === "none" && actual == null)
+    || (expected == null && actual == null);
+  if (matches) {
+    ok(`    outcome=${actual ?? "<none>"} 符合 expected`);
+    if (actual === "win") anyWin = true;
   } else {
-    fail(`    outcome=${result.outcome ?? "<none>"} 不等于 expected=${sc["expected-outcome"]} (ticks=${result.ticks})`);
+    fail(`    outcome=${actual ?? "<none>"} 不等于 expected=${expected} (ticks=${result.ticks})`);
   }
   // 对每个 mechanics node 都跑一次 reducer.checkInvariants：
   //   - 有 history  → 拿 history 跑动态不变式
@@ -191,6 +198,77 @@ function checkGridTrackShape(m) {
   );
   if (goodTracks.length > 0) {
     ok(`grid-track-shape: ${goodTracks.length} 条 grid-projection track 使用 rect-loop`);
+  }
+}
+
+/**
+ * 攻击触发粒度检查：当 ray-cast@v1 使用 coord-system:grid 且其 source 来自
+ * parametric-track@v1（带 grid-projection），攻击触发事件不能是 track.enter-segment。
+ * 
+ * enter-segment 每圈只触发 4 次（换段时），而 attack-position 每经过一个格对齐位就触发一次。
+ * 使用 enter-segment 会导致攻击频率远低于预期，游戏不可玩。
+ */
+function checkAttackTriggerGranularity(m) {
+  const nodes = m.mechanics || [];
+  // 找到所有使用 grid-projection 的 parametric-track 节点
+  const gridTracks = nodes.filter(n =>
+    n.primitive === "parametric-track@v1" &&
+    (n.params?.["grid-projection"] || n.params?.gridProjection)
+  );
+  if (gridTracks.length === 0) return;
+
+  // 找到所有 ray-cast 节点，检查其 trigger-on 是否使用了 enter-segment
+  const rayCasts = nodes.filter(n =>
+    n.primitive === "ray-cast@v1" &&
+    n.params?.["coord-system"] === "grid"
+  );
+  for (const rc of rayCasts) {
+    const triggers = rc["trigger-on"] || [];
+    if (triggers.includes("track.enter-segment")) {
+      fail(`attack-trigger-granularity[${rc.node}]: ray-cast(coord-system:grid) 的 trigger-on 使用了 track.enter-segment，这只在段切换时触发（每圈 4 次）。应改用 track.attack-position（每格对齐位触发一次），否则攻击频率严重不足`);
+    }
+  }
+}
+
+/**
+ * 通用 trigger-on payload 兼容性检查。
+ * 
+ * 对于每个 event-driven 节点（有 trigger-on），检查其 trigger-on 事件
+ * 的 payload 是否满足该节点 reducer 的 resolveAction 需求。
+ *
+ * 已知的 payload 需求（从 reducer .md Event Interface Contract 提取）：
+ * - resource-consume@v1: 需要 ev.left/ev.agent + ev.right/ev.target（双实体）
+ * - ray-cast@v1: 需要 ev.agent 或 ev.source（含坐标）
+ * - predicate-match@v1: 需要 ev.source/ev.agent + ev.targets[]/ev.right
+ * - score-accum@v1: 只需 ev.type 匹配 rules[].on
+ */
+function checkTriggerPayloadCompat(m, reducers) {
+  const nodes = m.mechanics || [];
+
+  // 已知需要双实体 payload 的 primitives
+  const needsBothEntities = new Set([
+    "resource-consume@v1",
+  ]);
+
+  // 已知只产出单实体 payload 的事件
+  const singleEntityEvents = new Set([
+    "track.enter-segment",
+    "track.attack-position",
+    "track.loop-complete",
+    "grid.moved",
+    "grid.blocked",
+  ]);
+
+  for (const n of nodes) {
+    const triggers = n["trigger-on"] || [];
+    if (triggers.length === 0) continue;
+    const pid = n.primitive;
+
+    for (const evt of triggers) {
+      if (needsBothEntities.has(pid) && singleEntityEvents.has(evt)) {
+        fail(`trigger-payload-compat[${n.node}]: ${pid} 需要 ev.agent + ev.target 双实体 payload，但 trigger-on "${evt}" 只携带单实体。应改为监听 match.hit 等双实体事件`);
+      }
+    }
   }
 }
 

@@ -57,3 +57,26 @@ on-release:[<action-id>, ...]   # release 时派发
 - **禁止**把 capacity-gate 与 slot-pool 混用：前者管"同时活跃计数"，后者管"固定位置占用"。
   一个 pixel-flow 场景里两者都用：等待区是 slot-pool（4 个固定位置），赛道是 capacity-gate
   （同时最多 1 只）。
+
+## Event Interface Contract
+
+### As Consumer (trigger-on)
+| 事件 | 必须携带的 payload | 来源示例 |
+|---|---|---|
+| `capacity.request` | `{ entityId }` | cooldown-dispatch@v1（`dispatch.fired` downstream）/ slot-pool@v1（`pool.unbound` 后触发） |
+| `capacity.release` | `{ entityId }` | entity-lifecycle@v1（`lifecycle.entered` with `to: dead`）|
+
+> `resolveAction` 将 `capacity.request` 映射为 `{ type: 'request', entityId }`，将 `capacity.release` 映射为 `{ type: 'release', entityId }`。
+
+### As Producer (produces-events)
+| 事件 | 携带的 payload | 典型下游 |
+|---|---|---|
+| `capacity.admitted` | `{ entityId }` | entity-lifecycle@v1（transition to `active`）|
+| `capacity.blocked` | `{ entityId }` | UI 反馈（如提示"赛道已满"）/ cooldown-dispatch 的 rejected 处理 |
+| `capacity.released` | `{ entityId }` | 可触发等待队列中下一个 entity 的 `capacity.request` |
+
+### DAG Wiring Rules
+- ✅ 正确接法：`cooldown-dispatch.fired` → `capacity-gate.request` → `capacity.admitted` → `entity-lifecycle.transition(active)`
+- ✅ 正确接法：`entity-lifecycle.entered(dead)` → `capacity-gate.release` → `capacity.released`
+- ❌ 常见接错：release 一个不在 active 列表中的 entityId——虽然是 noop 但说明上游 wiring 有误
+- ❌ 常见接错：让 capacity-gate 管理固定位置占用——位置占用应交给 slot-pool，capacity-gate 只管计数

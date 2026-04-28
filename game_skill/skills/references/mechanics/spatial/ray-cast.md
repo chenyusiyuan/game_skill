@@ -71,3 +71,24 @@ max-distance: number | null
 - 全局 `blocks.find(b => b.color === pig.color)`（违反 source-dependency，这是 pixel-flow 类游戏的核心 bug）
 - 无视 alive 字段（必须过滤 alive=false）
 - 在 grid 模式下走 pixel 距离（必须走曼哈顿步数）
+
+## Event Interface Contract
+
+### As Consumer (trigger-on)
+| 事件 | 必须携带的 payload | 来源示例 |
+|---|---|---|
+| `query` (action) | `{ source, targets }` — 由 `resolveAction` 自动组装 | orchestrator |
+| 任意触发事件 | `ev.agent` 或 `ev.source` — 必须携带 `gridPosition`（`{ row, col }`）或 `position`（`{ x, y }`），`resolveAction` 从中取发射起点 | parametric-track@v1 的 `track.attack-position`（`ev.agent` 含 `gridPosition`） |
+
+### As Producer (produces-events)
+| 事件 | 携带的 payload | 典型下游 |
+|---|---|---|
+| `ray.hit-candidate` | `{ source, targets: [...], distances: [...] }` — `targets` 为命中的 cell 数组（按距离升序），`distances` 为对应步数 | predicate-match@v1（判定同色等条件）、resource-consume@v1（扣血） |
+| `ray.miss` | `{ source }` | UI 反馈（空挥动画） |
+
+### DAG Wiring Rules
+- ✅ 正确接法：上游 `track.attack-position` → `ray-cast`；`resolveAction(node, ev, state)` 从 `ev.agent || ev.source` 取 source，要求该对象含 `gridPosition`（grid 模式）或 `position`（pixel 模式）。`parametric-track` 产出的 `track.attack-position` 的 `agent` 快照恰好带有这些字段
+- ✅ 正确接法：`node.params.targets.from` 引用 `grid-board` 的 cells 集合名，`resolveAction` 从 `state.collections[targetsRef]` 读取最新 alive targets
+- ❌ 常见接错：上游事件缺少 `ev.agent` 和 `ev.source` 字段——`resolveAction` 返回 `null`，orchestrator 将跳过此节点，不产生任何射线判定
+- ❌ 常见接错：`ev.agent` 存在但没有 `gridPosition` 也没有 `position`——`pickGridPoint` 返回 `null`，grid 模式下 `castGrid` 不执行，结果永远是 `ray.miss`
+- ❌ 常见接错：让 `ray-cast` 监听 `track.enter-segment` 而非 `track.attack-position`——前者每段只触发一次，大量格点会被跳过

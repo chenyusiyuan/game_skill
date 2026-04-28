@@ -1,0 +1,94 @@
+# 复合玩法 DAG 模板：传送带射击类（pixel-flow）
+# 适用 PRD 模式："传送带/轨道 + 棋盘/格子 + 射击/攻击 + 颜色匹配"
+#
+# 使用方法：mechanic-decomposer 识别到上述 PRD 模式时，
+# 读取此模板作为 DAG 骨架，替换 N/具体值后产出 mechanics.yaml。
+
+# --- DAG 骨架（7 节点） ---
+
+external-events: [input.click-pig, input.start, phase.playing]
+
+mechanics:
+  # 1. 运动层：tick-driven
+  - node: conveyor-track
+    primitive: parametric-track@v1
+    applies-to: pig
+    params:
+      shape: rect-loop
+      grid-projection: { rows: N, cols: N, outside-offset: 1 }
+      segments: [top, right, bottom, left]
+    produces-events: [track.enter-segment, track.attack-position, track.loop-complete]
+
+  # 2. 空间层：被动容器
+  - node: board
+    primitive: grid-board@v1
+    params: { rows: N, cols: N }
+
+  # 3. 攻击层：trigger-on attack-position（每格对齐位触发）
+  - node: attack-raycast
+    primitive: ray-cast@v1
+    trigger-on: [track.attack-position]
+    params:
+      coord-system: grid
+      direction.mode: normal-to-track
+      stop-on: first-hit
+    produces-events: [ray.hit-candidate, ray.miss]
+
+  # 4. 匹配层
+  - node: color-match
+    primitive: predicate-match@v1
+    trigger-on: [ray.hit-candidate]
+    params: { fields: [color], op: eq }
+    produces-events: [match.hit, match.miss]
+
+  # 5. 消耗层（命中后才扣弹药+方块耐久）
+  - node: attack-consume
+    primitive: resource-consume@v1
+    trigger-on: [match.hit]
+    params: { agent-field: pig.ammo, target-field: block.durability, amount: 1 }
+    produces-events: [resource.consumed, resource.agent-zero, resource.target-zero]
+
+  # 6. 得分层
+  - node: scoring
+    primitive: score-accum@v1
+    trigger-on: [resource.target-zero]
+
+  # 7. 胜负层（orchestrator 每 tick evaluate）
+  - node: end-check
+    primitive: win-lose-check@v1
+    params:
+      win: [{ kind: all-cleared, collection: blocks }]
+      lose: [{ kind: count-falls-below, collection: pigs, threshold: 1 }]
+
+# --- 事件流 ---
+# tick → conveyor-track → track.attack-position（每格对齐位）
+#   → attack-raycast → ray.hit-candidate
+#     → color-match → match.hit
+#       → attack-consume → resource.target-zero → scoring
+#       → attack-consume → resource.agent-zero（pig 弹药耗尽）
+#   → attack-raycast → ray.miss（无目标）
+# conveyor-track 另外产出 track.enter-segment（段切换）和 track.loop-complete（绕一圈）
+# 每 tick → end-check evaluate
+
+# --- simulation-scenario 参考 ---
+simulation-scenarios:
+  - name: happy-path-win
+    setup:
+      pigs:
+        - { id: p1, color: red, ammo: 3, t: 0, speed: 0.2, alive: true,
+            gridPosition: { row: -1, col: 0 } }
+      blocks:
+        - { id: b1, row: 0, col: 0, color: red, durability: 1, alive: true }
+    expected-outcome: win
+    max-ticks: 200
+
+  - name: mismatch-lose
+    setup:
+      pigs:
+        - { id: p1, color: red, ammo: 1, t: 0, speed: 0.2, alive: true,
+            gridPosition: { row: -1, col: 0 } }
+      blocks:
+        - { id: b1, row: 0, col: 0, color: blue, durability: 1, alive: true }
+    expected-outcome: none
+    max-ticks: 200
+    _note: "lose 依赖 entity-lifecycle 死亡链"

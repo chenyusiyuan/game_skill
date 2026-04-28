@@ -26,7 +26,7 @@ import { dirname } from "path";
 
 export const STATE_SCHEMA_VERSION = 1;
 
-const PHASE_NAMES = ["understand", "prd", "expand", "codegen", "verify"];
+const PHASE_NAMES = ["understand", "prd", "spec-clarify", "expand", "codegen", "verify"];
 // mechanics 是 Phase 3.0 产物（primitive DAG），排在其余 expanders 之前。
 // 它与 rule/event-graph 的关系：rule 和 event-graph 必须引用 mechanics.yaml 的 node id。
 const EXPAND_SUBTASKS = ["mechanics", "scene", "rule", "data", "assets", "event-graph", "implementation-contract"];
@@ -37,7 +37,7 @@ const EXPAND_SUBTASKS = ["mechanics", "scene", "rule", "data", "assets", "event-
 export function readState(filePath) {
   if (!existsSync(filePath)) return null;
   const raw = JSON.parse(readFileSync(filePath, "utf-8"));
-  if (raw.schemaVersion === STATE_SCHEMA_VERSION) return raw;
+  if (raw.schemaVersion === STATE_SCHEMA_VERSION) return normalizeV1(raw);
   return migrateLegacy(raw);
 }
 
@@ -74,6 +74,7 @@ export function initState({ project, runtime, visualStyle, deliveryTarget }) {
     phases: {
       understand: { status: "pending" },
       prd: { status: "pending" },
+      "spec-clarify": { status: "pending" },
       expand: {
         status: "pending",
         subtasks: Object.fromEntries(EXPAND_SUBTASKS.map(k => [k, { status: "pending" }])),
@@ -95,6 +96,7 @@ export function markPhase(state, phaseName, status, { error } = {}) {
   if (!PHASE_NAMES.includes(phaseName)) {
     throw new Error(`markPhase: unknown phase ${phaseName}`);
   }
+  assertPhaseAllowedByPlan(state, phaseName, status);
   const now = new Date().toISOString();
   const phase = { ...(state.phases?.[phaseName] ?? { status: "pending" }) };
   const prevStatus = phase.status;
@@ -132,6 +134,7 @@ export function markSubtask(state, subtaskName, status, { output, error } = {}) 
   if (!EXPAND_SUBTASKS.includes(subtaskName)) {
     throw new Error(`markSubtask: unknown subtask ${subtaskName}`);
   }
+  assertSubtaskAllowedByPlan(state, subtaskName, status);
   const now = new Date().toISOString();
   const expand = { ...(state.phases?.expand ?? {}) };
   const subtasks = { ...(expand.subtasks ?? {}) };
@@ -201,6 +204,41 @@ function nextPhaseAfter(name) {
   const idx = PHASE_NAMES.indexOf(name);
   if (idx < 0 || idx >= PHASE_NAMES.length - 1) return null;
   return PHASE_NAMES[idx + 1];
+}
+
+function normalizeV1(raw) {
+  const phases = { ...(raw.phases ?? {}) };
+  for (const p of PHASE_NAMES) {
+    phases[p] = phases[p] ?? { status: "pending" };
+  }
+  const expand = { ...(phases.expand ?? { status: "pending" }) };
+  const subtasks = { ...(expand.subtasks ?? {}) };
+  for (const k of EXPAND_SUBTASKS) {
+    subtasks[k] = subtasks[k] ?? { status: "pending" };
+  }
+  expand.subtasks = subtasks;
+  phases.expand = expand;
+  return { ...raw, phases };
+}
+
+function assertPhaseAllowedByPlan(state, phaseName, status) {
+  if (status !== "running" && status !== "completed") return;
+  const plan = state?.phasePlan;
+  if (!plan?.plannedPhases) return;
+  const planned = new Set(plan.plannedPhases);
+  if (planned.has(phaseName)) return;
+  if (phaseName === "expand" && planned.has("mechanics") && status === "running") return;
+  throw new Error(`phase boundary: mode=${plan.mode || "<unknown>"} does not allow phase '${phaseName}' status=${status}; hardStop=${plan.hardStop || "<none>"}`);
+}
+
+function assertSubtaskAllowedByPlan(state, subtaskName, status) {
+  if (status !== "running" && status !== "completed") return;
+  const plan = state?.phasePlan;
+  if (!plan?.plannedPhases) return;
+  const planned = new Set(plan.plannedPhases);
+  if (planned.has("expand")) return;
+  if (planned.has("mechanics") && subtaskName === "mechanics") return;
+  throw new Error(`phase boundary: mode=${plan.mode || "<unknown>"} does not allow expand subtask '${subtaskName}' status=${status}; hardStop=${plan.hardStop || "<none>"}`);
 }
 
 /**

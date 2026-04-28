@@ -64,3 +64,26 @@ on-overflow: [<action-id>, ...]             # 没有空槽时派发（默认 rej
 - 容器实现建议用数组 + id 查询，不要用 Map，方便序列化和快照复算。
 - **禁止**用 pool 保存 entity 的 runtime 数据（ammo/durability）——只保存 `occupantId`
   引用，数据仍存在 entity 自己的 `state.collections.<type>` 中。
+
+## Event Interface Contract
+
+### As Consumer (trigger-on)
+| 事件 | 必须携带的 payload | 来源示例 |
+|---|---|---|
+| `pool.request-bind` | `{ occupantId }` | entity-lifecycle@v1（`lifecycle.entered` with `to: waiting`）/ 初始化填充 |
+| `pool.request-unbind` | `{ occupantId, slotId? }` | cooldown-dispatch@v1（`dispatch.fired` 的 downstream）|
+
+> `resolveAction` 将 `pool.request-bind` 映射为 `{ type: 'bind', occupantId }`，将 `pool.request-unbind` 映射为 `{ type: 'unbind', occupantId, slotId }`。
+
+### As Producer (produces-events)
+| 事件 | 携带的 payload | 典型下游 |
+|---|---|---|
+| `pool.bound` | `{ occupantId, slotId }` | UI 更新槽位显示 / entity-lifecycle@v1 |
+| `pool.unbound` | `{ occupantId, slotId }` | capacity-gate@v1（`capacity.request`）/ entity-lifecycle@v1（transition to active） |
+| `pool.overflow` | `{ occupantId }` | UI 反馈（闪烁/提示）/ 通常 noop |
+
+### DAG Wiring Rules
+- ✅ 正确接法：`cooldown-dispatch.fired` → `pool.request-unbind` → `pool.unbound` → `capacity-gate.request`
+- ✅ 正确接法：`entity-lifecycle.entered(waiting)` → `pool.request-bind` → `pool.bound`
+- ❌ 常见接错：把 slot-pool 和 capacity-gate 混为一谈——slot-pool 管"固定位置占用"，capacity-gate 管"同时活跃计数"
+- ❌ 常见接错：unbind 时手动清零 entity 的 ammo/color——pool 只释放槽位，字段归零应由 resource-consume / entity-lifecycle 负责

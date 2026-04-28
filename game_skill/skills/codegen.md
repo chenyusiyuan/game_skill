@@ -310,6 +310,50 @@ exposeTestHooks({
 - `drivers`：把"一次真实用户输入"封装成函数调用（内部应派发 click/press/fill 或模拟等价事件），可被 playthrough profile 使用。
 - `probes`：把系统推入指定场景的裸 API（如 `resetWithScenario({board, pigs})` 直接设置状态、`stepTicks(n)` 固定推进 n 帧、`seedRng(n)` 固定种子）。**playthrough 不能调 probes**；只有 `check_runtime_semantics.js` 注入固定场景时用。
 
+### Step 4.0.5.1：模板已内置的校验桥（codegen 必须保留和扩展）
+
+引擎模板已经在 `state.js` / `index.html` 中内置了以下全局变量初始化：
+
+```js
+window.__trace = window.__trace || [];
+window.__assetUsage = window.__assetUsage || [];
+```
+
+以及在 `main.js` / `index.html` 中内置了 `window.gameTest` 的 stub 结构（含 observers/drivers/probes）。
+
+**codegen 的职责**：
+1. **保留**模板中已有的 `window.__trace` / `window.__assetUsage` 初始化，不要删除
+2. **不手写** `window.__trace.push(...)` —— 由 `_common/primitives/*.runtime.mjs` 自动推送（canvas/pixijs）；phaser/dom/three 过渡期仍需手写
+3. **填充** `window.gameTest.drivers` 的具体方法，映射到真实 UI 操作：
+   ```js
+   window.gameTest.drivers = {
+     clickStartButton: () => { /* 点击开始按钮的真实 DOM/Phaser/Pixi 操作 */ },
+     clickRetryButton: () => { /* 点击重试按钮 */ },
+   };
+   ```
+4. **实现** `window.gameTest.probes.resetWithScenario(scenario)` — 接收一个 scenario 对象（与 mechanics.yaml simulation-scenarios.setup 结构相同），将游戏状态重置到该场景：
+   ```js
+   window.gameTest.probes = {
+     resetWithScenario: (scenario) => {
+       // 清空当前棋盘/实体
+       // 按 scenario.pigs / scenario.blocks 重建
+       // 重置 score/phase
+       // 调用渲染刷新
+     },
+     stepTicks: (n) => {
+       // 强制推进 n 个 game tick（跳过 RAF）
+     },
+   };
+   ```
+5. **probes 不参与 playthrough profile** — 只有 `check_runtime_semantics.js` 使用；playthrough 调用 probes 会被反作弊拦截
+
+**检查清单**（codegen 完成后自检）：
+- [ ] `window.__trace` 在状态初始化后存在
+- [ ] `window.__assetUsage` 在状态初始化后存在
+- [ ] `window.gameTest.observers.getSnapshot()` 返回 gameState 深拷贝
+- [ ] `window.gameTest.drivers` 至少有 `clickStartButton`
+- [ ] `window.gameTest.probes.resetWithScenario` 已实现（不是 console.warn stub）
+
 ### Step 4.0.6：强制 import primitive runtime（P1-1 新增；canvas + pixijs）
 
 `specs/mechanics.yaml` 里引用的每个 primitive 都对应一个 **浏览器 runtime 模块**，位于

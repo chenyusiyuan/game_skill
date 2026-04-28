@@ -23,7 +23,31 @@ description: "Phase 5: 校验。分层预算：冒烟 ≤2 轮、工程侧 ≤3 
 node ${SKILL_DIR}/scripts/verify_all.js cases/${PROJECT} --profile ${PROJECT} --log ${LOG_FILE}
 ```
 
-`verify_all.js` 顺序运行 mechanics / boot / project / playthrough / compliance，并把真实退出码写进 report。任一脚本失败时 report.status 必须是 `failed`。主 agent、子 agent 或人工修复循环都不得手写绿色 `eval/report.json`。
+`verify_all.js` 顺序运行 mechanics / boot / project / playthrough / runtime_semantics / compliance，并把真实退出码写进 report。任一脚本失败时 report.status 必须是 `failed`。主 agent、子 agent 或人工修复循环都不得手写绿色 `eval/report.json`。
+
+## 两种验证模式
+
+Phase 5 必须先区分本轮是“分层诊断”还是“最终回归”：
+
+| mode | 触发语义 | 执行方式 | 失败处理 |
+|---|---|---|---|
+| `verify-layered` | 用户说逐层确认、先定位问题、不要端到端 | 按下方层级单独运行脚本 | 第一处失败即停，汇报原因和下一层未跑 |
+| `verify-e2e` / `full` | 用户要求最终交付、完整回归、正式验收 | 运行 `verify_all.js` | 可进入受预算约束的修复循环 |
+
+`verify-layered` 禁止直接运行 `verify_all.js`，也禁止在一个失败后自动改代码再继续跑下一层。它的目的不是“刷绿”，而是把问题明确归因到 mechanics / data / contract / runtime / playthrough 的哪一层。
+
+推荐分层顺序：
+
+1. 玩法语义：`check_mechanics.js`
+2. 数值可行性：读取 `specs/data.yaml balance-check` 并与代码关卡配置交叉核对
+3. Contract/素材：`check_implementation_contract.js`、`check_asset_selection.js`、`check_asset_usage.js`
+4. 冒烟：`check_game_boots.js`
+5. 工程：`check_project.js`
+6. 运行时语义：`check_runtime_semantics.js`
+7. 产品走通：`check_playthrough.js`
+8. 合规：`check_skill_compliance.js`
+
+只有 1-8 全部通过，才建议切到 `verify-e2e` 跑统一入口生成正式 report。
 
 ## 分层预算
 

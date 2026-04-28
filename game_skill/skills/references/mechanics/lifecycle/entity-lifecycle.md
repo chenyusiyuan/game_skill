@@ -63,3 +63,25 @@ on-enter-dead:      [...]
   （否则 check_runtime_semantics 会报 before/after 不匹配 reducer）。
 - `dead` 状态不清除 entity（回收归 grid-board / collection 的事）；只是标记该实例不再
   参与后续转移。
+
+## Event Interface Contract
+
+### As Consumer (trigger-on)
+| 事件 | 必须携带的 payload | 来源示例 |
+|---|---|---|
+| `lifecycle.event` | `{ entityId, event }` — `event` 对应 `transitions[].event`（如 `dispatched`、`exhausted`、`killed`、`arrived`） | capacity-gate@v1（`capacity.admitted` → event=`dispatched`）；resource-consume@v1（`resource.agent-zero` → event=`exhausted`/`killed`）；路径动画完成 → event=`arrived` |
+
+> `resolveAction` 将 `lifecycle.event` 映射为 `{ type: 'transition', entityId, event }`。
+
+### As Producer (produces-events)
+| 事件 | 携带的 payload | 典型下游 |
+|---|---|---|
+| `lifecycle.entered` | `{ entityId, from, to }` | slot-pool@v1（当 `to: waiting` → `pool.request-bind`）；capacity-gate@v1（当 `to: dead` → `capacity.release`）；UI 动画切换 |
+| `lifecycle.invalid-transition` | `{ entityId, from, event, reason? }` | 调试/日志；通常不接下游业务逻辑 |
+
+### DAG Wiring Rules
+- ✅ 正确接法：`capacity.admitted` → `lifecycle.event(dispatched)` → `lifecycle.entered(active)` → 开始主任务
+- ✅ 正确接法：`lifecycle.entered(returning)` + 动画完成 → `lifecycle.event(arrived)` → `lifecycle.entered(waiting)` → `pool.request-bind`
+- ✅ 正确接法：`lifecycle.entered(dead)` → `capacity.release`
+- ❌ 常见接错：业务代码直写 `entity.lifecycle = "active"` 绕过 transition——check_runtime_semantics 会报 before/after 不匹配
+- ❌ 常见接错：向已 dead 的 entity 发送 transition event——会产出 `lifecycle.invalid-transition(dead-is-terminal)` 且状态不变

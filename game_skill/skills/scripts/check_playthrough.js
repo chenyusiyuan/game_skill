@@ -202,6 +202,15 @@ if (!skipCoverageCheck) {
         for (const c of missing) {
           console.log(`  ✗ @check(${c.id}) ${c.title}`);
         }
+        // 给 agent 可操作的修复指引
+        console.log(`\n修复方法:`);
+        console.log(`  1. 为每个缺失的 @check 在 profile 中添加对应的 assertion，assertion.check_id 必须与 @check id 一致`);
+        console.log(`  2. 每条 assertion 必须包含至少 1 个 action: click 的 setup 步骤（真实 DOM click 或 canvas x/y 坐标）`);
+        console.log(`  3. 更新 profile.prd_hash 为当前 PRD 的 SHA1: ${createHash("sha1").update(prdContent).digest("hex")}`);
+        console.log(`  4. assertion 结构示例:`);
+        for (const c of missing.slice(0, 2)) {
+          console.log(`     { "id": "${c.id}", "check_id": "${c.id}", "description": "${c.title}", "setup": [{ "action": "click", "selector": "#对应按钮或元素" }] }`);
+        }
         process.exit(4);
       }
 

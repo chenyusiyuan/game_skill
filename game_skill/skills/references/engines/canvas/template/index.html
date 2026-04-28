@@ -29,6 +29,10 @@
     };
     window.gameState = state;
 
+    // === Verify hooks ===
+    window.__trace = window.__trace || [];
+    window.__assetUsage = window.__assetUsage || [];
+
     // ===== update =====
     function update(state, dt) {
       if (state.phase !== "playing") return;
@@ -78,6 +82,23 @@
       if (state.phase === "ready") state.phase = "playing";
       else if (state.phase === "playing") state.score += 1;
     });
+
+    // === Test API (Phase 5 校验需要) ===
+    window.gameTest = window.gameTest || {};
+    window.gameTest.observers = {
+      getSnapshot: () => JSON.parse(JSON.stringify(window.gameState)),
+      getTrace: () => [...(window.__trace || [])],
+      getAssetUsage: () => [...(window.__assetUsage || [])],
+    };
+    window.gameTest.drivers = {};
+    window.gameTest.probes = {
+      resetWithScenario: (scenario) => {
+        console.warn('probes.resetWithScenario: stub — codegen 需实现');
+      },
+      stepTicks: (n) => {
+        console.warn('probes.stepTicks: stub — codegen 需实现');
+      },
+    };
   </script>
 </body>
 </html>

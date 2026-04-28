@@ -73,3 +73,25 @@ on-rejected-forbidden: [<action-id>, ...]
   集中管理。
 - `performance.now()` 在测试里需 seed；P1 runtime 会接受 `ctx.now` 注入，默认用
   `performance.now() || Date.now()`。
+
+## Event Interface Contract
+
+### As Consumer (trigger-on)
+| 事件 | 必须携带的 payload | 来源示例 |
+|---|---|---|
+| `dispatch.request` | `{ now: number, downstream: { kind, event? }, dispatcherId? }` | UI 层玩家点击 / 键盘输入事件 |
+
+> `resolveAction` 将 `dispatch.request` 映射为 `{ type: 'request', now, downstream, dispatcherId }`。`downstream` 描述意图触发的下游事件类型，须通过白名单校验。
+
+### As Producer (produces-events)
+| 事件 | 携带的 payload | 典型下游 |
+|---|---|---|
+| `dispatch.fired` | `{ at: number, downstream: { kind, event? } }` | capacity-gate@v1（`capacity.request`）；slot-pool@v1（`pool.request-unbind`）；entity-lifecycle@v1（`lifecycle.event`） |
+| `dispatch.rejected-cooldown` | `{ remainingMs: number }` | UI 冷却提示（如按钮灰显倒计时）|
+| `dispatch.rejected-forbidden` | `{ downstream?, reason: string }` | UI 错误提示 / 调试日志 |
+
+### DAG Wiring Rules
+- ✅ 正确接法：UI 点击 → `dispatch.request` → `dispatch.fired` → `capacity-gate.request` → `entity-lifecycle.transition(active)`
+- ✅ 正确接法：`allowed-events` 白名单限制 downstream.kind 为 `lifecycle-event` / `pool.request-unbind` / `capacity.request` 等安全事件
+- ❌ 常见接错：downstream.kind 设为 `state.win-set` / `state.score-set`——被 forbidden-blacklist 拦截，产出 `dispatch.rejected-forbidden`
+- ❌ 常见接错：绕过 cooldown-dispatch 由业务层自己维护 `lastClickAt`——冷却必须由 primitive 集中管理

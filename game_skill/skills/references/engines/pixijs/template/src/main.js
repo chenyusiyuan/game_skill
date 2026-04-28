@@ -65,4 +65,23 @@ import { state } from "./state.js";
       box.rotation += 0.02 * ticker.deltaTime;
     }
   });
+
+  // === Test API (Phase 5 校验需要) ===
+  window.gameTest = window.gameTest || {};
+  window.gameTest.observers = {
+    getSnapshot: () => JSON.parse(JSON.stringify(window.gameState)),
+    getTrace: () => [...(window.__trace || [])],
+    getAssetUsage: () => [...(window.__assetUsage || [])],
+  };
+  window.gameTest.drivers = {
+    // codegen 阶段按实际 UI 填充
+  };
+  window.gameTest.probes = {
+    resetWithScenario: (scenario) => {
+      console.warn('probes.resetWithScenario: stub — codegen 需实现');
+    },
+    stepTicks: (n) => {
+      console.warn('probes.stepTicks: stub — codegen 需实现');
+    },
+  };
 })();

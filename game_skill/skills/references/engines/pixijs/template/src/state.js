@@ -4,3 +4,7 @@ export const state = {
 };
 
 window.gameState = state;
+
+// === Verify hooks (Phase 5 校验桥) ===
+window.__trace = window.__trace || [];
+window.__assetUsage = window.__assetUsage || [];

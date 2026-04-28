@@ -13,10 +13,44 @@ Phase 2: GamePRD           → docs/game-prd.md（必须过 check_game_prd.js）
 Phase 2.5: Spec Clarify    → docs/spec-clarifications.md（功能机制歧义：必要时最多 1-2 问，否则记录默认假设）
 Phase 3: Expand            → specs/{mechanics,scene,rule,data,assets,event-graph,implementation-contract}.yaml（始终必做）
 Phase 4: Codegen           → game/index.html + src/
-Phase 5: Verify + Deliver  → verify_all.js(check_mechanics + check_game_boots + check_project + check_playthrough + check_skill_compliance) + eval/report.json + docs/delivery.md
+Phase 5: Verify + Deliver  → verify_all.js(check_mechanics + check_game_boots + check_project + check_playthrough + check_runtime_semantics + check_skill_compliance) + eval/report.json + docs/delivery.md
 ```
 
 **核心约束**：严格串行，每阶段完成前不启动下一阶段；失败不降级。
+
+---
+
+## 分阶段执行模式（逐层确认）
+
+当用户明确说“分阶段实现”“逐个层确认”“不要先端到端”“只跑 mechanics / 只验证某层 / 先别 codegen”时，主 agent 必须先确定 phase mode，并按 mode 的停止点硬停。不要把这类需求解释成完整生成链路。
+
+推荐用脚本生成阶段计划：
+
+```bash
+node game_skill/skills/scripts/phase_plan.js --mode verify-layered --project ${PROJECT}
+node game_skill/skills/scripts/phase_plan.js --mode mechanics-only --stop-after mechanics
+node game_skill/skills/scripts/phase_plan.js --mode full --stop-before codegen
+```
+
+支持的 mode：
+
+| mode | 用途 | 允许到达 | E2E |
+|---|---|---|---|
+| `full` | 默认完整生成交付 | deliver | 允许 |
+| `mechanics-only` | 只确认玩法原语、数值和 win 可达 | mechanics | 禁止 |
+| `expand-only` | 只产 specs/contract，不写游戏代码 | expand | 禁止 |
+| `codegen-only` | 基于已冻结 specs 只做代码生成和工程自检 | codegen | 禁止 |
+| `verify-layered` | 逐层定位已有 case 问题 | verify 单层脚本 | 禁止统一 E2E 修复循环 |
+| `verify-e2e` | 最终交付回归 | deliver | 必须走 `verify_all.js` |
+| `resume` | 从 `.game/state.json` 继续 | 由 state 决定 | 默认禁止，除非恢复点是最终交付 |
+
+硬规则：
+
+- `stop-before codegen` 或 `mode=mechanics-only/expand-only` 时，Phase 4 不得启动。
+- `verify-layered` 时先跑单层 check，失败即停下汇报；不得直接进入 `verify_all.js` 的自动修复循环。
+- `verify_all.js` 只用于最终接受、`mode=full` 或用户显式要求 `verify-e2e`。
+- 阶段停止不是失败。到达停止点后，写清楚已验证内容、失败层和下一步建议，然后等待用户决定是否继续。
+- 若用户说“重新跑几个 case 看看”，优先用 `verify-layered`；只有所有层都绿后再跑 E2E。
 
 ---
 
@@ -166,6 +200,7 @@ import('./game_skill/skills/scripts/_state.js').then(m => {
 - `{ resumable: false, reason: 'previously failed...' }` → 需要人工介入，不自动重试
 
 **schema v1 要求**（详见 `schemas/state.schema.json`）：
+- `phases.spec-clarify` 是正式阶段，禁止手工塞顶层 `spec-clarify` 或绕过 helper 写 state
 - `phases.expand` 必须含 `subtasks.{mechanics, scene, rule, data, assets, event-graph, implementation-contract}`，每个子任务独立 status
 - 所有 phase status ∈ `pending | running | completed | failed | skipped`
 - 旧漂移 schema（如 canvas case 的扁平 `projectId`）会被 `readState()` 自动迁移到 v1 内存结构，但**必须重新 `writeState()` 才会持久化**（否则重读仍走 migrate 分支）
@@ -186,6 +221,16 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"user-fix","round":1,"descripti
 ```
 
 **后续所有相对路径都以 `cases/${PROJECT}/` 为根**，绝不写到项目根。
+
+如果本轮不是完整生成，必须在 Step 0 后立即生成 phase plan，并把 `mode / plannedPhases / hardStop / allowE2E` 作为本轮执行边界：
+
+```bash
+node game_skill/skills/scripts/phase_plan.js --mode ${PHASE_MODE:-full} --project ${PROJECT} --write-state
+```
+
+用户没有显式 mode 但表达了“先逐层确认问题”时，默认 `PHASE_MODE=verify-layered`；表达了“先确认机制/数值/是否可通关”时，默认 `PHASE_MODE=mechanics-only`。
+
+**硬要求**：分阶段模式下，`phase_plan.js --write-state` 是进入 Phase 2/2.5/3 前的第一条边界命令。后续 `markPhase` / `markSubtask` 会根据 `state.phasePlan` 阻止越界：`mechanics-only` 只允许 `expand.subtasks.mechanics`，不允许 scene/rule/data/assets/event-graph/implementation-contract，也不允许 codegen。
 
 ---
 
@@ -288,12 +333,37 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"user-fix","round":1,"descripti
 
 **时机**：GamePRD 已通过 `check_game_prd.js` 且 guardrails 已生成之后、Phase 3 Expand 之前。
 
-1. 读 `game_skill/skills/spec-clarify.md`、`cases/${PROJECT}/docs/brief.md`、`cases/${PROJECT}/docs/game-prd.md`、`cases/${PROJECT}/.game/guardrails.md`
+0. 用 helper 标记阶段，禁止手写 state：
+   ```bash
+   node -e "
+   import('./game_skill/skills/scripts/_state.js').then(m => {
+     let st = m.readState('cases/${PROJECT}/.game/state.json');
+     st = m.markPhase(st, 'spec-clarify', 'running');
+     m.writeState('cases/${PROJECT}/.game/state.json', st);
+   })
+   "
+   ```
+1. 读 `game_skill/skills/spec-clarify.md`、`cases/${PROJECT}/docs/brief.md`、`cases/${PROJECT}/docs/game-prd.md`、`cases/${PROJECT}/.game/guardrails.md`、`game_skill/skills/references/mechanics/_index.yaml`
 2. 检查每条核心 `@rule` / `@constraint` 是否存在功能机制歧义：触发粒度、作用范围、目标选择、资源消耗时点、移动/碰撞粒度、同 tick 结算顺序、回收/生成/销毁时机
 3. 若歧义会改变核心玩法结果 → 用 `AskUserQuestion` 一次性最多问 2 个问题；每个问题必须绑定具体 `@rule(id)` 或 `@constraint(id)`，首选项标注推荐，并包含"让我决定"
 4. 若歧义不阻塞核心玩法 → 不问用户，选择保守默认，并写入 `Assumptions`
 5. 无论 asked / assumed / skipped，都写 `cases/${PROJECT}/docs/spec-clarifications.md`；该文件是 Phase 3 的必读输入
-6. 本阶段**不得**追问视觉、引擎、内容量、交付范围；这些已经属于 Phase 1/2
+6. 写完后必须运行：
+   ```bash
+   node game_skill/skills/scripts/check_spec_clarifications.js cases/${PROJECT}/ --log ${LOG_FILE}
+   ```
+   该检查会阻断两类刚性错误：引用 `_index.yaml` 中不存在的 primitive（例如 `raycast@v1` / `grid-path-follow@v1`），以及用平均消除/除以 2 估算 `balance-check.demand`。
+7. 通过后标记 completed：
+   ```bash
+   node -e "
+   import('./game_skill/skills/scripts/_state.js').then(m => {
+     let st = m.readState('cases/${PROJECT}/.game/state.json');
+     st = m.markPhase(st, 'spec-clarify', 'completed');
+     m.writeState('cases/${PROJECT}/.game/state.json', st);
+   })
+   "
+   ```
+8. 本阶段**不得**追问视觉、引擎、内容量、交付范围；这些已经属于 Phase 1/2
 
 ---
 
@@ -402,12 +472,15 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"user-fix","round":1,"descripti
    ```
 9. 任一失败 → 调 `markPhase(st, 'expand', 'failed')`，整阶段 failed，报用户不降级
    - 特别地，`check_mechanics.js` 失败意味着玩法 DAG 结构性错误或不可完成。**禁止**绕过它直接进 Phase 4 —— 这正是避免"Phase 5 修复死循环"的核心前置关卡。
+10. 若 phase plan 的 `hardStop` 是 `after:mechanics` 或 `after:expand`，到此必须停止并汇报。不得启动 Phase 4。
 
 ---
 
 ## Phase 4: Codegen
 
 **输出**：`cases/${PROJECT}/game/index.html`（必需）+ 可选 `cases/${PROJECT}/game/src/`
+
+若 phase plan 含 `stopBefore: "codegen"` 或 `plannedPhases` 不包含 `codegen`，本阶段不得执行。主 agent 只能汇报当前已完成的 specs/contract/check 结果。
 
 0. **进场前硬性要求**：先 `Read cases/${PROJECT}/.game/guardrails.md`（Phase 2 末尾自动产出），把 hard-rules + must-have-features 原文落进 TodoWrite；对抗 /compact 丢约束。
 1. 读 GamePRD front-matter 的 `runtime`，再从 `_index.json.engines[]` 找到对应 engine 条目；`guide`、`template`、`default-run-mode`、`version-pin` 都以该条目为准
@@ -458,6 +531,11 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"user-fix","round":1,"descripti
 
 **输出**：`cases/${PROJECT}/eval/report.json` + `cases/${PROJECT}/docs/delivery.md`
 
+进入本阶段前先确认 phase plan：
+- `mode=verify-layered`：按 `verify.md` 的分层诊断顺序单独运行脚本，失败即停，不生成绿色 report，不触发自动修复循环。
+- `mode=verify-e2e` 或 `mode=full`：才允许运行统一入口 `verify_all.js` 并生成正式 `eval/report.json`。
+- `mode=codegen-only`：只允许跑 Phase 4 自检里列出的工程/冒烟检查，不进入交付验证。
+
 0. **进场前硬性要求**：先 `Read cases/${PROJECT}/.game/guardrails.md`，把 hard-rules / must-have-features 落进 TodoWrite；修复循环中每一轮开头回读一次。
 1. **补全并冻结正式 profile**（只做一次；冻结后 Phase 5 不可再改 profile）：
    ```bash
@@ -481,12 +559,13 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"user-fix","round":1,"descripti
    ```
    退出码 1 = LLM 修了不该修的文件（PRD/specs/mechanics）→ 立刻终止，报用户。这是"面向测试改 PRD"的硬闸。
 2. 统一入口：`node game_skill/skills/scripts/verify_all.js cases/${PROJECT} --profile ${PROJECT} --log ${LOG_FILE}`
-   - 它会顺序跑 `check_mechanics`、`check_game_boots`、`check_project`、`check_playthrough`、`check_skill_compliance`
+   - 它会顺序跑 `check_mechanics`、`check_game_boots`、`check_project`、`check_playthrough`、`check_runtime_semantics`、`check_skill_compliance`
    - `cases/${PROJECT}/eval/report.json` 只能由这个入口根据真实退出码生成；禁止手写绿色报告
 3. 若需定位单层失败，再分别运行：
    - 冒烟（≤2 轮）：`node game_skill/skills/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG_FILE}`
    - 工程侧（≤3 轮）：`node game_skill/skills/scripts/check_project.js cases/${PROJECT}/game/ --log ${LOG_FILE}`
    - 产品侧（≤10 轮）：`node game_skill/skills/scripts/check_playthrough.js cases/${PROJECT}/game/ --profile ${PROJECT} --log ${LOG_FILE}`
+   - 运行时语义：`node game_skill/skills/scripts/check_runtime_semantics.js cases/${PROJECT}/ --log ${LOG_FILE}`
    - profile 在 `game_skill/skills/scripts/profiles/` 下，若缺少需先创建
    - **profile 必须覆盖 PRD 中所有 `@check(layer: product)` 条目**（脚本会自动校验，覆盖不足退出码 4）
    - **profile 必须包含至少一条真实 click**（`{ action: "click", selector: "..." }` 或 `{ action: "click", x, y }`），纯 `eval` 不够；每个交互类 assertion 也必须自己包含真实 click/press/fill，不能靠别的 assertion 的 click 混过
