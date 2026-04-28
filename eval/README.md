@@ -52,9 +52,18 @@ eval/
 
 → 读 `reviews/phase_gate_reviewer.md`
 → **驻留式独立会话**：case 开跑前先开会话 B 一次性注入 DRIVER MESSAGE，agent
-  读完 INTENT/DEBT/failures 后驻留待命。
+  读完 INTENT/DEBT/failures/.pipeline_patterns.md 后驻留待命。
 → 之后会话 A 每完成一个 Phase，你只在会话 B 发一句 "Phase N 完成"，
-  agent 返回 Blocker 清单 / Debt 清单 / Next Action verdict。
+  agent 返回 Blocker 清单（**分 CASE-LOCAL / SYSTEMATIC**）+ Debt 清单 +
+  Next Action verdict。
+→ SYSTEMATIC Blocker 会强制停 case 先修 skill（见会话 D）。
+
+### 某个 Blocker 被判定为 SYSTEMATIC，需要修 skill
+
+→ 开会话 D（Skill Fixer）冷启
+→ 粘贴 `reviews/phase_gate_reviewer.md` verdict 里的 SYSTEMATIC 段
+→ 会话 D 按 `protocols/iteration_testing_protocol.md` §2 决策表修 skill
+→ 修完 commit，回会话 A 重跑 Phase N
 
 ### 某个 Phase 连续失败 3+ 次
 

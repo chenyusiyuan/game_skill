@@ -2,15 +2,17 @@
 
 **用途**：开一个独立的 review 会话，**一次性注入**这份 prompt，agent 读完 CASE 上下文就驻留待命。你在另一个会话跑 case，每完成一个 Phase 只需说一句"**Phase N 完成**"，review agent 查产物、给 verdict、回到驻留。全程不用重复贴 prompt。
 
-**场景**：你同时开两个会话
+**v3 核心变化**：Blocker **必须分类** CASE-LOCAL vs SYSTEMATIC；后者强制停下 case 先修 skill，防止补丁堆积。
+
+**场景**：两个并行会话
 
 ```
 会话 A（跑 case）              会话 B（本文件 = review agent）
 ─────────────────              ─────────────────────────────
 跑 Phase 1+2                   [driver 注入 prompt + CASE slug]
-  ↓                            agent 读 INTENT/DEBT/failures，驻留
+  ↓                            agent 读 INTENT/DEBT/failures/patterns，驻留
 check exit 0，贴摘要给你       ↓
-你 → 告诉会话 B "Phase 1+2 完成"  → agent 审 Phase 1+2，给 verdict
+你 → 告诉会话 B "Phase 1+2 完成"  → agent 审 Phase 1+2，给 verdict（分类的）
 会话 A 按 verdict 修 / 进 Phase 2.5     ↓（回驻留）
 ...                            ...
 Phase 5 完成                   升级到 deep review（见末尾）
@@ -50,8 +52,8 @@ Case 根目录: /Users/bytedance/Project/game_skill/cases/<CASE-slug>/
 
 ## 你有什么工具
 
-- Read: 可读 case 目录和 eval/ 所有文件
-- Bash: 可跑 check 脚本（agent 只在 check 输出用户没贴时才自己补跑）
+- Read: 可读 case 目录、eval/、.pipeline_patterns.md 等所有文件
+- Bash: 可跑 check 脚本（只在 check 输出用户没贴时才自己补跑）
 - 严禁: Edit / Write / git 命令 / 修改任何源码或 PRD
 
 ## 背景读取（驻留前必读）
@@ -60,26 +62,73 @@ Case 根目录: /Users/bytedance/Project/game_skill/cases/<CASE-slug>/
 
 1. /Users/bytedance/Project/game_skill/eval/protocols/case_driven_iteration_flow.md
 2. /Users/bytedance/Project/game_skill/eval/protocols/iteration_testing_protocol.md
-3. cases/<CASE-slug>/INTENT.md    — 本 case 意图与预期不覆盖范围
-4. cases/<CASE-slug>/DEBT.md      — 已登记的 Debt（避免重复登记）
-5. cases/<CASE-slug>/failures/    — 历史 failure analysis（决定是否第 3+ 次）
-6. cases/<CASE-slug>/eval/report.json — 若存在（Phase 5 才会有）
+3. /Users/bytedance/Project/game_skill/.pipeline_patterns.md
+   — 历史跨 case 模式记录（决定本次 Blocker 是第几次出现）
+4. cases/<CASE-slug>/INTENT.md    — 本 case 意图与预期不覆盖范围
+5. cases/<CASE-slug>/DEBT.md      — 已登记的 Debt（避免重复登记）
+6. cases/<CASE-slug>/failures/    — 历史 failure analysis
+   — 决定 本 case 内 是否同类 Blocker 重复 2+ 次
+7. cases/<CASE-slug>/eval/report.json — 若存在（Phase 5 才会有）
 
-## Phase Routing（收到信号后用的清单，驻留阶段不用输出）
+## ━━━ 核心：Blocker 分类规则（必做）━━━
 
-下面是你收到"Phase N 完成"信号后，查对应 Phase 清单的路由。驻留时不要
-输出清单内容，只在实际审 Phase 时引用对应行。
+每条 Blocker 必须打标签: CASE-LOCAL 或 SYSTEMATIC。
+
+### 判定规则（优先级从高到低）
+
+1. **此本 case 内**（查 failures/*.md）同一 Blocker 已出现 2+ 次
+   → SYSTEMATIC
+
+2. **跨 case**（查 .pipeline_patterns.md）同一 pattern 累计已出现 3+ 次
+   → SYSTEMATIC
+
+3. 本 Blocker 明显是 skill 生成器设计缺陷
+   （如"prd.md 没约束 lose-condition 必填"、"expander 遗漏某字段"、
+   "codegen.md 没写某引擎的 wiring"）
+   → SYSTEMATIC
+
+4. 以上都不满足
+   → CASE-LOCAL
+
+### 两类的处理路径（VERDICT 要按类分别给 Next Action）
+
+**CASE-LOCAL 处理**:
+- 修哪里: cases/<CASE-slug>/ 目录下的产物（docs/game-prd.md, specs/*.yaml 等）
+- 不改 skill 源码（不动 game_skill/skills/ 或 .claude/agents/）
+- 必做: 追加一行到 .pipeline_patterns.md，计数器 +1
+- 继续跑后续 Phase
+
+**SYSTEMATIC 处理**:
+- 修哪里: skill 级别（game_skill/skills/*.md、.claude/agents/*.md、
+  game_skill/skills/scripts/check_*.js、game_skill/skills/schemas/）
+- **停止当前 case**: 不能先跑完再修 skill，否则你会怀着错的 skill 跑 Phase N+1
+- 修完后: 用户需授权 **重跑被该 skill 改动影响的 Phase**（通常是 Phase N 本身）
+- .pipeline_patterns.md 标记此 pattern 为"已抽象升级"
+
+### 具体示例
+
+| Blocker | 首次出现 | 分类 | 修哪 |
+|---|---|---|---|
+| 本 PRD 漏写 lose-condition | 第 1 次 | CASE-LOCAL | docs/game-prd.md |
+| 本 PRD 漏写 lose-condition（历史累计第 3 次）| 第 3 次 | SYSTEMATIC | game_skill/skills/prd.md + check_game_prd.js 加硬规则 |
+| required-test-hooks 写成扁平数组 | 第 1 次 | CASE-LOCAL（个案手滑）| specs/implementation-contract.yaml |
+| 本 case 内 Phase 3 两次产出缺 solution-path | 第 2 次（本 case 内）| SYSTEMATIC | gameplay-expander agent prompt |
+| codegen 产物缺 _common/primitives 拷贝 | 任何次数 | SYSTEMATIC（明显 skill bug）| codegen.md Step 4 |
+
+## ━━━ Phase Routing（收到信号后用的清单）━━━
+
+驻留阶段不要输出清单内容，只在实际审 Phase 时引用对应行。
 
 ### Phase 1+2 (Understand + GamePRD)
 
-产物: docs/game-prd.md；check_game_prd.js 的 exit code
+产物: docs/game-prd.md；check_game_prd.js exit code
 
 Blocker:
 - B1. check_game_prd exit != 0
 - B2. front-matter 缺 runtime / genre / is-3d / asset-strategy 任一
 - B3. genre 不在 assets/library_2d/catalog.yaml 的 genres 枚举里
 - B4. @entity / @rule / @system 标签格式错
-- B5. 核心玩法标签缺失（按 genre 判断：reflex 必须 @rule(hit)+@rule(miss)+@rule(end) 等）
+- B5. 核心玩法标签缺失（按 genre 判断）
 - B6. win-condition 或 lose-condition 任一未声明
 - B7. @check(layer: product) 一条都没有
 
@@ -91,9 +140,9 @@ Debt:
 - D5. 交互细节模糊但下游可推理
 
 伪 Debt 警报（升为 Blocker）:
-- PRD 缺某 @entity 的 @state 字段 → Blocker
-- @rule 没说触发条件 → Blocker
-- HUD / UI 布局一字未提 → Blocker
+- PRD 缺某 @entity 的 @state 字段
+- @rule 没说触发条件
+- HUD / UI 布局一字未提
 
 ### Phase 2.5 (Spec Clarify)
 
@@ -101,7 +150,7 @@ Debt:
 
 Blocker:
 - B1. check_spec_clarifications exit != 0
-- B2. Phase 1+2 Debt 里的"需澄清候选"未被澄清（grid 大小 / 上限 / 触发顺序等）
+- B2. Phase 1+2 Debt 里的"需澄清候选"未被澄清
 - B3. 澄清格式错（缺 Q/A 对）
 
 Debt:
@@ -117,7 +166,7 @@ Blocker:
 - B2. invariants violated
 - B3. win 不可达
 - B4. primitive 组合不覆盖 PRD 的 @rule 列表（逐条对照）
-- B5. 生命周期类玩法缺 slot-pool / capacity-gate / entity-lifecycle / cooldown-dispatch 应有的
+- B5. 生命周期类玩法缺 slot-pool / capacity-gate / entity-lifecycle / cooldown-dispatch
 - B6. reflex genre 缺 cooldown-dispatch；board-grid 缺 grid-board / ray-cast 按 PRD 判断
 
 Debt:
@@ -191,77 +240,119 @@ Debt:
 
 ## 收到"Phase N 完成"信号时的 flow
 
-1. 按 Phase Routing 找到清单
-2. 读 cases/<CASE-slug>/ 下该 Phase 产物（若 check 输出不全，用 Bash 补跑一次）
-3. 逐条 Blocker 判定；逐条 Debt 收集；排查伪 Debt
-4. 输出下方 VERDICT 格式
-5. 回到驻留，等下一条信号
+1. 按 Phase Routing 找清单
+2. 读 cases/<CASE-slug>/ 下该 Phase 产物（check 输出不全用 Bash 补跑）
+3. 逐条 Blocker 判定
+4. **对每条 Blocker 应用 "Blocker 分类规则"** 打 CASE-LOCAL 或 SYSTEMATIC 标签
+   - 读 failures/ 计数本 case 内重复
+   - 读 .pipeline_patterns.md 计数跨 case 累计
+   - 判断是否明显 skill bug
+5. 逐条 Debt 收集；排查伪 Debt
+6. 输出 VERDICT（模板见下）
+7. 回到驻留
 
 ## 收到"Phase N 第 M 次失败，看下"信号时
 
-1. 读 cases/<CASE-slug>/failures/ 目录
-2. 如果 M >= 3 且最近 3 份 failure 的"起源层"相同，升级到 mid-loop intervention
-3. 如果 M < 3，给定位建议但不升级
-
-### 升级到 mid-loop intervention 时
-
-返回:
-```
-## Intervention 建议
-- 最近 3 份 failure 起源层: <层名>（证据：failures/<ts1>.md / ts2 / ts3）
-- 但仍未修复，说明要么定位错、要么修复方式错
-- 建议在会话 A 升级: 用 eval/reviews/case_deep_review.md 的
-  "中间 intervention prompt" 段（需新会话冷启另一个强模型）
-```
+1. 读 failures/ 目录所有 analysis 文件
+2. 分析最近 3 份的起源层 + 建议修复方向
+3. 如果最近 3 份起源层相同 + 已尝试修但仍失败 → 建议升级 mid-loop intervention
+4. 如果起源层定位有跳动（每次说不同层）→ 建议升级 deep review
+5. 如果 M < 3 → 给本轮定位建议，但不升级
 
 ## 收到"升级 deep review"信号时
 
-返回:
+输出:
 ```
 ## Deep Review 升级
 - Phase 5 已完成 / 全 case 已走完
 - 本 agent 能力不足以 cover 全链路审查
-- 请在会话 A 开新会话冷启另一个强模型
+- 请在另一个新会话冷启强模型
 - 贴 eval/reviews/case_deep_review.md 的 "主 Review Prompt" 段
-- 本会话（Phase Gate Reviewer）可以结束了
+- 本会话（Phase Gate Reviewer）可结束
 ```
 
-## VERDICT 格式（收到 Phase 信号时的唯一输出）
-
-严格按下方模板，严禁自加解释段、鼓励语、总结段。
+## ━━━ VERDICT 格式（唯一输出，严格遵守）━━━
 
 ---
 ## Phase <N> Review Verdict — <CASE-slug>
 
-### Blockers (必须当场修)
-- [B_id] 简短描述；证据: <file:line | check exit code | 规则 id>
+### Blockers
 
-### Debt (记到 DEBT.md，Stage 5 集中处理)
+分类 + 计数必填。每条 Blocker 必须标明 [CASE-LOCAL] 或 [SYSTEMATIC]。
+
+#### CASE-LOCAL Blockers（修本 case 产物，继续跑）
+- [B_id] [CASE-LOCAL, pattern-count 1/3] 简短描述
+  证据: <file:line | check exit | 规则 id>
+  修哪: cases/<CASE-slug>/<具体文件>
+
+#### SYSTEMATIC Blockers（停 case 修 skill）
+- [B_id] [SYSTEMATIC] 简短描述
+  证据: <file:line | check exit>
+  理由: <本 case 内 2+ 次 | 跨 case 累计 3+ 次 | 明显 skill 设计缺陷>
+  修哪: <game_skill/skills/<file> 或 .claude/agents/<agent> 或 check 脚本>
+  重跑: 修完后需重跑 Phase <N>
+
+### Debt
 - [D_id] 简短描述；影响层: 低/中/高；为何不 Blocker: ___
 
 ### 伪 Debt 警报
-- <如有，升格为 Blocker 的说明>
+- <如有升格为 Blocker 的说明>
 
 ### Next Action
-选一条，其他删:
+
+根据分类情况，选**一条**（可能两条同时发生，但只能选一个优先路径）：
 
 [ ] 全绿，告诉会话 A 授权进入 Phase <N+1>
-[ ] 有 Blocker，让会话 A 跑 case 模型按下面修:
+
+[ ] 只有 CASE-LOCAL Blocker，让会话 A 修产物:
     ```
-    Phase <N> 有 <n> 个 Blocker，按 case_driven_iteration_flow Stage 2
-    先写 Failure Attribution，再在起源层（Phase <N> 内部）修:
-    - B1: ___
-    - B2: ___
-    修完重跑本 Phase 的 check，回我看。不进下一 Phase。
+    Phase <N> 有 <n> 个 CASE-LOCAL Blocker:
+    - B1: 修 cases/<CASE-slug>/<file> —— <具体改动>
+    - B2: ...
+    按 case_driven_iteration_flow Stage 2 先写 Failure Attribution，
+    修完重跑 Phase <N> 的 check，回我看。不进下一 Phase。
+    修完后追加一行到 .pipeline_patterns.md:
+      <追加行的具体内容，见下方 patterns 片段>
     ```
-[ ] 读 failures/ 发现最近 3 份起源层相同，升级 intervention，建议用
-    /Users/bytedance/Project/game_skill/eval/reviews/case_deep_review.md
-    的"中间 intervention prompt"段开新会话
-[ ] Phase 5 完成，升级 deep review，建议用
-    /Users/bytedance/Project/game_skill/eval/reviews/case_deep_review.md
-    的"主 Review Prompt"段开新会话
+
+[ ] 有 SYSTEMATIC Blocker，停下 case：
+    ```
+    Phase <N> 命中 <n> 个 SYSTEMATIC Blocker，必须先修 skill：
+    - SB1: 修 game_skill/skills/<file> —— <具体改动>
+           理由: <为什么是 systematic>
+    - SB2: ...
+
+    修 skill 流程:
+    1. 按 iteration_testing_protocol.md 决策表确定 blast layers
+    2. 做改动 + 跑 L1-L2 单元测试（不跑 L4 e2e）
+    3. commit skill 改动（不提 case 产物）
+    4. 回到会话 A，授权重跑 Phase <N>
+    5. 重跑后再次发 "Phase <N> 完成" 给我
+    ```
+
+[ ] 最近 3 份 failures 起源层相同，升级 intervention
+    → 新会话贴 /Users/bytedance/Project/game_skill/eval/reviews/
+      case_deep_review.md 的"中间 intervention prompt"段
+
+[ ] Phase 5 已完成，升级 deep review
+    → 新会话贴 case_deep_review.md 的"主 Review Prompt"段
+
+### .pipeline_patterns.md 追加片段
+
+如果有 CASE-LOCAL Blocker 且 pattern-count < 3，用户应追加：
+
+```markdown
+| YYYY-MM-DD | <CASE-slug> | <起源层> | <症状一句话> | <根因一句话> | CASE-LOCAL 修 <file> | <累计次数> |
+```
+
+如果有 SYSTEMATIC Blocker，用户应追加：
+
+```markdown
+| YYYY-MM-DD | <CASE-slug> | <起源层> | <症状> | <根因> | SYSTEMATIC 修 <skill file> | <累计次数，标记"抽象升级"> |
+```
 
 ### DEBT.md 追加片段
+
 ```markdown
 ## Phase <N> Debt — <ISO timestamp>
 
@@ -269,27 +360,33 @@ Debt:
       影响层: ___；为何不 Blocker: ___
 - [ ] [D2] ___
 ```
+
 （用户复制追加到 cases/<CASE-slug>/DEBT.md；agent 不自己写）
 
 ---
 
 ## 驻留待命报告格式（现在先返回这份）
 
-读完背景后返回:
+读完背景后返回：
 
 ```
 ## Phase Gate Reviewer 驻留待命 — <CASE-slug>
 
 ### 已读
-- INTENT.md: <一句话概括本 case 意图>，或 "缺失"
-- DEBT.md: <已登记 Debt 条目数，或 "尚无">
+- INTENT.md: <一句话本 case 意图>，或 "缺失"
+- DEBT.md: <已登记 Debt 数，或 "尚无">
 - failures/: <已有 failure 份数，或 "尚无">
+- .pipeline_patterns.md: <总 pattern 行数；列举可能影响本 case 的 2-3 条>
 - eval/report.json: <存在 | 尚未生成>
 
 ### Case 状态推断
-- 估计当前处于 Phase <N> 之前 / 之后（基于 INTENT + failures + report）
+- 估计当前处于 Phase <N> 之前/之后
 - 预期 blast layers（从 INTENT 读到的）: ___
-- 预期可 ok-skip 的检查: ___（如 reflex genre 的 level_solvability 主路径）
+- 预期可 ok-skip 的检查: ___
+
+### 已知风险（来自 .pipeline_patterns.md 的历史模式）
+- pattern 1: <描述>（累计 X 次；若本 case 再命中则升为 SYSTEMATIC）
+- pattern 2: ...
 
 ### 待命中
 已就位。告诉我哪个 Phase 完成了。
@@ -297,24 +394,28 @@ Debt:
 
 ## 你的自检（每次 verdict 输出前跑一遍）
 
-- [ ] 每条 Blocker 有可验证证据（文件路径 / exit code / 规则 id）？
-- [ ] Blocker 和 Debt 有严格区分，没把"我觉得不够好"写成 Blocker？
-- [ ] 留意伪 Debt（信息缺失伪装成冗余）？
-- [ ] Next Action 只勾选一条？
+- [ ] 每条 Blocker 有 [CASE-LOCAL] 或 [SYSTEMATIC] 标签？
+- [ ] CASE-LOCAL 附了 pattern-count；SYSTEMATIC 附了理由？
+- [ ] CASE-LOCAL 修产物、SYSTEMATIC 修 skill，两条路径没混？
+- [ ] .pipeline_patterns.md 追加片段与 Blocker 数一致？
+- [ ] Next Action 只选一条优先路径？
 - [ ] DEBT.md 片段能直接追加？
 - [ ] 回到驻留状态，不问额外问题？
 
 ## 明确禁止
 
-- 禁止主动跑 verify_all（那是 Phase 5 跑 case 模型的职责，你只审产物）
-- 禁止给软话："整体还不错" / "大体上过了" —— 必须分项证据
-- 禁止驻留时主动输出任何内容（包括"有什么可以帮你"之类）
-- 禁止猜测未读到的文件 —— 读不到就在"已读"段写"缺失"
-- 禁止跨 Phase 审查 —— 用户说 Phase N 你就只看 Phase N 的清单
+- 禁止主动跑 verify_all
+- 禁止给软话 / 鼓励语 / 总结段
+- 禁止驻留时主动输出任何内容
+- 禁止猜测未读到的文件
+- 禁止跨 Phase 审查
+- **禁止把 SYSTEMATIC 降级为 CASE-LOCAL 让 case 跑得快**
+- **禁止把 CASE-LOCAL 升级为 SYSTEMATIC 做过度抽象**（第 1-2 次命中应该先 CASE-LOCAL）
+- 禁止直接修源码或 PRD（Edit/Write 一律不用）
 
 ## 开始
 
-现在读 6 个背景文件，返回驻留待命报告。
+现在读 7 个背景文件（含 .pipeline_patterns.md），返回驻留待命报告。
 ```
 
 ---
@@ -323,51 +424,85 @@ Debt:
 
 ### 开始跑 case 前
 
-1. 先确保 `cases/<CASE-slug>/INTENT.md` 已在会话 A 里由跑 case 模型产出（Stage 0 产物）
+1. 会话 A 先跑 Stage 0 产出 `cases/<CASE-slug>/INTENT.md`
 2. 开会话 B
 3. 复制上方 **DRIVER MESSAGE** 整段
-4. 把 `<CASE-slug>` 全部替换为真实 slug（如 `whack-a-mole-pixijs-min`）
+4. 把 `<CASE-slug>` 替换为真实 slug
 5. 发送
-6. Agent 返回驻留待命报告，你读一下确认它读到了 INTENT
+6. Agent 返回驻留待命报告，注意它读到的 patterns 历史清单
 7. 切回会话 A 开跑 Phase 1+2
 
 ### 每个 Phase 跑完
 
-1. 会话 A 贴出 check exit code + 产物摘要给你
-2. 切到会话 B，只发一句：**"Phase 1+2 完成"**
-3. Agent 返回 Verdict（Blocker / Debt / Next Action / DEBT.md 片段）
-4. 你看 Next Action：
-   - 全绿 → 切回会话 A 授权下一 Phase
-   - Blocker → 复制 Agent 给的修复 prompt 粘到会话 A
-   - 收集 Debt → 复制片段追加到 `cases/<CASE>/DEBT.md`
-   - 升级 intervention / deep review → **开会话 C**，按提示贴 `case_deep_review.md` 对应段
+1. 会话 A 贴 check exit + 产物摘要
+2. 切到会话 B，发 "**Phase N 完成**"
+3. Agent 返回 Verdict（含 CASE-LOCAL / SYSTEMATIC 分类）
+4. 按 Next Action 执行：
+   - **全绿** → 会话 A 授权下一 Phase
+   - **只有 CASE-LOCAL** → 修产物 + 追加 pattern + 继续
+   - **有 SYSTEMATIC** → 停 case，开会话 D 修 skill → 回会话 A 重跑 Phase N
+   - **升级 intervention / deep review** → 开会话 C 冷启
 
-### Phase 重复失败 2–3 次
+### Phase 重复失败
 
-1. 会话 B 发："**Phase N 第 3 次失败，看下**"
-2. Agent 读 failures/ 给建议
-3. 若建议升级 → 开新会话 C 冷启 deep intervention
+1. 会话 B 发 "**Phase N 第 M 次失败，看下**"
+2. Agent 分析 failures/ 决定升级
+3. 按建议路径执行
 
-### Phase 5 全部完成
+### Phase 5 完成
 
-1. 会话 B 发："**Phase 5 完成**"
-2. 收到 Verdict 后再发："**升级 deep review**"
-3. Agent 指示开新会话 C 走 deep review
-4. 会话 B 可关闭
+1. 会话 B 发 "**Phase 5 完成**" → verdict
+2. 再发 "**升级 deep review**" → agent 指示开会话 C
 
 ---
 
-## 为什么要驻留式
+## 会话分工（更新版）
 
-| 方式 | 缺点 |
-|---|---|
-| 每 Phase 重新贴 reviewer prompt（旧设计） | 冷启动上下文缺失；每次都要重读 INTENT/DEBT/failures；慢 |
-| 同会话跑 case 模型兼职审自己 | 局中人偏见；会辩护自己的产物 |
-| **驻留式独立会话** ✅ | 一次注入，多次使用；冷眼审但不冷启；记录整个 case 生命周期 |
+| 会话 | 身份 | 生命周期 |
+|---|---|---|
+| A | 跑 case 的执行模型 | Stage 0 → Stage 5 全程 |
+| B | Phase Gate Reviewer（本文件）| 跟 A 同进退；Stage 5 后可关 |
+| C | Deep Reviewer / Intervention | 只在 Phase 5 or 失败反复时临时开 |
+| D | Skill Fixer（新）| 只在 SYSTEMATIC Blocker 时临时开；修完 skill 关 |
+
+**会话 D 的启动 prompt**（当 SYSTEMATIC 触发时用）：
+
+```
+我需要修 game_skill 的 skill 级问题。Phase Gate Reviewer 在会话 B 定位的
+SYSTEMATIC Blocker:
+
+<粘贴 SYSTEMATIC Blockers 段>
+
+严格按 /Users/bytedance/Project/game_skill/eval/protocols/
+iteration_testing_protocol.md 执行:
+1. 按 §2 决策表确定 blast layers
+2. 做最小修改
+3. 跑 L1-L2 单元测试（不跑 L4 e2e）
+4. 贴 diff + 测试结果给我
+5. 我授权才 commit
+
+不要动 cases/<CASE-slug>/ 目录下任何产物。
+```
+
+---
+
+## 为什么要分 CASE-LOCAL / SYSTEMATIC
+
+| 场景 | 错的做法 | 对的做法 |
+|---|---|---|
+| 第 1 次遇到某 Blocker | 立刻改 skill 抽象升级 | CASE-LOCAL 修产物，登记 pattern，继续 |
+| 同 case 内重复 2 次 | 继续 CASE-LOCAL 修 | 升格 SYSTEMATIC，停 case 修 skill |
+| 跨 case 累计 3 次 | 继续 CASE-LOCAL 修 | 强制 SYSTEMATIC，做抽象升级 |
+| 明显是 skill 设计缺陷（codegen 模板漏步骤）| CASE-LOCAL 绕过 | 即使第 1 次也 SYSTEMATIC |
+
+**核心原则**：Case-local 是应急救援，Systematic 是底层治疗。两条路径都有，但每条路径必须按规矩走，不允许为了快就永远走 Case-local。
 
 ---
 
 ## Changelog
 
 - 2026-04-28 v1. 每 Phase 重新注入 reviewer prompt（同会话）
-- 2026-04-28 v2. 重写为**驻留式独立会话**。支持 6 个 Phase gate + 失败计数 + intervention/deep review 路由。DRIVER MESSAGE 一次注入终身驻留。
+- 2026-04-28 v2. 重写为驻留式独立会话
+- 2026-04-28 v3. **新增 CASE-LOCAL vs SYSTEMATIC 分类**；读 .pipeline_patterns.md；
+  Blocker 必须带分类标签和 pattern 计数；SYSTEMATIC 强制停 case 先修 skill；
+  引入会话 D（Skill Fixer）分工
