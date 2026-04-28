@@ -22,6 +22,7 @@ eval/
 ├── cases/                                  ← 每个 case 的启动 prompt
 │   └── whack_a_mole_pixijs.md               — 当前计划跑的 case prompt
 └── reviews/                                ← Review prompt 模板
+    ├── phase_gate_reviewer.md              — Phase 完成时的轻量 gate reviewer
     └── case_deep_review.md                  — Stage 5 深 review + 中间 intervention
 ```
 
@@ -46,6 +47,12 @@ eval/
 
 → 读 `reviews/case_deep_review.md`
 → 开**另一个**新会话执行（不要在跑 case 的会话续）。
+
+### 某个 Phase 刚跑完，我要判断能不能进下一 Phase
+
+→ 读 `reviews/phase_gate_reviewer.md`
+→ 同会话可用（不用开新对话），只需告诉 reviewer "CASE slug" + "Phase 编号"。
+→ Reviewer 会返回 Blocker 清单 / Debt 清单 / Next Action verdict。
 
 ### 某个 Phase 连续失败 3+ 次
 
