@@ -1,4 +1,7 @@
 import { state } from "../state.js";
+import {
+  accumulateScore,
+} from "../_common/primitives/index.mjs";
 
 export class MainScene extends Phaser.Scene {
   constructor() {
@@ -42,7 +45,13 @@ export class MainScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.input.on("pointerdown", () => {
-      state.score += 1;
+      state.score = accumulateScore({
+        rule: "score-click",
+        node: "score-click",
+        currentScore: state.score,
+        eventPayload: "input.click",
+        params: { rules: [{ on: "input.click", delta: 1 }] },
+      });
       this.scoreText.setText(`Score: ${state.score}`);
     });
   }

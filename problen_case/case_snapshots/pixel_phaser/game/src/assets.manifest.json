@@ -1,5 +1,5 @@
 {
-  "basePath": "../../../assets/library_2d",
+  "basePath": "../../../../assets/library_2d",
   "images": [
     {
       "id": "btn-start-left",

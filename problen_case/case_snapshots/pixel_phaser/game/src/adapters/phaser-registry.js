@@ -17,6 +17,7 @@
  */
 
 import { validateManifest, buildStats } from "../_common/registry.spec.js";
+import { recordAssetUsage } from "../_common/asset-usage.js";
 
 export function preloadRegistryAssets(manifest, { scene } = {}) {
   const { ok, errors } = validateManifest(manifest);
@@ -59,6 +60,10 @@ export function createRegistry(manifest, { scene } = {}) {
   }
 
   const entries = new Map();
+  const manifestImageById = new Map((manifest.images ?? []).map((it) => [it.id, it]));
+  const manifestSheetById = new Map((manifest.spritesheets ?? []).map((it) => [it.id, it]));
+  const manifestAudioById = new Map((manifest.audio ?? []).map((it) => [it.id, it]));
+
   function register(section, item, loaded, error = null) {
     entries.set(item.id, { kind: section, loaded, error });
   }
@@ -87,20 +92,50 @@ export function createRegistry(manifest, { scene } = {}) {
   }
 
   return {
-    getTexture(id) {
+    getTexture(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
-      return e.loaded && !e.error && scene.textures.exists(id) ? scene.textures.get(id) : null;
+      if (e.loaded && !e.error && scene.textures.exists(id)) {
+        recordAssetUsage({
+          id,
+          section: "images",
+          kind: "texture",
+          manifestItem: manifestImageById.get(id),
+          extra,
+        });
+        return scene.textures.get(id);
+      }
+      return null;
     },
-    getSpritesheet(id) {
+    getSpritesheet(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
-      return e.loaded && !e.error && scene.textures.exists(id) ? scene.textures.get(id) : null;
+      if (e.loaded && !e.error && scene.textures.exists(id)) {
+        recordAssetUsage({
+          id,
+          section: "spritesheets",
+          kind: "spritesheet",
+          manifestItem: manifestSheetById.get(id),
+          extra,
+        });
+        return scene.textures.get(id);
+      }
+      return null;
     },
-    getAudio(id) {
+    getAudio(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
-      return e.loaded && !e.error && scene.cache.audio.exists(id) ? scene.sound.add(id) : null;
+      if (e.loaded && !e.error && scene.cache.audio.exists(id)) {
+        recordAssetUsage({
+          id,
+          section: "audio",
+          kind: "audio",
+          manifestItem: manifestAudioById.get(id),
+          extra,
+        });
+        return scene.sound.add(id);
+      }
+      return null;
     },
     has(id) {
       const e = entries.get(id);

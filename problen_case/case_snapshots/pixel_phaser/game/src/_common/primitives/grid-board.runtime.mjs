@@ -27,16 +27,17 @@ export function addCell(ctx) {
 }
 
 export function removeCell(ctx) {
-  const { rule, node = null, board, cell, params = {} } = ctx;
+  const { rule, node = null, board, cell, cellId, params = {} } = ctx;
+  const resolvedCellId = cellId ?? cell?.id ?? cell?.cellId ?? null;
   const before = snapshot(board);
-  const result = gbStep(before, { type: "remove-cell", cell }, params);
+  const result = gbStep(before, { type: "remove-cell", cellId: resolvedCellId }, params);
   const after = { ...result };
   delete after._events;
   pushTraceEvent({
     primitive: "grid-board@v1",
     rule,
     node,
-    before: { board: before, op: "remove-cell", cell: snapshot(cell) },
+    before: { board: before, op: "remove-cell", cell: snapshot(cell), cellId: resolvedCellId },
     after: { board: after, events: result._events ?? [] },
   });
   return after;

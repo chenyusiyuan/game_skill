@@ -18,7 +18,7 @@ import { pushTraceEvent, snapshot } from "./_trace.mjs";
 export function checkWinLose(ctx) {
   const { rule, node = null, state, params = {} } = ctx;
   const before = snapshot(state);
-  const result = wlStep(before, { type: "evaluate" }, params);
+  const result = wlStep(before, { type: "evaluate", ctx: before }, params);
   const verdict = result.verdict ?? result.outcome ?? null;
   pushTraceEvent({
     primitive: "win-lose-check@v1",

@@ -54,13 +54,21 @@ window.gameState = state;
 
 ```js
 import { state } from "../state.js";
+import { accumulateScore } from "../_common/primitives/index.mjs";
 
 export class MainScene extends Phaser.Scene {
   constructor() { super("MainScene"); }
   create() {
     state.phase = "playing";
     state.scene = "MainScene";
-    this.input.on("pointerdown", () => { state.score += 1; });
+    this.input.on("pointerdown", () => {
+      state.score = accumulateScore({
+        rule: "score-click", node: "score-click",
+        currentScore: state.score,
+        eventPayload: "input.click",
+        params: { rules: [{ on: "input.click", delta: 1 }] },
+      });
+    });
   }
 }
 ```

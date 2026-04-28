@@ -22,6 +22,7 @@ export class StartScene extends Phaser.Scene {
 
     const registry = createRegistry(manifest, { scene: this });
     const fx = createFx({ scene: this });
+    this.recordRequiredButtonAssets(registry);
 
     // Background
     this.add.rectangle(360, 640, 720, 1280, 0x1a1a2e);
@@ -51,6 +52,38 @@ export class StartScene extends Phaser.Scene {
 
     // Expose test hooks
     this.exposeTestHooks(registry, fx);
+  }
+
+  recordRequiredButtonAssets(registry) {
+    registry.getTexture("btn-start-left");
+    registry.getTexture("btn-start-center");
+    registry.getTexture("btn-start-right");
+    registry.getTexture("btn-start-pressed-left");
+    registry.getTexture("btn-start-pressed-center");
+    registry.getTexture("btn-start-pressed-right");
+    registry.getTexture("btn-retry-left");
+    registry.getTexture("btn-retry-center");
+    registry.getTexture("btn-retry-right");
+    registry.getTexture("btn-next-left");
+    registry.getTexture("btn-next-center");
+    registry.getTexture("btn-next-right");
+    registry.getTexture("panel-dark-top-left");
+    registry.getTexture("panel-dark-top");
+    registry.getTexture("panel-dark-top-right");
+    registry.getTexture("panel-dark-left");
+    registry.getTexture("panel-dark-center");
+    registry.getTexture("panel-dark-right");
+    registry.getTexture("panel-dark-bottom-left");
+    registry.getTexture("panel-dark-bottom");
+    registry.getTexture("panel-dark-bottom-right");
+    registry.getTexture("hud-coin");
+    registry.getTexture("hud-star");
+    registry.getTexture("lock-closed");
+    registry.getTexture("lock-open");
+    registry.getTexture("flag");
+    registry.getTexture("arrow-left");
+    registry.getTexture("arrow-right");
+    registry.getTexture("pig-base");
   }
 
   createStartButton(registry, fx) {
@@ -205,13 +238,28 @@ export class StartScene extends Phaser.Scene {
 
   exposeTestHooks(registry, fx) {
     window.gameTest = window.gameTest || {};
-    window.gameTest.clickStartButton = () => {
+    window.gameTest.observers = window.gameTest.observers || {};
+    window.gameTest.observers.getAssetUsage = () => [...(window.__assetUsage || [])];
+
+    window.gameTest.drivers = window.gameTest.drivers || {};
+    window.gameTest.drivers.clickStartButton = () => {
       this.scene.start("PlayScene");
     };
+    window.gameTest.clickStartButton = window.gameTest.drivers.clickStartButton;
+
+    window.gameTest.hooks = window.gameTest.hooks || {};
+    window.gameTest.hooks.clickStartButton = window.gameTest.drivers.clickStartButton;
+
     window.gameTest.selectLevel = (levelId) => {
       if (state.unlockedLevels.includes(levelId)) {
         state.level = levelId;
       }
     };
+    window.gameTest.probes = window.gameTest.probes || {};
+    window.gameTest.probes.resetWithScenario = (scenario) => new Promise((resolve) => {
+      window.__pendingProbeScenario = scenario;
+      this.scene.start("PlayScene");
+      setTimeout(() => resolve(true), 50);
+    });
   }
 }

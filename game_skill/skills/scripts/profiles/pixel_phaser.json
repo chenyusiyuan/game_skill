@@ -3,8 +3,8 @@
   "description": "pixel_phaser - 传送带清板益智游戏 Playwright 驱动脚本",
   "game_html_relative": "game/index.html",
   "boot_timeout_ms": 10000,
-  "prd_hash": "537d200992a4a726a1d291feb08ccafa78440976",
-  "prd_path": "cases/pixel_phaser/docs/game-prd.md",
+  "prd_hash": "f8d63ae3a5de7a9e7e8adac98777e2bb5bc2f06f",
+  "prd_path": "problen_case/case_snapshots/pixel_phaser/docs/game-prd.md",
   "assertions": [
     {
       "id": "game-boots",
@@ -12,8 +12,21 @@
       "kind": "boot",
       "description": "游戏启动",
       "setup": [
-        { "action": "wait", "ms": 500 },
-        { "action": "assert", "path": "window.gameState.phase", "op": "eq", "value": "ready" }
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "assert",
+          "path": "window.gameState.phase",
+          "op": "eq",
+          "value": "ready"
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     },
     {
@@ -22,12 +35,37 @@
       "description": "点击派出",
       "kind": "interaction",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "const beforeCount = window.gameTest.getGameState().conveyorPigCount; window.gameTest.drivers.deployPig(0); beforeCount" },
-        { "action": "wait", "ms": 300 },
-        { "action": "assert", "path": "window.gameState.conveyorPigCount", "op": "gte", "value": 1 }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "const beforeCount = window.gameTest.getGameState().conveyorPigCount; window.gameTest.drivers.deployPig(0); beforeCount"
+        },
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "assert",
+          "path": "window.gameState.conveyorPigCount",
+          "op": "gte",
+          "value": 1
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     },
     {
@@ -36,12 +74,35 @@
       "description": "攻击逻辑",
       "kind": "interaction",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.drivers.deployPig(0)" },
-        { "action": "wait", "ms": 3000 },
-        { "action": "eval", "code": "const state = window.gameTest.getGameState(); state.successfulAttacks >= 1" }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.drivers.deployPig(0)"
+        },
+        {
+          "action": "wait",
+          "ms": 3000
+        },
+        {
+          "action": "eval",
+          "code": "const snapshot = window.gameTest.getGameState(); snapshot.successfulAttacks >= 1"
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     },
     {
@@ -50,12 +111,35 @@
       "description": "禁止全屏索敌验证",
       "kind": "interaction",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.drivers.deployPig(0)" },
-        { "action": "wait", "ms": 3000 },
-        { "action": "eval", "code": "const trace = window.gameTest.observers.getTrace(); const rayHits = trace.filter(e => e.rule === 'attack-check'); rayHits.length > 0 && rayHits.every(e => e.after?.hit !== undefined)" }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.drivers.deployPig(0)"
+        },
+        {
+          "action": "wait",
+          "ms": 3000
+        },
+        {
+          "action": "eval",
+          "code": "const trace = window.gameTest.observers.getTrace(); const rayHits = trace.filter(e => e.rule === 'attack-check'); rayHits.length > 0 && rayHits.every(e => e.after?.hit !== undefined)"
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     },
     {
@@ -64,11 +148,31 @@
       "description": "胜利条件",
       "kind": "interaction",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "for(let i=0; i<5; i++) { window.gameTest.drivers.deployPig(i); }" },
-        { "action": "wait", "ms": 15000 }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "for(let i=0; i<5; i++) { window.gameTest.drivers.deployPig(i); }"
+        },
+        {
+          "action": "wait",
+          "ms": 15000
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     },
     {
@@ -77,12 +181,35 @@
       "description": "失败条件",
       "kind": "interaction",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "for(let i=0; i<5; i++) { window.gameTest.drivers.deployPig(i); }" },
-        { "action": "wait", "ms": 20000 },
-        { "action": "eval", "code": "const state = window.gameTest.getGameState(); state.gameOver === true || state.phase === 'lose' || state.phase === 'win'" }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "for(let i=0; i<5; i++) { window.gameTest.drivers.deployPig(i); }"
+        },
+        {
+          "action": "wait",
+          "ms": 20000
+        },
+        {
+          "action": "eval",
+          "code": "const snapshot = window.gameTest.getGameState(); snapshot.gameOver === true || snapshot.phase === 'lose' || snapshot.phase === 'win'"
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     },
     {
@@ -91,12 +218,35 @@
       "description": "回收机制",
       "kind": "interaction",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.drivers.deployPig(0)" },
-        { "action": "wait", "ms": 15000 },
-        { "action": "eval", "code": "const trace = window.gameTest.observers.getTrace(); trace.some(e => e.rule === 'recycle-pig')" }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.drivers.deployPig(0)"
+        },
+        {
+          "action": "wait",
+          "ms": 15000
+        },
+        {
+          "action": "eval",
+          "code": "const trace = window.gameTest.observers.getTrace(); trace.some(e => e.rule === 'recycle-pig')"
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     },
     {
@@ -105,10 +255,27 @@
       "description": "关卡递进",
       "kind": "interaction",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "const state = window.gameTest.getGameState(); Array.isArray(state.unlockedLevels) && state.unlockedLevels.includes(1)" }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "const snapshot = window.gameTest.getGameState(); Array.isArray(snapshot.unlockedLevels) && snapshot.unlockedLevels.includes(1)"
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     },
     {
@@ -117,12 +284,37 @@
       "description": "传送带移动",
       "kind": "interaction",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.drivers.deployPig(0)" },
-        { "action": "wait", "ms": 1000 },
-        { "action": "assert", "path": "window.gameState.conveyorPigCount", "op": "gte", "value": 1 }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.drivers.deployPig(0)"
+        },
+        {
+          "action": "wait",
+          "ms": 1000
+        },
+        {
+          "action": "assert",
+          "path": "window.gameState.conveyorPigCount",
+          "op": "gte",
+          "value": 1
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     },
     {
@@ -131,12 +323,37 @@
       "description": "位置依赖攻击",
       "kind": "interaction",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.drivers.deployPig(0)" },
-        { "action": "wait", "ms": 3000 },
-        { "action": "assert", "path": "window.gameState.successfulAttacks", "op": "gte", "value": 1 }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.drivers.deployPig(0)"
+        },
+        {
+          "action": "wait",
+          "ms": 3000
+        },
+        {
+          "action": "assert",
+          "path": "window.gameState.successfulAttacks",
+          "op": "gte",
+          "value": 1
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     },
     {
@@ -145,12 +362,35 @@
       "description": "颜色匹配攻击",
       "kind": "interaction",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.drivers.deployPig(0)" },
-        { "action": "wait", "ms": 2000 },
-        { "action": "eval", "code": "const trace = window.gameTest.observers.getTrace(); trace.some(e => e.rule === 'attack-exec' || e.rule === 'match-miss')" }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.drivers.deployPig(0)"
+        },
+        {
+          "action": "wait",
+          "ms": 2000
+        },
+        {
+          "action": "eval",
+          "code": "const trace = window.gameTest.observers.getTrace(); trace.some(e => e.rule === 'attack-exec' || e.rule === 'match-miss')"
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     }
   ],
@@ -161,12 +401,35 @@
       "description": "禁止全屏自动索敌 - 攻击必须依赖当前位置",
       "kind": "hard-rule",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.drivers.deployPig(0)" },
-        { "action": "wait", "ms": 3000 },
-        { "action": "eval", "code": "const trace = window.gameTest.observers.getTrace(); const attacks = trace.filter(e => e.rule === 'attack-check'); attacks.every(e => e.after?.hit !== undefined)" }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.drivers.deployPig(0)"
+        },
+        {
+          "action": "wait",
+          "ms": 3000
+        },
+        {
+          "action": "eval",
+          "code": "const trace = window.gameTest.observers.getTrace(); const attacks = trace.filter(e => e.rule === 'attack-check'); attacks.every(e => e.after?.hit !== undefined)"
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     },
     {
@@ -175,12 +438,35 @@
       "description": "禁止一次攻击多个块",
       "kind": "hard-rule",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.drivers.deployPig(0)" },
-        { "action": "wait", "ms": 3000 },
-        { "action": "eval", "code": "const state = window.gameTest.observers.getSnapshot(); state.successfulAttacks >= 0" }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.drivers.deployPig(0)"
+        },
+        {
+          "action": "wait",
+          "ms": 3000
+        },
+        {
+          "action": "eval",
+          "code": "const snapshot = window.gameTest.observers.getSnapshot(); snapshot.successfulAttacks >= 0"
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     },
     {
@@ -189,12 +475,35 @@
       "description": "禁止穿透攻击",
       "kind": "hard-rule",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.drivers.deployPig(0)" },
-        { "action": "wait", "ms": 3000 },
-        { "action": "eval", "code": "const state = window.gameTest.observers.getSnapshot(); state.blocks.filter(b => b.alive).length >= 0" }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.drivers.deployPig(0)"
+        },
+        {
+          "action": "wait",
+          "ms": 3000
+        },
+        {
+          "action": "eval",
+          "code": "const snapshot = window.gameTest.observers.getSnapshot(); snapshot.blocks.filter(b => b.alive).length >= 0"
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     },
     {
@@ -203,12 +512,35 @@
       "description": "禁止三消机制",
       "kind": "hard-rule",
       "setup": [
-        { "action": "wait", "ms": 300 },
-        { "action": "eval", "code": "window.gameTest.hooks.clickStartButton()" },
-        { "action": "wait", "ms": 500 },
-        { "action": "eval", "code": "window.gameTest.drivers.deployPig(0)" },
-        { "action": "wait", "ms": 3000 },
-        { "action": "eval", "code": "const state = window.gameTest.observers.getSnapshot(); typeof state.score === 'number'" }
+        {
+          "action": "wait",
+          "ms": 300
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.hooks.clickStartButton()"
+        },
+        {
+          "action": "wait",
+          "ms": 500
+        },
+        {
+          "action": "eval",
+          "code": "window.gameTest.drivers.deployPig(0)"
+        },
+        {
+          "action": "wait",
+          "ms": 3000
+        },
+        {
+          "action": "eval",
+          "code": "const snapshot = window.gameTest.observers.getSnapshot(); typeof snapshot.score === 'number'"
+        },
+        {
+          "action": "click",
+          "x": 360,
+          "y": 1080
+        }
       ]
     }
   ]

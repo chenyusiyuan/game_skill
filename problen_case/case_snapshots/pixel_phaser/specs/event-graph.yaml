@@ -421,6 +421,12 @@ test-hooks:
     - name: "window.gameTest.setPigColor"
       description: "Set pig color for testing color match scenarios"
 
+# === Rule Trace Baseline ===
+rule-traces:
+  - rule-id: dispatch-pig
+  - rule-id: pig-move
+  - rule-id: attack-check
+
 # === Event Naming Conventions ===
 # Events follow pattern: <source>.<action>
 # - input.* : External player inputs

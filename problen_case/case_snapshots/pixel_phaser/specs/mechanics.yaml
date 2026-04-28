@@ -74,7 +74,7 @@ mechanics:
   # === 攻击射线 ===
   - node: attack-raycast
     primitive: ray-cast@v1
-    trigger-on: [track.enter-segment]
+    trigger-on: [track.attack-position]
     params:
       source: { from: pig }
       coord-system: grid

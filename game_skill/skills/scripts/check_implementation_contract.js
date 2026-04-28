@@ -327,7 +327,7 @@ function checkGeneratedCode(c, assets, root) {
   }
   checkTracePushPoints(businessSrc);  // T3
   checkPrimitiveImplementationCoverage(allSrc); // mechanics -> code 1:1
-  checkRuntimePrimitiveImports(c, businessSrc); // P1.4: canvas/pixijs must import runtime APIs
+  checkRuntimePrimitiveImports(c, businessSrc); // P1.4: enforced engines must import runtime APIs
 
   if (engine === "phaser3" || engine === "phaser") {
     if (/\.load\.start\s*\(/.test(businessSrc)) {
@@ -449,7 +449,7 @@ function checkRuntimePrimitiveImports(c, businessSrc) {
     );
   }
   if (missingImport.length === 0 && missingCall.length === 0) {
-    ok(`[runtime] 全部 ${required.size} 个 runtime-backed primitive 均已 import + 调用`);
+    ok(`[runtime] runtime primitive import 完整：全部 ${required.size} 个 runtime-backed primitive 均已 import + 调用`);
   }
 }
 
@@ -476,7 +476,7 @@ function checkTracePushPoints(businessSrc) {
   // 先检查业务代码是否有 window.__trace 初始化或 push
   const hasTraceInit = /window\.__trace\s*=|window\.__trace\.push\s*\(/.test(businessSrc);
   if (!hasTraceInit) {
-    fail(`[trace] 业务代码未见 window.__trace.push 调用；codegen 必须在每条 @rule 触发点 push`);
+    fail(`[trace] 业务代码未见 window.__trace 初始化；codegen 必须保留 trace sink，并在每条 @rule 触发点产出 runtime trace`);
     return;
   }
   // 每条 rule-id 必须有对应 push
@@ -488,9 +488,9 @@ function checkTracePushPoints(businessSrc) {
   if (missing.length > 0) {
     const shown = missing.slice(0, 8).join(", ");
     const more = missing.length > 8 ? ` ...+${missing.length - 8}` : "";
-    fail(`[trace] ${missing.length}/${ruleIds.length} 个 @rule 在业务代码中缺少 window.__trace.push({rule:...}) 调用: ${shown}${more}`);
+    fail(`[trace] ${missing.length}/${ruleIds.length} 个 @rule 在业务代码中缺少 trace rule 字面量（runtime ctx.rule 或手写 push）: ${shown}${more}`);
   } else {
-    ok(`[trace] 所有 ${ruleIds.length} 个 @rule 都有 trace push 调用`);
+    ok(`[trace] 所有 ${ruleIds.length} 个 @rule 都有 trace rule 字面量`);
   }
 }
 

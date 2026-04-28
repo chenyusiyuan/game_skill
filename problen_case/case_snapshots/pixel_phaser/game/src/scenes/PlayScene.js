@@ -18,6 +18,23 @@ import {
 import { preloadRegistryAssets, createRegistry } from "../adapters/phaser-registry.js";
 import { createFx } from "../adapters/phaser-fx.js";
 import manifest from "../assets.manifest.json" with { type: "json" };
+import { recordAssetUsage } from "../_common/asset-usage.js";
+import {
+  addCell,
+  removeCell,
+  tickTrack,
+  positionAt,
+  rayCastGridFirstHit,
+  predicateMatch,
+  consumeResource,
+  bindSlot,
+  unbindSlot,
+  requestCapacity,
+  releaseCapacity,
+  transitionLifecycle,
+  checkWinLose,
+  accumulateScore,
+} from "../_common/primitives/index.mjs";
 
 // ===== Constants =====
 const LAYOUT = {
@@ -36,6 +53,90 @@ const TIMING = {
   RECYCLE_DELAY: 200,
 };
 
+const TRACK_SEGMENTS = [
+  { id: "top", range: [0, 0.25] },
+  { id: "right", range: [0.25, 0.5] },
+  { id: "bottom", range: [0.5, 0.75] },
+  { id: "left", range: [0.75, 1] },
+];
+
+const RAY_DIRECTIONS = {
+  top: { dx: 0, dy: 1 },
+  right: { dx: -1, dy: 0 },
+  bottom: { dx: 0, dy: -1 },
+  left: { dx: 1, dy: 0 },
+};
+
+const SLOT_PARAMS = {
+  capacity: 5,
+  "slot-ids": ["slot-0", "slot-1", "slot-2", "slot-3", "slot-4"],
+};
+
+const LIFECYCLE_PARAMS = {
+  transitions: [
+    { from: "waiting", event: "dispatched", to: "active" },
+    { from: "active", event: "exhausted", to: "returning" },
+    { from: "active", event: "killed", to: "dead" },
+    { from: "returning", event: "arrived", to: "waiting" },
+  ],
+};
+
+const SCORE_PARAMS = {
+  "score-field": "game.score",
+  rules: [{ on: "resource.target-zero", delta: 10 }],
+};
+
+function boardParams() {
+  return {
+    rows: state.gridHeight,
+    cols: state.gridWidth,
+    "cell-fields": [
+      { name: "color", type: "enum", values: COLOR_HEX ? Object.keys(COLOR_HEX) : ["red", "blue", "yellow", "green"] },
+      { name: "hp", type: "number" },
+    ],
+  };
+}
+
+function boardState() {
+  return { cells: state.blocks };
+}
+
+function applyBoard(nextBoard) {
+  if (Array.isArray(nextBoard?.cells)) state.blocks = nextBoard.cells;
+}
+
+function slotPoolFromState() {
+  return {
+    capacity: SLOT_PARAMS.capacity,
+    slots: state.waitingSlots.map((occupantId, index) => ({ id: `slot-${index}`, occupantId })),
+  };
+}
+
+function applySlotPool(pool) {
+  if (!Array.isArray(pool?.slots)) return;
+  state.waitingSlots = pool.slots.map((slot) => slot.occupantId ?? null);
+  syncDerivedState();
+}
+
+function gateFromState() {
+  return {
+    capacity: state.conveyorCapacity,
+    active: [...state.conveyorPigs],
+  };
+}
+
+function applyGate(gate) {
+  if (!Array.isArray(gate?.active)) return;
+  state.conveyorCapacity = gate.capacity;
+  state.conveyorPigs = [...gate.active];
+  syncDerivedState();
+}
+
+function syncDerivedState() {
+  state.conveyorPigCount = state.conveyorPigs.length;
+  state.waitingPigCount = state.waitingSlots.filter(Boolean).length;
+}
+
 export class PlayScene extends Phaser.Scene {
   constructor() {
     super("PlayScene");
@@ -51,6 +152,7 @@ export class PlayScene extends Phaser.Scene {
     this.pigSprites = new Map();
     this.blockSprites = new Map();
     this.conveyorPath = [];
+    syncDerivedState();
   }
 
   preload() {
@@ -75,11 +177,17 @@ export class PlayScene extends Phaser.Scene {
     this.renderWaitingSlots();
     this.renderHUD();
 
-    // Initialize trace
+    // Initialize runtime trace sink; primitive runtime owns all trace writes.
     window.__trace = window.__trace || [];
 
     // Expose test hooks
     this.exposeTestHooks();
+
+    if (window.__pendingProbeScenario) {
+      const scenario = window.__pendingProbeScenario;
+      delete window.__pendingProbeScenario;
+      window.gameTest.probes.resetWithScenario(scenario);
+    }
   }
 
   // ===== Level Initialization =====
@@ -87,7 +195,6 @@ export class PlayScene extends Phaser.Scene {
     const level = LEVELS.find((l) => l.id === levelId);
     if (!level) return;
 
-    const before = { level: state.level, phase: state.phase };
     state.level = levelId;
     state.score = 0;
     state.phase = "playing";
@@ -109,8 +216,7 @@ export class PlayScene extends Phaser.Scene {
 
     // Generate pigs
     this.generatePigs(level);
-
-    window.__trace.push({ rule: "level-init", before, after: { level: state.level }, t: Date.now() });
+    syncDerivedState();
   }
 
   generateBlocks(level) {
@@ -137,15 +243,25 @@ export class PlayScene extends Phaser.Scene {
       colors.push(colorSet[i % colorSet.length]);
     }
 
-    // Create blocks
-    state.blocks = selectedPositions.map((pos, i) => ({
-      id: `block-${i}`,
-      color: colors[i],
-      hp: i < reinforcedBlocks ? (Array.isArray(reinforcedHp) ? reinforcedHp[i] || 2 : reinforcedHp) : 1,
-      row: pos.row,
-      col: pos.col,
-      alive: true,
-    }));
+    let board = { cells: [] };
+    for (const [i, pos] of selectedPositions.entries()) {
+      const block = {
+        id: `block-${i}`,
+        color: colors[i],
+        hp: i < reinforcedBlocks ? (Array.isArray(reinforcedHp) ? reinforcedHp[i] || 2 : reinforcedHp) : 1,
+        row: pos.row,
+        col: pos.col,
+        alive: true,
+      };
+      board = addCell({
+        rule: "board-init",
+        node: "board",
+        board,
+        cell: block,
+        params: boardParams(),
+      });
+    }
+    applyBoard(board);
   }
 
   generatePigs(level) {
@@ -173,10 +289,19 @@ export class PlayScene extends Phaser.Scene {
 
     state.pigs = pigs;
 
-    // Place first 5 pigs in waiting slots
+    // Place first 5 pigs in waiting slots through slot-pool runtime.
+    let pool = slotPoolFromState();
     for (let i = 0; i < Math.min(5, pigs.length); i++) {
-      state.waitingSlots[i] = pigs[i].id;
+      const next = bindSlot({
+        rule: "pool-bind",
+        node: "waiting-pool-manager",
+        pool,
+        occupantId: pigs[i].id,
+        params: SLOT_PARAMS,
+      });
+      pool = next.pool;
     }
+    applySlotPool(pool);
   }
 
   // ===== Rendering =====
@@ -222,6 +347,13 @@ export class PlayScene extends Phaser.Scene {
   // @asset('block-target'): graphics-generated color-block, rendered procedurally
   renderBlock(block) {
     if (!block.alive) return;
+    recordAssetUsage({
+      id: "block-target",
+      section: "images",
+      kind: "generated",
+      visualPrimitive: "color-block",
+      extra: { color: block.color, row: block.row, col: block.col },
+    });
 
     const cellSize = LAYOUT.CELL_SIZE;
     const x = LAYOUT.BOARD_OFFSET_X + block.col * cellSize + cellSize / 2;
@@ -298,22 +430,7 @@ export class PlayScene extends Phaser.Scene {
     const perimeter = 2 * this.trackBounds.width + 2 * this.trackBounds.height;
     this.trackPerimeter = perimeter;
 
-    // Segment boundaries (normalized t values)
-    this.segments = {
-      top: { start: 0, end: this.trackBounds.width / perimeter },
-      right: {
-        start: this.trackBounds.width / perimeter,
-        end: (this.trackBounds.width + this.trackBounds.height) / perimeter,
-      },
-      bottom: {
-        start: (this.trackBounds.width + this.trackBounds.height) / perimeter,
-        end: (2 * this.trackBounds.width + this.trackBounds.height) / perimeter,
-      },
-      left: {
-        start: (2 * this.trackBounds.width + this.trackBounds.height) / perimeter,
-        end: 1,
-      },
-    };
+    this.segments = TRACK_SEGMENTS;
   }
 
   renderWaitingSlots() {
@@ -481,32 +598,30 @@ export class PlayScene extends Phaser.Scene {
 
   updateConveyorPigs(delta) {
     const dt = delta / 1000;
+    const trackParams = this.getTrackParams();
 
     for (const pig of state.pigs) {
       if (pig.lifecycle !== "active" || !pig.alive) continue;
 
       const oldT = pig.t;
       const oldSegmentId = pig.segmentId;
+      const oldLapCount = pig.lapCount || 0;
+      const oldAttackPositionKey = pig.attackPositionKey || null;
 
-      // Update t position
-      pig.t = (pig.t + pig.speed * dt) % 1;
+      const nextPig = tickTrack({
+        rule: "pig-move",
+        node: "conveyor-track",
+        agent: pig,
+        dt,
+        params: trackParams,
+      });
+      Object.assign(pig, nextPig);
 
-      // Determine current segment
-      const newSegmentId = this.getSegmentAtT(pig.t);
-
-      // Check for segment transition (attack trigger point)
-      if (oldSegmentId !== newSegmentId && newSegmentId) {
-        pig.segmentId = newSegmentId;
-
-        // Calculate grid position based on segment
-        pig.gridPosition = this.getGridPositionFromT(pig.t, newSegmentId);
-
-        // Trigger attack check
-        this.onEnterSegment(pig, oldSegmentId, newSegmentId);
+      if (pig.attackPositionKey && pig.attackPositionKey !== oldAttackPositionKey) {
+        this.onEnterSegment(pig, oldSegmentId, pig.segmentId);
       }
 
-      // Check for loop complete
-      if (oldT > 0.9 && pig.t < 0.1) {
+      if ((pig.lapCount || 0) > oldLapCount || (oldT > 0.9 && pig.t < 0.1)) {
         this.onLoopComplete(pig);
       }
 
@@ -515,74 +630,34 @@ export class PlayScene extends Phaser.Scene {
     }
   }
 
-  getSegmentAtT(t) {
-    for (const [segId, seg] of Object.entries(this.segments)) {
-      if (t >= seg.start && t < seg.end) {
-        return segId;
-      }
-    }
-    return "top"; // Default for t close to 1
-  }
-
-  getGridPositionFromT(t, segmentId) {
-    const { gridWidth, gridHeight } = state;
-    const { left, top, right, bottom } = this.trackBounds;
-
-    let x, y;
-    const localT = (t - this.segments[segmentId].start) / (this.segments[segmentId].end - this.segments[segmentId].start);
-
-    switch (segmentId) {
-      case "top":
-        x = left + localT * (right - left);
-        y = top;
-        break;
-      case "right":
-        x = right;
-        y = top + localT * (bottom - top);
-        break;
-      case "bottom":
-        x = right - localT * (right - left);
-        y = bottom;
-        break;
-      case "left":
-        x = left;
-        y = bottom - localT * (bottom - top);
-        break;
-    }
-
-    // Convert to grid column/row
-    const col = Math.floor((x - LAYOUT.BOARD_OFFSET_X) / LAYOUT.CELL_SIZE);
-    const row = Math.floor((y - LAYOUT.BOARD_OFFSET_Y) / LAYOUT.CELL_SIZE);
-
-    return { row, col, worldX: x, worldY: y };
+  getTrackParams() {
+    const bounds = this.trackBounds || {
+      left: LAYOUT.BOARD_OFFSET_X - LAYOUT.CONVEYOR_MARGIN,
+      top: LAYOUT.BOARD_OFFSET_Y - LAYOUT.CONVEYOR_MARGIN,
+      width: state.gridWidth * LAYOUT.CELL_SIZE + LAYOUT.CONVEYOR_MARGIN * 2,
+      height: state.gridHeight * LAYOUT.CELL_SIZE + LAYOUT.CONVEYOR_MARGIN * 2,
+    };
+    const width = bounds.width ?? bounds.right - bounds.left;
+    const height = bounds.height ?? bounds.bottom - bounds.top;
+    return {
+      shape: "rect-loop",
+      geometry: {
+        x: bounds.left,
+        y: bounds.top,
+        width,
+        height,
+      },
+      "grid-projection": {
+        rows: state.gridHeight,
+        cols: state.gridWidth,
+        "outside-offset": 1,
+      },
+      segments: TRACK_SEGMENTS,
+    };
   }
 
   getWorldPositionFromT(t) {
-    const { left, top, right, bottom, width, height } = this.trackBounds;
-    const perimeter = this.trackPerimeter;
-    const dist = t * perimeter;
-
-    let x, y;
-
-    if (dist < width) {
-      // Top edge
-      x = left + dist;
-      y = top;
-    } else if (dist < width + height) {
-      // Right edge
-      x = right;
-      y = top + (dist - width);
-    } else if (dist < 2 * width + height) {
-      // Bottom edge
-      x = right - (dist - width - height);
-      y = bottom;
-    } else {
-      // Left edge
-      x = left;
-      y = bottom - (dist - 2 * width - height);
-    }
-
-    return { x, y };
+    return positionAt(t, this.getTrackParams());
   }
 
   updatePigSpritePosition(pig) {
@@ -608,89 +683,107 @@ export class PlayScene extends Phaser.Scene {
   onEnterSegment(pig, fromSegment, toSegment) {
     if (this.attackLock || pig.ammo <= 0) return;
 
-    const before = { pigId: pig.id, segment: toSegment, ammo: pig.ammo };
-
-    // @hard-rule(no-global-autoaim): 攻击必须严格依赖小猪当前位置，只能攻击正对方向第一个目标块
-    // Ray-cast from pig position toward the board center
     const hit = this.rayCastFirstHit(pig, toSegment);
 
     if (hit) {
+      const target = state.blocks.find((block) => block.id === hit.id && block.alive);
+      if (!target) return;
       // @hard-rule(no-multi-attack): 每次攻击只处理1个目标块
-      this.tryAttack(pig, hit);
+      this.tryAttack(pig, target);
     }
-
-    window.__trace.push({ rule: "attack-check", before, after: { hit: hit?.id }, t: Date.now() });
   }
 
   rayCastFirstHit(pig, segmentId) {
     // @hard-rule(no-penetration): 小猪不能跳过前方异色块去攻击后方同色块
-    // Get direction based on segment
-    const direction = {
-      top: { dr: 1, dc: 0 }, // Attack downward
-      right: { dr: 0, dc: -1 }, // Attack leftward
-      bottom: { dr: -1, dc: 0 }, // Attack upward
-      left: { dr: 0, dc: 1 }, // Attack rightward
-    }[segmentId];
+    const direction = RAY_DIRECTIONS[segmentId];
 
     if (!direction) return null;
 
-    const { row, col } = pig.gridPosition;
-    const { gridWidth, gridHeight } = state;
-
-    // Scan from pig position toward the board
-    let r = row + direction.dr;
-    let c = col + direction.dc;
-
     // @hard-rule(source-dependency): 命中结果必须是 source.position 的函数
-    while (r >= 0 && r < gridHeight && c >= 0 && c < gridWidth) {
-      // Find first alive block at this position
-      const block = state.blocks.find((b) => b.alive && b.row === r && b.col === c);
-      if (block) {
-        return block; // Return first hit regardless of color (no-penetration)
-      }
-      r += direction.dr;
-      c += direction.dc;
-    }
-
-    return null;
+    return rayCastGridFirstHit({
+      rule: "attack-check",
+      node: "attack-raycast",
+      source: pig,
+      direction,
+      targets: state.blocks,
+      params: {
+        "coord-system": "grid",
+        "stop-on": "first-hit",
+        "max-distance": Math.max(state.gridWidth, state.gridHeight) + 2,
+      },
+    });
   }
 
   tryAttack(pig, target) {
     if (this.attackLock) return;
 
-    const before = { pigId: pig.id, pigAmmo: pig.ammo, targetId: target.id, targetHp: target.hp };
+    const matched = predicateMatch({
+      rule: pig.color === target.color ? "color-match" : "match-miss",
+      node: "color-match",
+      left: pig,
+      right: target,
+      params: { fields: ["color"], op: "eq" },
+    });
 
-    // Color match check
-    if (pig.color === target.color) {
+    if (matched) {
       // Successful attack
       this.attackLock = true;
 
       state.totalAttacks++;
       state.successfulAttacks++;
 
-      // Consume resources
-      pig.ammo = Math.max(0, pig.ammo - 1);
-      target.hp = Math.max(0, target.hp - 1);
+      const result = consumeResource({
+        rule: "attack-exec",
+        node: "attack-consume",
+        agent: pig,
+        target,
+        params: {
+          "agent-field": "pig.ammo",
+          "target-field": "block.hp",
+          amount: 1,
+        },
+      });
+      Object.assign(pig, result.agent);
+      Object.assign(target, result.target);
 
       // Play effects
       this.fx.playEffect("tint-flash", { target: this.blockSprites.get(target.id), color: "#ffffff", duration: 100 });
       this.fx.playEffect("float-text", { x: 360, y: 300, text: "+10", color: "#22c55e", duration: 600 });
 
-      // Check if target destroyed
-      if (target.hp <= 0) {
-        target.alive = false;
-        this.destroyBlock(target);
-        state.score += 10;
+      const targetZero = result.events.some((event) => event.type === "resource.target-zero");
+      if (targetZero) {
+        const nextBoard = removeCell({
+          rule: "board-remove-cell",
+          node: "board",
+          board: boardState(),
+          cell: target,
+          params: boardParams(),
+        });
+        applyBoard(nextBoard);
+        const removedTarget = state.blocks.find((block) => block.id === target.id) || target;
+        this.destroyBlock(removedTarget);
+        state.score = accumulateScore({
+          rule: "score-up",
+          node: "scoring",
+          currentScore: state.score,
+          eventPayload: "resource.target-zero",
+          params: SCORE_PARAMS,
+        });
         this.updateHUD();
       }
 
-      // Check if pig exhausted
-      if (pig.ammo <= 0) {
-        pig.lifecycle = "returning";
+      const agentZero = result.events.some((event) => event.type === "resource.agent-zero");
+      if (agentZero) {
+        const next = transitionLifecycle({
+          rule: "pig-exhausted",
+          node: "pig-lifecycle",
+          entity: pig,
+          event: "exhausted",
+          params: LIFECYCLE_PARAMS,
+        });
+        Object.assign(pig, next.entity);
         this.fx.playEffect("fade-out", { target: this.pigSprites.get(pig.id), duration: 300, destroyOnEnd: false });
       }
-
-      window.__trace.push({ rule: "attack-exec", before, after: { pigAmmo: pig.ammo, targetHp: target.hp }, t: Date.now() });
 
       this.time.delayedCall(TIMING.ATTACK_DELAY, () => {
         this.attackLock = false;
@@ -698,7 +791,6 @@ export class PlayScene extends Phaser.Scene {
     } else {
       // Color mismatch - no attack
       this.fx.playEffect("tint-flash", { target: this.pigSprites.get(pig.id), color: "#ef4444", duration: 100 });
-      window.__trace.push({ rule: "match-miss", before, after: {}, t: Date.now() });
     }
   }
 
@@ -721,22 +813,45 @@ export class PlayScene extends Phaser.Scene {
       return;
     }
 
-    const before = { pigId: pig.id, lifecycle: pig.lifecycle };
-
     // Pig has remaining ammo, return to waiting slot
-    pig.lifecycle = "returning";
+    const returning = transitionLifecycle({
+      rule: "recycle-pig",
+      node: "pig-lifecycle",
+      entity: pig,
+      event: "exhausted",
+      params: LIFECYCLE_PARAMS,
+    });
+    Object.assign(pig, returning.entity);
 
-    // Find first empty waiting slot
-    const emptySlotIndex = state.waitingSlots.findIndex((s) => s === null);
+    const released = releaseCapacity({
+      rule: "capacity-release",
+      node: "conveyor-capacity",
+      gate: gateFromState(),
+      entityId: pig.id,
+      params: { capacity: state.conveyorCapacity },
+    });
+    applyGate(released.gate);
 
-    if (emptySlotIndex !== -1) {
-      state.waitingSlots[emptySlotIndex] = pig.id;
-      pig.lifecycle = "waiting";
+    const bound = bindSlot({
+      rule: "recycle-pig",
+      node: "waiting-pool-manager",
+      pool: slotPoolFromState(),
+      occupantId: pig.id,
+      params: SLOT_PARAMS,
+    });
+
+    if (!bound.events.some((event) => event.type === "pool.overflow")) {
+      applySlotPool(bound.pool);
+      const arrived = transitionLifecycle({
+        rule: "recycle-pig",
+        node: "pig-lifecycle",
+        entity: pig,
+        event: "arrived",
+        params: LIFECYCLE_PARAMS,
+      });
+      Object.assign(pig, arrived.entity);
       pig.t = 0;
       pig.segmentId = null;
-
-      // Remove from conveyor
-      state.conveyorPigs = state.conveyorPigs.filter((id) => id !== pig.id);
 
       // Update visuals
       const sprite = this.pigSprites.get(pig.id);
@@ -747,19 +862,29 @@ export class PlayScene extends Phaser.Scene {
 
       this.updateWaitingSlotSprites();
       this.updateHUD();
-
-      window.__trace.push({ rule: "recycle-pig", before, after: { lifecycle: pig.lifecycle, slotIndex: emptySlotIndex }, t: Date.now() });
     } else {
       // No empty slot, pig dies
-      pig.lifecycle = "dead";
-      pig.alive = false;
+      const killed = transitionLifecycle({
+        rule: "pig-death",
+        node: "pig-lifecycle",
+        entity: pig,
+        event: "killed",
+        params: LIFECYCLE_PARAMS,
+      });
+      Object.assign(pig, killed.entity);
       this.removePigFromConveyor(pig);
-      window.__trace.push({ rule: "pig-death", before, after: { lifecycle: "dead" }, t: Date.now() });
     }
   }
 
   removePigFromConveyor(pig) {
-    state.conveyorPigs = state.conveyorPigs.filter((id) => id !== pig.id);
+    const released = releaseCapacity({
+      rule: "capacity-release",
+      node: "conveyor-capacity",
+      gate: gateFromState(),
+      entityId: pig.id,
+      params: { capacity: state.conveyorCapacity },
+    });
+    applyGate(released.gate);
     const sprite = this.pigSprites.get(pig.id);
     if (sprite) {
       this.fx.playEffect("fade-out", { target: sprite, duration: 200, destroyOnEnd: true });
@@ -770,16 +895,33 @@ export class PlayScene extends Phaser.Scene {
 
   // ===== Win/Lose Check =====
   checkEndConditions() {
+    if (this.__probeMode) return;
     if (state.gameOver) return;
 
-    const before = { phase: state.phase };
+    const verdict = checkWinLose({
+      rule: "end-check",
+      node: "end-check",
+      state: {
+        collections: {
+          blocks: state.blocks,
+          pigs: state.pigs,
+        },
+        fields: { score: state.score },
+        resolved: state.gameOver,
+        outcome: ["win", "lose"].includes(state.phase) ? state.phase : null,
+      },
+      params: {
+        win: [
+          { kind: "all-cleared", collection: "blocks" },
+          { kind: "score-reaches", field: "score", threshold: 100 },
+        ],
+        lose: [{ kind: "count-falls-below", collection: "pigs", threshold: 1 }],
+      },
+    });
 
-    // Win: all blocks cleared
-    const aliveBlocks = state.blocks.filter((b) => b.alive);
-    if (aliveBlocks.length === 0) {
+    if (verdict === "win") {
       state.phase = "win";
       state.gameOver = true;
-      window.__trace.push({ rule: "win-check", before, after: { phase: "win" }, t: Date.now() });
 
       this.time.delayedCall(500, () => {
         this.scene.start("ResultScene");
@@ -787,14 +929,9 @@ export class PlayScene extends Phaser.Scene {
       return;
     }
 
-    // Lose: no pigs available (waiting + conveyor empty) and blocks remain
-    const waitingPigs = state.pigs.filter((p) => p.lifecycle === "waiting" && p.alive);
-    const activePigs = state.pigs.filter((p) => p.lifecycle === "active" && p.alive);
-
-    if (waitingPigs.length === 0 && activePigs.length === 0) {
+    if (verdict === "lose") {
       state.phase = "lose";
       state.gameOver = true;
-      window.__trace.push({ rule: "lose-check", before, after: { phase: "lose" }, t: Date.now() });
 
       this.time.delayedCall(500, () => {
         this.scene.start("ResultScene");
@@ -812,22 +949,46 @@ export class PlayScene extends Phaser.Scene {
     const pig = state.pigs.find((p) => p.id === pigId);
     if (!pig || pig.lifecycle !== "waiting") return;
 
-    // Check conveyor capacity
-    if (state.conveyorPigs.length >= state.conveyorCapacity) {
+    const admitted = requestCapacity({
+      rule: "dispatch-pig",
+      node: "conveyor-capacity",
+      gate: gateFromState(),
+      entityId: pig.id,
+      params: { capacity: state.conveyorCapacity },
+    });
+
+    if (!admitted.admitted && !admitted.gate.active.includes(pig.id)) {
       this.fx.playEffect("tint-flash", { target: this.capacityText, color: "#ef4444", duration: 200 });
       return;
     }
+    applyGate(admitted.gate);
 
-    const before = { pigId, lifecycle: pig.lifecycle, slotIndex };
+    const unbound = unbindSlot({
+      rule: "dispatch-pig",
+      node: "waiting-pool-manager",
+      pool: slotPoolFromState(),
+      occupantId: pig.id,
+      slotId: `slot-${slotIndex}`,
+      params: SLOT_PARAMS,
+    });
+    applySlotPool(unbound.pool);
 
-    // Dispatch pig to conveyor
-    pig.lifecycle = "active";
+    const active = transitionLifecycle({
+      rule: "dispatch-pig",
+      node: "pig-lifecycle",
+      entity: pig,
+      event: "dispatched",
+      params: LIFECYCLE_PARAMS,
+    });
+    Object.assign(pig, active.entity);
     pig.t = 0;
-    pig.segmentId = "top";
-    pig.gridPosition = this.getGridPositionFromT(0, "top");
-
-    state.waitingSlots[slotIndex] = null;
-    state.conveyorPigs.push(pig.id);
+    Object.assign(pig, tickTrack({
+      rule: "pig-move",
+      node: "conveyor-track",
+      agent: pig,
+      dt: 0,
+      params: this.getTrackParams(),
+    }));
 
     // Update visuals
     this.updateWaitingSlotSprites();
@@ -835,8 +996,6 @@ export class PlayScene extends Phaser.Scene {
 
     // Play effects
     this.fx.playEffect("scale-bounce", { target: this.pigSprites.get(pig.id), from: 1.2, to: 1, duration: 200 });
-
-    window.__trace.push({ rule: "dispatch-pig", before, after: { lifecycle: pig.lifecycle }, t: Date.now() });
   }
 
   // ===== Test Hooks =====
@@ -847,20 +1006,22 @@ export class PlayScene extends Phaser.Scene {
     window.gameTest.getSnapshot = () => JSON.parse(JSON.stringify(state));
     window.gameTest.getTrace = () => [...(window.__trace || [])];
     window.gameTest.getAssetUsage = () => {
-      // Track all assets used via add.image calls
-      const usage = [];
-      const trace = window.__trace || [];
-      for (const ev of trace) {
-        if (ev.rule === 'asset-used' && ev.assetId) {
-          usage.push({ assetId: ev.assetId, timestamp: ev.t });
-        }
-      }
-      return usage;
+      return [...(window.__assetUsage || [])];
     };
 
     // Drivers (user input simulation)
     window.gameTest.drivers = window.gameTest.drivers || {};
-    window.gameTest.drivers.deployPig = (slotIndex) => this.onSlotClick(slotIndex);
+    window.gameTest.drivers.dispatchPig = (slotOrPigId) => {
+      if (typeof slotOrPigId === "string") {
+        const pig = state.pigs.find((item) => item.id === slotOrPigId);
+        if (!pig) return false;
+        const segmentId = pig.segmentId || "top";
+        this.rayCastFirstHit(pig, segmentId);
+        return true;
+      }
+      return this.onSlotClick(slotOrPigId);
+    };
+    window.gameTest.drivers.deployPig = window.gameTest.drivers.dispatchPig;
     window.gameTest.drivers.clickStartButton = () => this.scene.start("PlayScene");
     window.gameTest.drivers.clickRetryButton = () => this.scene.start("PlayScene");
     window.gameTest.drivers.clickNextButton = () => {
@@ -904,13 +1065,28 @@ export class PlayScene extends Phaser.Scene {
     window.gameTest.probes.resetWithScenario = (scenario) => {
       // Reset trace
       window.__trace = [];
+      this.__probeMode = true;
 
       // Reset state with scenario data
-      if (scenario.pigs) {
-        state.pigs = scenario.pigs.map(p => ({ ...p }));
+      const scenarioPigs = scenario.pigs || (scenario.pig ? [scenario.pig] : null);
+      if (scenarioPigs) {
+        state.pigs = scenarioPigs.map((p) => ({
+          ...p,
+          lifecycle: p.lifecycle || "waiting",
+          t: p.t ?? 0,
+          segmentId: p.segmentId || "top",
+          ammo: p.ammo ?? 3,
+          alive: p.alive ?? true,
+          gridPosition: p.gridPosition || { row: -1, col: 0 },
+        }));
       }
       if (scenario.blocks) {
-        state.blocks = scenario.blocks.map(b => ({ ...b }));
+        state.blocks = scenario.blocks.map((b) => ({
+          ...b,
+          hp: b.hp ?? b.durability ?? 1,
+          durability: b.durability ?? b.hp ?? 1,
+          alive: b.alive ?? true,
+        }));
       }
       if (scenario.game) {
         for (const item of scenario.game) {
@@ -939,7 +1115,28 @@ export class PlayScene extends Phaser.Scene {
       // Re-render
       this.updateWaitingSlotSprites();
       this.updateHUD();
+      window.__trace = [];
 
+      return true;
+    };
+
+    window.gameTest.probes.resetPig = (patch) => {
+      if (!patch?.id) return false;
+      let pig = state.pigs.find((item) => item.id === patch.id);
+      if (!pig) {
+        pig = {
+          id: patch.id,
+          color: patch.color || "red",
+          ammo: patch.ammo ?? 3,
+          lifecycle: "waiting",
+          t: patch.t ?? 0,
+          segmentId: patch.segmentId || "top",
+          gridPosition: patch.gridPosition || { row: -1, col: 0 },
+          alive: true,
+        };
+        state.pigs.push(pig);
+      }
+      Object.assign(pig, patch);
       return true;
     };
 
@@ -947,6 +1144,7 @@ export class PlayScene extends Phaser.Scene {
     window.gameTest.observers = window.gameTest.observers || {};
     window.gameTest.observers.getTrace = window.gameTest.getTrace;
     window.gameTest.observers.getSnapshot = window.gameTest.getSnapshot;
+    window.gameTest.observers.getAssetUsage = window.gameTest.getAssetUsage;
 
     // Setup slot click handlers
     this.setupSlotClickHandlers();
