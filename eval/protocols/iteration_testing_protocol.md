@@ -300,7 +300,7 @@ FIX ORDER: start at L1; L3/L4 will likely self-resolve.
 
 ## 建议下一步
 - 本轮可以 commit
-- 按 TODO 清单，下一批是 P1 profile 迁移；建议先读 profile_tri_bucket_migration_todo.md 的前置依赖段再开工
+- 按 TODO 清单，下一批是 P1 profile 迁移；建议先读 eval/todos/profile_tri_bucket_migration_todo.md 的前置依赖段再开工
 
 ## 如果用户想发版
 - 需要跑 L5 全锚 + L6 diff；今天没跑，估计 10 分钟

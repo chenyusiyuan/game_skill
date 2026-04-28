@@ -146,7 +146,7 @@ test("check_implementation_contract skips three spatial primitives without faili
 
 ## 相关上下文文件
 
-- 方案来源：`/Users/bytedance/Project/game_skill/生成层重构.md` §3 / §10
+- 方案来源：`/Users/bytedance/Project/game_skill/eval/design/生成层重构.md` §3 / §10
 - 数据表：`/Users/bytedance/Project/game_skill/game_skill/skills/scripts/_primitive_runtime_map.js`
 - Checker：`/Users/bytedance/Project/game_skill/game_skill/skills/scripts/check_implementation_contract.js`
 - 三分类 schema：`/Users/bytedance/Project/game_skill/game_skill/skills/schemas/implementation-contract.schema.json`

@@ -312,11 +312,11 @@ cp cases/$CASE/eval/report.json cases/anchors/<descriptive-name>-min/eval/report
 
 ## 相关参考
 
-- `iteration_testing_protocol.md` — 改代码时的 L1-L6 快速测试
-- `three_engine_todo.md` — P3-C three 引擎收编待办
-- `profile_tri_bucket_migration_todo.md` — profile 三分类迁移待办
-- `生成层重构.md` — 历史抽象升级的完整案例（P0/P1/P2）
-- `asset_chain_baseline_audit.md` — catalog 语义审计参考
+- `eval/protocols/iteration_testing_protocol.md` — 改代码时的 L1-L6 快速测试
+- `eval/todos/three_engine_todo.md` — P3-C three 引擎收编待办
+- `eval/todos/profile_tri_bucket_migration_todo.md` — profile 三分类迁移待办
+- `eval/design/生成层重构.md` — 历史抽象升级的完整案例（P0/P1/P2）
+- `eval/design/asset_chain_baseline_audit.md` — catalog 语义审计参考
 
 ---
 
