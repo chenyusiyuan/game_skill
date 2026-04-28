@@ -35,6 +35,10 @@ const assetsPath = firstExisting(
   join(specsDir, "assets.yaml"),
   join(specsDir, ".pending/assets.yaml")
 );
+const mechanicsPath = firstExisting(
+  join(specsDir, "mechanics.yaml"),
+  join(specsDir, ".pending/mechanics.yaml")
+);
 const prdPath = join(caseDir, "docs/game-prd.md");
 const strategy = readAssetStrategy(caseDir);
 const assetless = strategy.mode === "none";
@@ -50,9 +54,11 @@ const prdRaw = existsSync(prdPath) ? readFileSync(prdPath, "utf-8") : "";
 
 let sceneSpec;
 let assetsSpec;
+let mechanicsSpec;
 try {
   sceneSpec = yaml.load(sceneRaw) ?? {};
   assetsSpec = assetsRaw ? (yaml.load(assetsRaw) ?? {}) : {};
+  mechanicsSpec = mechanicsPath ? (yaml.load(readFileSync(mechanicsPath, "utf-8")) ?? {}) : {};
 } catch (e) {
   console.error(`✗ specs yaml 解析失败: ${e.message}`);
   process.exit(1);
@@ -62,6 +68,7 @@ const runtime = inferRuntime({ assetsRaw, assetsSpec, prdRaw });
 const runMode = defaultRunMode(runtime);
 const boot = normalizeBoot(sceneSpec["boot-contract"] ?? {});
 const bindings = assetless ? [] : collectAssetBindings(assetsSpec, strategy);
+const runtimeProbes = detectProbesFromMechanics(mechanicsSpec);
 
 const contract = {
   "contract-version": 1,
@@ -81,7 +88,11 @@ const contract = {
           "required-local-assets-loaded",
           "required-local-assets-consumed",
         ],
-    "required-test-hooks": ["clickStartButton"],
+    "required-test-hooks": {
+      observers: ["getSnapshot", "getTrace"],
+      drivers: ["clickStartButton"],
+      probes: runtimeProbes,
+    },
     "report-policy": "verifier-json-only",
   },
 };
@@ -91,6 +102,7 @@ writeFileSync(outPath, yaml.dump(contract, { lineWidth: 120, noRefs: true }) + "
 console.log(`✓ implementation contract 写入: ${outPath}`);
 console.log(`  - runtime: ${runtime} (${runMode})`);
 console.log(`  - asset-bindings: ${bindings.length}`);
+console.log(`  - runtime-probes: ${runtimeProbes.length ? runtimeProbes.join(", ") : "<none>"}`);
 
 function firstExisting(...paths) {
   return paths.find((p) => existsSync(p)) ?? null;
@@ -120,6 +132,14 @@ function normalizeBoot(raw) {
     "start-action": raw["start-action"] ?? { trigger: "auto", target: null, result: "phase -> playing" },
     "scene-transitions": transitions,
   };
+}
+
+export function detectProbesFromMechanics(mechanics) {
+  const primitives = new Set((mechanics?.mechanics ?? []).map((node) => String(node?.primitive ?? "")).filter(Boolean));
+  if (primitives.has("ray-cast@v1") && primitives.has("parametric-track@v1")) {
+    return ["resetWithScenario"];
+  }
+  return [];
 }
 
 function collectAssetBindings(spec, strategy) {

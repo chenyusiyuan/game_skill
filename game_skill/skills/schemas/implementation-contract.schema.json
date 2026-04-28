@@ -128,8 +128,32 @@
           "items": { "type": "string" }
         },
         "required-test-hooks": {
-          "type": "array",
-          "items": { "type": "string" }
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["observers", "drivers", "probes"],
+              "properties": {
+                "observers": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "drivers": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "probes": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "array",
+              "items": { "type": "string" },
+              "deprecated": true
+            }
+          ]
         },
         "report-policy": {
           "type": "string",

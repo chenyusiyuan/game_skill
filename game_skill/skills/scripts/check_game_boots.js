@@ -317,25 +317,48 @@ if (canvasHealth.missingTextures.length === 0 && canvasHealth.brokenImages.lengt
 const isEngineProject = ["phaser3", "phaser", "pixijs", "pixi", "canvas", "three"].includes(engineMarker);
 
 if (isEngineProject) {
-  // 5a. window.gameTest 存在
-  const hasGameTest = await page.evaluate(() =>
-    typeof window.gameTest !== "undefined" ||
-    typeof window.simulateCorrectMatch === "function"
-  );
-  if (!hasGameTest) {
+  // 5a. window.gameTest 三分类存在性检查
+  const testApi = await page.evaluate(() => {
+    const gt = window.gameTest;
+    const hasTri = gt &&
+      typeof gt.observers === "object" &&
+      typeof gt.drivers === "object" &&
+      typeof gt.probes === "object";
+    const legacyKeys = gt && typeof gt === "object"
+      ? Object.keys(gt).filter((k) =>
+          !["observers", "drivers", "probes"].includes(k) &&
+          typeof gt[k] === "function"
+        )
+      : [];
+    return {
+      hasGameTest: typeof gt !== "undefined",
+      hasTri: Boolean(hasTri),
+      legacyKeys,
+      hasSimulateCorrectMatch: typeof window.simulateCorrectMatch === "function",
+    };
+  });
+  if (!testApi.hasGameTest && !testApi.hasSimulateCorrectMatch) {
     errors.push(`[BOOT-TEST-API] ${engineMarker} 引擎项目但 window.gameTest / simulateCorrectMatch 未暴露`);
+  } else if (testApi.hasTri) {
+    console.log(`  ✓ [BOOT-TEST-API-TRI] window.gameTest 三分类 API 已暴露`);
+  } else if (testApi.legacyKeys.length > 0 || testApi.hasSimulateCorrectMatch) {
+    console.log(`  ⚠ [BOOT-TEST-API-TRI] 仅检测到旧平铺测试 API（${testApi.legacyKeys.slice(0, 6).join(", ") || "simulateCorrectMatch"}）；过渡期 warning，请升级引擎模板为 observers/drivers/probes`);
   } else {
-    console.log(`  ✓ [BOOT-TEST-API] 测试 API 已暴露`);
+    errors.push(`[BOOT-TEST-API-TRI] ${engineMarker} 引擎项目 window.gameTest 缺 observers/drivers/probes 三桶；请按三分类暴露测试 API`);
   }
 
   // 5b. "能开始一局"：尝试点击开始按钮，验证 phase 变为 playing
   const canStartGame = await page.evaluate(async () => {
-    // 方式 1：通过 gameTest.clickStartButton
-    if (window.gameTest?.clickStartButton) {
+    // 方式 1：通过三分类 gameTest.drivers.clickStartButton
+    const driverStart = window.gameTest?.drivers?.clickStartButton ?? window.gameTest?.clickStartButton;
+    if (driverStart) {
       try {
-        await window.gameTest.clickStartButton();
+        await driverStart();
         await new Promise(r => setTimeout(r, 500));
-        return { phase: window.gameState?.phase, method: "gameTest.clickStartButton" };
+        return {
+          phase: window.gameState?.phase,
+          method: window.gameTest?.drivers?.clickStartButton ? "gameTest.drivers.clickStartButton" : "gameTest.clickStartButton",
+        };
       } catch (e) {
         return { error: e.message, method: "gameTest.clickStartButton" };
       }

@@ -63,6 +63,7 @@ const profileAssertions = Array.isArray(profile.assertions) ? profile.assertions
 const hardRuleAssertions = Array.isArray(profile.hard_rule_assertions) ? profile.hard_rule_assertions : [];
 const allAssertions = [...profileAssertions, ...hardRuleAssertions];
 const profileShapeErrors = [];
+const profileShapeWarnings = [];
 
 // T5: profile 只能是驱动脚本；expect 会让 profile 重新变成"自带答案"。
 const hasExpectField = allAssertions.some((a) => a.expect !== undefined);
@@ -117,6 +118,38 @@ function hasGameTestBridgeStep(a) {
   });
 }
 
+function evalCodeSteps(a) {
+  return (a.setup ?? [])
+    .filter((s) => s.action === "eval")
+    .map((s) => String(s.js ?? s.code ?? ""));
+}
+
+function scanProfileHookNamespaces(a) {
+  const calls = [];
+  for (const code of evalCodeSteps(a)) {
+    for (const m of code.matchAll(/window\.gameTest\.(observers|drivers|probes)\.([A-Za-z_$][\w$]*)/g)) {
+      calls.push({ namespace: m[1], name: m[2], match: m[0] });
+    }
+    for (const m of code.matchAll(/window\.gameTest\.(?!observers\.|drivers\.|probes\.)([A-Za-z_$][\w$]*)/g)) {
+      calls.push({ namespace: "legacy-flat", name: m[1], match: m[0] });
+    }
+  }
+  return calls;
+}
+
+function recordHookNamespace(a, namespace, violation, match) {
+  log.entry({
+    type: "profile-hook-namespace",
+    phase: "verify",
+    step: "profile-hook-namespace",
+    script: "check_playthrough.js",
+    assertionId: a.id ?? "<unknown>",
+    namespace,
+    violation,
+    match,
+  });
+}
+
 // P0.1: profile eval 反作弊——禁止直接改产品真值、补 trace、调 probes。
 // 规则定义在 _profile_anti_cheat.js；此处只调用 detectAntiCheatHits。
 
@@ -126,6 +159,34 @@ if (!clickOk) {
   profileShapeErrors.push(`[PROFILE] profile 中没有任何真实 action: click 步骤——必须至少 1 条 selector click 或 x/y 坐标 click，否则无法暴露 hitArea/按钮错位类 bug`);
 }
 for (const a of allAssertions) {
+  const hookCalls = scanProfileHookNamespaces(a);
+  const hasDriverCall = hookCalls.some((h) => h.namespace === "drivers");
+  for (const h of hookCalls) {
+    if (h.namespace === "observers") {
+      recordHookNamespace(a, h.namespace, null, h.match);
+      continue;
+    }
+    if (h.namespace === "probes") {
+      const violation = "profile-probe-forbidden";
+      recordHookNamespace(a, h.namespace, violation, h.match);
+      profileShapeErrors.push(`[PROFILE][test-hooks] assertion "${a.id}" 禁止调用 window.gameTest.probes.*；probe 只允许 runtime_semantics checker 使用`);
+      continue;
+    }
+    if (h.namespace === "drivers") {
+      const violation = hasRealUserInputStep(a) ? null : "driver-without-real-ui-action";
+      recordHookNamespace(a, h.namespace, violation, h.match);
+      if (violation) {
+        profileShapeErrors.push(`[PROFILE][test-hooks] assertion "${a.id}" 调用了 window.gameTest.drivers.${h.name}，但同一 assertion 缺少真实 UI action: click/press/fill`);
+      }
+      continue;
+    }
+    if (h.namespace === "legacy-flat") {
+      const violation = "deprecated-flat-gameTest-hook";
+      recordHookNamespace(a, h.namespace, violation, h.match);
+      profileShapeWarnings.push(`[PROFILE][test-hooks] assertion "${a.id}" 使用旧平铺 ${h.match}；请迁移到 observers/drivers/probes 三分类命名空间`);
+    }
+  }
+
   // P0.1: 反作弊优先——无论是否交互类 assertion，都禁止这些 pattern。
   const cheats = detectAntiCheatHits(a);
   for (const h of cheats) {
@@ -141,7 +202,7 @@ for (const a of allAssertions) {
     profileShapeErrors.push(`[PROFILE] 交互类 assertion "${a.id}" 缺少真实用户输入步骤；至少需要 click/press/fill 之一`);
   }
   if (!hasRealUserInputStep(a) && hasGameTestBridgeStep(a)) {
-    profileShapeErrors.push(`[PROFILE] 交互类 assertion "${a.id}" 只通过 window.gameTest 驱动；测试桥接只能辅助，不能替代真实输入链路`);
+    profileShapeWarnings.push(`[PROFILE][deprecated] assertion "${a.id}" 命中旧 window.gameTest 驱动正则；过渡期仅 warning，请迁移到 drivers.* 并保留真实 click/press/fill`);
   }
 }
 
@@ -217,6 +278,18 @@ if (!skipCoverageCheck) {
       console.log(`✓ PRD @check 覆盖率: ${prdChecks.length}/${prdChecks.length}`);
     }
   }
+}
+
+if (profileShapeWarnings.length > 0) {
+  console.log(`\n⚠ profile test-hooks 过渡期 warning:`);
+  for (const w of profileShapeWarnings) console.log("  " + w);
+  log.entry({
+    type: "profile-warning",
+    phase: "verify",
+    step: "playthrough",
+    script: "check_playthrough.js",
+    profile_warnings: profileShapeWarnings,
+  });
 }
 
 if (profileShapeErrors.length > 0) {

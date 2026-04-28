@@ -32,6 +32,7 @@ const errors = [];
 function err(msg) { errors.push(msg); }
 function ok(msg) { console.log(`  ✓ ${msg}`); }
 function fail(msg) { console.log(`  ✗ ${msg}`); err(msg); }
+function warn(msg) { console.log(`  ⚠ ${msg}`); }
 function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 
 console.log(`工程侧校验: ${gameDir}`);
@@ -281,6 +282,17 @@ if (["phaser3", "phaser", "pixijs", "pixi", "canvas", "three"].includes(engineId
   if (!hasTestApi)
     fail(`[ENGINE-TEST] ${engineId} 引擎必须暴露 window.gameTest 或 simulateCorrectMatch 测试 API（见 verify-hooks.md）`);
   else ok(`[ENGINE-TEST] 测试 API 已暴露`);
+
+  if (["canvas", "pixijs", "pixi"].includes(engineId)) {
+    const hasTriHooks = /window\.gameTest\.observers|gameTest\s*=\s*{[\s\S]{0,4000}\bobservers\s*:/.test(allSrc) &&
+                        /window\.gameTest\.drivers|gameTest\s*=\s*{[\s\S]{0,4000}\bdrivers\s*:/.test(allSrc) &&
+                        /window\.gameTest\.probes|gameTest\s*=\s*{[\s\S]{0,4000}\bprobes\s*:/.test(allSrc);
+    if (!hasTriHooks) {
+      warn(`[ENGINE-TEST-TRI] ${engineId} 引擎代码未检测到 window.gameTest.observers/drivers/probes 三分类；过渡期 warning`);
+    } else {
+      ok(`[ENGINE-TEST-TRI] 测试 API 三分类命名空间已检测到`);
+    }
+  }
 }
 
 // 通用：交互/匹配类玩法必须有异步锁
