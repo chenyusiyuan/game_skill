@@ -13,7 +13,7 @@ Phase 2: GamePRD           → docs/game-prd.md（必须过 check_game_prd.js）
 Phase 2.5: Spec Clarify    → docs/spec-clarifications.md（功能机制歧义：必要时最多 1-2 问，否则记录默认假设）
 Phase 3: Expand            → specs/{mechanics,scene,rule,data,assets,event-graph,implementation-contract}.yaml（始终必做）
 Phase 4: Codegen           → game/index.html + src/
-Phase 5: Verify + Deliver  → verify_all.js(check_mechanics + check_game_boots + check_project + check_playthrough + check_runtime_semantics + check_skill_compliance) + eval/report.json + docs/delivery.md
+Phase 5: Verify + Deliver  → verify_all.js(check_mechanics + check_game_boots + check_project + check_playthrough + check_runtime_semantics + check_level_solvability + check_skill_compliance) + eval/report.json + docs/delivery.md
 ```
 
 **核心约束**：严格串行，每阶段完成前不启动下一阶段；失败不降级。
@@ -376,6 +376,7 @@ node game_skill/skills/scripts/phase_plan.js --mode ${PHASE_MODE:-full} --projec
 - **Phase 3.0 — Mechanic Decomposition**：先产 `mechanics.yaml`（玩法原语 DAG），单独提交，作为 Phase 3.x / Phase 4 的语义骨架。
 - **Phase 3.x — Expanders**：原有 5 个 expander 并发写 `specs/.pending/*.yaml`，其中 `rule` 和 `event-graph` 可读 `mechanics.yaml` 作为引用源。
 - **Phase 3.5 — Symbolic Check**：`check_mechanics.js` 用原语 reducer 跑 profile 剧本，验证玩法 invariants + win 可达。不过则整个 Phase 3 failed，不进 codegen。
+- board-grid genre 的 data expander 必须产出 `solution-path` + `playability`；其他 genre 可省略并由 P2 checker 自动 ok-skip。
 
 ---
 
@@ -568,13 +569,15 @@ node game_skill/skills/scripts/phase_plan.js --mode ${PHASE_MODE:-full} --projec
    ```
    退出码 1 = LLM 修了不该修的文件（PRD/specs/mechanics）→ 立刻终止，报用户。这是"面向测试改 PRD"的硬闸。
 2. 统一入口：`node game_skill/skills/scripts/verify_all.js cases/${PROJECT} --profile ${PROJECT} --log ${LOG_FILE}`
-   - 它会顺序跑 `check_mechanics`、`check_game_boots`、`check_project`、`check_playthrough`、`check_runtime_semantics`、`check_skill_compliance`
+   - 它会顺序跑 `check_mechanics`、`check_game_boots`、`check_project`、`check_playthrough`、`check_runtime_semantics`、`check_level_solvability`、`check_skill_compliance`
+   - Phase 5 verify 现在包含 `check_level_solvability`：board-grid 必跑，其他 genre 或未声明 `playability.genre` 自动 ok-skip
    - `cases/${PROJECT}/eval/report.json` 只能由这个入口根据真实退出码生成；禁止手写绿色报告
 3. 若需定位单层失败，再分别运行：
    - 冒烟（≤2 轮）：`node game_skill/skills/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG_FILE}`
    - 工程侧（≤3 轮）：`node game_skill/skills/scripts/check_project.js cases/${PROJECT}/game/ --log ${LOG_FILE}`
    - 产品侧（≤10 轮）：`node game_skill/skills/scripts/check_playthrough.js cases/${PROJECT}/game/ --profile ${PROJECT} --log ${LOG_FILE}`
    - 运行时语义：`node game_skill/skills/scripts/check_runtime_semantics.js cases/${PROJECT}/ --log ${LOG_FILE}`
+   - P2 可玩性：`node game_skill/skills/scripts/check_level_solvability.js cases/${PROJECT}/ --log ${LOG_FILE}`
    - profile 在 `game_skill/skills/scripts/profiles/` 下，若缺少需先创建
    - **profile 必须覆盖 PRD 中所有 `@check(layer: product)` 条目**（脚本会自动校验，覆盖不足退出码 4）
    - **profile 必须包含至少一条真实 click**（`{ action: "click", selector: "..." }` 或 `{ action: "click", x, y }`），纯 `eval` 不够；每个交互类 assertion 也必须自己包含真实 click/press/fill，不能靠别的 assertion 的 click 混过
@@ -784,6 +787,6 @@ Agent 我：
 4. Phase 2: 生成 docs/game-prd.md，末尾 strategy 回写，跑 check_game_prd.js 退出 0
 5. Phase 3: 先跑 game-mechanic-decomposer 产 mechanics.yaml，再并发 5 个 game-gameplay-expander，产 scene/rule/data/assets/event-graph 五份 specs；随后主 agent 生成 implementation-contract.yaml
 6. Phase 4: cp 模板到 game/，启 game-engine-codegen 填玩法
-7. Phase 5: check_game_boots + check_project + check_playthrough + check_skill_compliance，产 report.json + delivery.md
+7. Phase 5: verify_all（含 check_level_solvability），产 report.json + delivery.md
 8. task_done: "单词消消乐已生成。open cases/word-match-lite/game/index.html 可体验。"
 ```

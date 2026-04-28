@@ -55,11 +55,15 @@ tools: Read, Write, Bash, Glob, Grep
 | event-graph | `@rule`, `@state`, `@scene` | **game-systems.md 契约速查表**（必须） | `specs/.pending/event-graph.yaml` |
 
 5. yaml 格式严格按 `expand.md` 的示例，保持：
+   - **data 维度 P2 可玩性输入**：
+     - 当 PRD 的 genre 属于 board-grid 时，必须为每个 level 生成 `solution-path` 与 `playability` 块，参见 `expand.md` §10。
+     - 当 PRD 的 genre 属于 reflex / edu-practice 时，必须填对应 `playability` 子字段，不允许只写 `genre` 空壳；reflex 填目标频率、命中窗口、失败反馈、重试路径、公平性，edu-practice 填题量、正误反馈、渐进难度、通过阈值。
+     - 其他 genre 可省略 `solution-path`，但 `rejected_requirements` 可显式记录 `P2_NOT_APPLICABLE`。
    - 每条 rule 有 trigger + condition + effect-on-true/false（不合并）
    - rule 的 effect 展开成 logic + visual 两段；visual 必须使用标准动词（`particle-burst` / `screen-shake` / `tint-flash` / `float-text` / `scale-bounce` / `pulse` / `fade-out`）
    - scene 覆盖所有 `@scene`；rule 覆盖所有 `@rule`；不漏不增
    - scene.yaml 必须含 `boot-contract` 段
-   - event-graph.yaml 必须含 `async-boundaries` 和 `test-hooks` 段
+   - event-graph.yaml 必须含 `async-boundaries` 和 `test-hooks` 段；`test-hooks` 必须拆成 `observers` / `drivers` / `probes` 三类，每类至少一条，profile 只能读 observers、通过真实 UI action 配合 drivers，probes 只供 runtime_semantics checker 使用。
    - yaml 合法（缩进正确）
    - **assets 色块语义规则**：
      - 如果 PRD 的 @entity/@ui 是 色块 / 方块 / 目标块 / color block，且字段里有 `color` 或玩法规则依赖颜色匹配，必须输出 `type: generated`（或 inline-svg/graphics-generated）并写 `visual-primitive: color-block`。
@@ -121,7 +125,7 @@ tools: Read, Write, Bash, Glob, Grep
 - `produced`: 写入的 yaml 相对路径
 - `counts`: 各 tag 类的统计数
 - `warnings`: 非阻断问题（比如"默认填充 trigger"）
-- `rejected_requirements`: 因 PRD 信息不足无法展开的需求 id 列表
+- `rejected_requirements`: 因 PRD 信息不足无法展开的需求 id 列表；非 board-grid 跳过 P2 时允许填 `P2_NOT_APPLICABLE`
 - `error` / `suggestion`: 失败时填
 
 **主 agent 会用 `markSubtask(status, output)` 更新 state.json，据此做事务提交。** 子 agent 自己**不要**去写 state.json。

@@ -1,0 +1,68 @@
+mechanics:
+  version: 1
+  primitive-catalog-version: 1
+  external-events: [match.hit]
+  entities:
+    - id: pig
+      uses: [resource-consume]
+      initial: { id: "", ammo: 4, alive: true }
+    - id: block
+      uses: [resource-consume]
+      initial: { id: "", hp: 1, alive: true }
+  mechanics:
+    - node: attack-consume
+      primitive: resource-consume@v1
+      trigger-on: [match.hit]
+      params:
+        agent-field: pig.ammo
+        target-field: block.hp
+        amount: 1
+      produces-events: [resource.consumed, resource.agent-zero, resource.target-zero]
+    - node: end-check
+      primitive: win-lose-check@v1
+      params:
+        win:
+          - kind: all-cleared
+            collection: blocks
+        lose: []
+        evaluate-on: [resource.target-zero]
+      produces-events: [win, lose]
+data:
+  initial-state:
+    collections:
+      pigs:
+        - { id: pig-1, color: red, ammo: 4, alive: true }
+      blocks:
+        - { id: block-1, color: red, hp: 1, alive: true }
+        - { id: block-2, color: red, hp: 1, alive: true }
+        - { id: block-3, color: red, hp: 1, alive: true }
+        - { id: block-4, color: red, hp: 1, alive: true }
+  playability:
+    genre: board-grid
+    solvable: true
+    trivial-click-all: false
+    meaningful-decisions-min: 3
+    no-softlock-after-valid-prefix: true
+  solution-path:
+    levels:
+      - id: 1
+        min-steps: 4
+        max-steps: 8
+        actions:
+          - event: match.hit
+            payload: { sourceId: pig-1, targetId: block-1 }
+            expected-effect: { entity: block-1, field: alive, to: false }
+          - event: match.hit
+            payload: { sourceId: pig-1, targetId: block-2 }
+            expected-effect: { entity: block-2, field: alive, to: false }
+          - event: match.hit
+            payload: { sourceId: pig-1, targetId: block-3 }
+            expected-effect: { entity: block-3, field: alive, to: false }
+          - event: match.hit
+            payload: { sourceId: pig-1, targetId: block-4 }
+            expected-effect: { entity: block-4, field: alive, to: false }
+        anti-trivial:
+          expected-win: false
+          actions:
+            - event: match.hit
+              payload: { sourceId: pig-1, targetId: block-1 }

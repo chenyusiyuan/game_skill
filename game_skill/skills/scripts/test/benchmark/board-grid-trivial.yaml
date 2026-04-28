@@ -1,0 +1,50 @@
+mechanics:
+  version: 1
+  primitive-catalog-version: 1
+  external-events: [dispatch-pig]
+  entities:
+    - id: pig
+      uses: [entity-lifecycle]
+      initial: { id: "", lifecycle: waiting, alive: true }
+    - id: block
+      uses: [grid-board]
+      initial: { id: "", alive: false }
+  mechanics:
+    - node: pig-lifecycle
+      primitive: entity-lifecycle@v1
+      trigger-on: [dispatch-pig]
+      params:
+        transitions:
+          - { from: waiting, event: dispatched, to: active }
+      produces-events: [lifecycle.entered.active]
+    - node: end-check
+      primitive: win-lose-check@v1
+      params:
+        win:
+          - kind: all-cleared
+            collection: blocks
+        lose: []
+        evaluate-on: [lifecycle.entered.active]
+      produces-events: [win, lose]
+data:
+  initial-state:
+    collections:
+      pigs:
+        - { id: pig-a, lifecycle: waiting, alive: true }
+        - { id: pig-b, lifecycle: waiting, alive: true }
+      blocks:
+        - { id: already-clear, alive: false }
+  playability:
+    genre: board-grid
+    solvable: true
+    trivial-click-all: false
+    meaningful-decisions-min: 1
+    no-softlock-after-valid-prefix: false
+  solution-path:
+    levels:
+      - id: 1
+        min-steps: 1
+        max-steps: 2
+        actions:
+          - event: dispatch-pig
+            payload: { unitId: pig-a }

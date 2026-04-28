@@ -86,6 +86,18 @@ console.log("\n[phase-plan] staged execution boundaries");
 }
 
 // =============================
+// P2: level solvability fixtures
+// =============================
+console.log("\n[P2] check_level_solvability: board-grid solution replay");
+test("node --test check_level_solvability.test.mjs 全绿", () => {
+  const r = spawnSync("node", ["--test", join(here, "check_level_solvability.test.mjs")], {
+    encoding: "utf-8",
+    cwd: root,
+  });
+  assert(r.status === 0, `level solvability fixtures 应全绿，exit=${r.status}\n${r.stdout}\n${r.stderr}`);
+});
+
+// =============================
 // P2-1: extract_game_prd --emit-rule-traces 抽 state.score
 // =============================
 console.log("\n[P2-1] extract_game_prd: state.* 必须被抽取");

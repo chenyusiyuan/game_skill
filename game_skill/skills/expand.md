@@ -367,6 +367,7 @@ resources:
 - `initial-state`：**codegen 必须原样搬入** `window.gameState` 的初始值。每个字段都有明确类型和默认值，避免 LLM 遗漏或猜错初始值
 - `isProcessing: false` 是异步锁的初始值，必须包含——对应代码架构规范中的异步间隙加锁要求
 - `selectedCards: []` 等交互临时状态也要在此声明，让 codegen 和 verify 都知道有这个字段
+- `solution-path` / `playability` 是 P2 可玩性验证输入；board-grid / reflex / edu-practice 必须按 genre 填对应子字段
 
 **数值平衡校验段（必须包含）**：
 
@@ -408,6 +409,78 @@ balance-check:
 - 若 supply < demand 的 **1.2 倍**（即容错余量不足 20%），标 `WARNING`
 - 若 supply < demand，标 `FAIL`，expand 阶段必须修正后再输出
 - codegen 阶段必须核对实际代码中的数值与 `balance-check` 一致
+
+**可玩性验证段（P2，按 genre 必填）**：
+
+expand 在生成 `data.yaml` 时，**必须**按 genre 填 playability 子字段。board-grid 需要每个关卡附带一条可 replay 的 `solution-path`；checker 只重放显式动作，不做 BFS / 自动求解。reflex / edu-practice 先做轻量 schema 断言，不跑浏览器也不跑 reducer，但不得生成空壳 playability。
+
+```yaml
+# board-grid：显式解路径 + 反 trivial + 前缀软锁 probe
+playability:
+  genre: board-grid
+  solvable: true
+  trivial-click-all: false      # checker 会自动合成 click-all 反例；anti-trivial 是额外手写反例
+  meaningful-decisions-min: 3   # 至少 N 个需要决策的动作
+  no-softlock-after-valid-prefix: true
+
+solution-path:
+  levels:
+    - id: 1
+      min-steps: 6
+      max-steps: 18
+      actions:
+        # 每个 action 必须是 mechanics.yaml 里声明过的 event；
+        # checker 会按顺序喂给对应 primitive reducer
+        - event: dispatch-pig
+          payload: { unitId: "pig-red-1", fromSlot: "wait-0" }
+          expected-effect: { entity: "pig-red-1", field: "lifecycle", to: "active" }
+        - event: match-hit
+          payload: { sourceId: "pig-red-1", targetId: "block-0-2" }
+          expected-effect: { entity: "block-0-2", field: "alive", to: false }
+        # ...直到触发 win-condition
+      # 反例：一键点击所有 unit 不应通关
+      anti-trivial:
+        actions:
+          - event: dispatch-pig
+            payload: { unitId: "pig-red-1" }
+          - event: dispatch-pig
+            payload: { unitId: "pig-blue-1" }
+        expected-win: false
+
+---
+# reflex：只做字段范围断言，预留未来 runtime probe 接入口
+playability:
+  genre: reflex
+  target-frequency: { min-per-sec: 0.5, max-per-sec: 3 }
+  hit-window-ms: 400
+  failure-feedback: "shake + sound"
+  retry-path: "click retry-button -> reset level"
+  fairness:
+    consecutive-misses-max: 5
+    first-target-delay-ms-max: 2000
+
+---
+# edu-practice：题库、反馈、渐进难度必须可检查
+playability:
+  genre: edu-practice
+  item-count: 24
+  correct-feedback: "green + chime"
+  error-feedback: "red + retry-hint"
+  progressive-difficulty:
+    levels: 3
+    items-per-level: 8
+    must-cover-all: true
+  passing-threshold-pct: 70
+```
+
+**规则**：
+- `playability.genre: board-grid` 时必须声明 `solution-path.levels[].actions`
+- `solution-path.levels[].actions` 只写可 replay 的关键动作，不写视觉动画或提示文本
+- `anti-trivial.actions` 用来补充手写反例；若 `trivial-click-all: false`，checker 还会自动合成“所有可派出单位按 id 字典序各派出一次、不安排目标”的反例
+- `no-softlock-after-valid-prefix: true` 时，checker 会抽样 solution-path 合法前缀并继续 replay 剩余动作，后缀不能 invariant 失败或丢失 win
+- `playability.genre: reflex` 时必须填 `target-frequency` / `hit-window-ms` / `failure-feedback` / `retry-path` / `fairness`
+- `playability.genre: edu-practice` 时必须填 `item-count` / 正误反馈 / `progressive-difficulty` / `passing-threshold-pct`
+- `meaningful-decisions-min` 不足、reflex 首目标延迟过大、edu 通过阈值偏离只 warning；不可达 win / 软锁 / trivial 通关 / reflex 或 edu 硬字段错误会阻断
 
 ### specs/assets.yaml
 
@@ -617,18 +690,17 @@ async-boundaries:
 # 需要暴露给 Playwright 测试的 API（codegen 必须实现，verify 据此校验）
 test-hooks:
   # Canvas / Pixi / Phaser 引擎必须暴露（DOM 引擎可跳过，用 Playwright click 真实 DOM）
-  required:
-    - name: "window.gameTest.clickStartButton"
-      description: "模拟点击开始按钮，触发 phase ready → playing"
-    - name: "window.simulateCorrectMatch"
-      description: "模拟一次正确配对，走真实的 selectCard → matchCheck 链路"
-    - name: "window.simulateWrongMatch"
-      description: "模拟一次错误配对，走真实的 selectCard → matchCheck 链路"
-  recommended:
-    - name: "window.gameTest.clickRetryButton"
-      description: "模拟点击重试按钮"
-    - name: "window.gameTest.getCards"
-      description: "返回当前卡片列表（用于动态构造测试数据）"
+  observers:
+    - name: "window.gameTest.observers.getSnapshot"
+    - name: "window.gameTest.observers.getTrace"
+    - name: "window.gameTest.observers.getAssetUsage"
+  drivers:
+    - name: "window.gameTest.drivers.clickStartButton"
+    - name: "window.gameTest.drivers.clickRetryButton"
+  probes:
+    - name: "window.gameTest.probes.resetWithScenario"
+      required-when: "mechanics 含 ray-cast@v1 / parametric-track + resource-consume 组合"
+    - name: "window.gameTest.probes.stepTicks"
 
 # 悬空事件检查：每个 listens 必须有至少一个模块 emits 对应事件（input.* 除外）
 # 孤立模块检查：每个模块至少有一个 listens 或 emits 与其他模块相连
@@ -652,7 +724,7 @@ test-hooks:
 - [ ] data.yaml 包含 initial-state 段，字段完整且类型明确
 - [ ] event-graph 中每个 listens 事件都有对应 emits 来源（input.* 除外）
 - [ ] event-graph 包含 async-boundaries 段（每个异步交互链路有 entry-lock + exit-unlock）
-- [ ] event-graph 包含 test-hooks 段（Canvas/Pixi/Phaser 引擎的 required API 列表）
+- [ ] event-graph 包含 test-hooks 三段（observers/drivers/probes），每段至少一条
 - [ ] assets.yaml 包含 selection-report 段（candidate-packs + local-file-ratio + fallback-reasons）
 - [ ] assets.yaml 中 genre 是 catalog.yaml 顶部 genres 登记的合法 id
 - [ ] implementation-contract.yaml 通过 `check_implementation_contract.js --stage expand`

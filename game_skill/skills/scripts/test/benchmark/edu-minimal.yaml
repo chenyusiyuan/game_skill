@@ -1,0 +1,17 @@
+mechanics:
+  version: 1
+  primitive-catalog-version: 1
+  mechanics: []
+data:
+  initial-state:
+    level: 1
+  playability:
+    genre: edu-practice
+    item-count: 24
+    correct-feedback: "green + chime"
+    error-feedback: "red + retry-hint"
+    progressive-difficulty:
+      levels: 3
+      items-per-level: 8
+      must-cover-all: true
+    passing-threshold-pct: 70

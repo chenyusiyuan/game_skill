@@ -91,8 +91,8 @@ const GATES = {
   verify: {
     files: [],
     checks: profileId
-      ? [["verify_all.js", caseDir, "--profile", profileId]]
-      : [["verify_all.js", caseDir]],
+      ? [["check_level_solvability.js", caseDir], ["verify_all.js", caseDir, "--profile", profileId]]
+      : [["check_level_solvability.js", caseDir], ["verify_all.js", caseDir]],
   },
 };
 

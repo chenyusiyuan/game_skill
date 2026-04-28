@@ -57,6 +57,7 @@ if (!profileId) {
 // P0.2: runtime_semantics 接在 playthrough 之后。不读产品 profile，使用 probe scenario
 // 语义复算。当前 case 若不含 ray-cast@v1 或未暴露 probes API 会自动 ok-skip。
 runCheck("runtime_semantics", ["check_runtime_semantics.js", caseDir, ...logArgs()]);
+runCheck("level_solvability", ["check_level_solvability.js", caseDir, ...logArgs()]);
 
 runCheck("compliance", ["check_skill_compliance.js", caseDir, ...logArgs()]);
 

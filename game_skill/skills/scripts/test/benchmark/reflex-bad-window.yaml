@@ -1,0 +1,16 @@
+mechanics:
+  version: 1
+  primitive-catalog-version: 1
+  mechanics: []
+data:
+  initial-state:
+    level: 1
+  playability:
+    genre: reflex
+    target-frequency: { min-per-sec: 0.5, max-per-sec: 3 }
+    hit-window-ms: 50
+    failure-feedback: "shake + sound"
+    retry-path: "click retry-button -> reset level"
+    fairness:
+      consecutive-misses-max: 5
+      first-target-delay-ms-max: 2000

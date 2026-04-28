@@ -1,0 +1,60 @@
+mechanics:
+  version: 1
+  primitive-catalog-version: 1
+  external-events: [match.hit]
+  entities:
+    - id: pig
+      uses: [resource-consume]
+      initial: { id: "", ammo: 1, alive: true }
+    - id: block
+      uses: [resource-consume]
+      initial: { id: "", hp: 1, alive: true }
+  mechanics:
+    - node: attack-consume
+      primitive: resource-consume@v1
+      trigger-on: [match.hit]
+      params:
+        agent-field: pig.ammo
+        target-field: block.hp
+        amount: 1
+      produces-events: [resource.consumed, resource.agent-zero, resource.target-zero]
+    - node: end-check
+      primitive: win-lose-check@v1
+      params:
+        win:
+          - kind: all-cleared
+            collection: blocks
+        lose:
+          - kind: count-falls-below
+            collection: pigs
+            threshold: 1
+        evaluate-on: [resource.target-zero, resource.agent-zero]
+      produces-events: [win, lose]
+data:
+  initial-state:
+    collections:
+      pigs:
+        - { id: pig-1, color: red, ammo: 1, alive: true }
+      blocks:
+        - { id: block-1, color: red, hp: 2, alive: true }
+  playability:
+    genre: board-grid
+    solvable: true
+    trivial-click-all: false
+    meaningful-decisions-min: 2
+    no-softlock-after-valid-prefix: true
+  solution-path:
+    levels:
+      - id: 1
+        min-steps: 2
+        max-steps: 4
+        actions:
+          - event: match.hit
+            payload: { sourceId: pig-1, targetId: block-1 }
+          - event: match.hit
+            payload: { sourceId: pig-1, targetId: block-1 }
+        anti-trivial:
+          expected-win: false
+          actions:
+            - event: match.hit
+              payload: { sourceId: pig-1, targetId: block-1 }
