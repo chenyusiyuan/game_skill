@@ -30,7 +30,7 @@ const MODE_PRESETS = {
     description: "完整生成、校验和交付。",
   },
   "mechanics-only": {
-    startAt: "prd",
+    startAt: "understand",
     stopAfter: "mechanics",
     allowE2E: false,
     layeredVerify: false,

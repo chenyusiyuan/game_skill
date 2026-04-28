@@ -394,13 +394,22 @@ node game_skill/skills/scripts/phase_plan.js --mode ${PHASE_MODE:-full} --projec
    ```
 3. 返回 `{status: "ok"}` → 记录 `markSubtask(st, 'mechanics', 'completed', {...})`
 4. 返回 `{status: "failed"}` → Phase 3 整阶段 failed，原因上报用户（PRD 可能结构性不可行，比如有"瞬移攻击"这类违反 ray-cast 语义的规则，需要 PRD 改或新增原语）
-5. Phase 3.x 中的 `rule` 和 `event-graph` expander prompt 必须新增两行：
+5. 若 phase plan 的 `hardStop` 是 `after:mechanics`，立即把 `.pending/mechanics.yaml` 提交为 `specs/mechanics.yaml`，只运行 mechanics gate，然后停止：
+   ```bash
+   mv cases/${PROJECT}/specs/.pending/mechanics.yaml cases/${PROJECT}/specs/mechanics.yaml
+   rmdir cases/${PROJECT}/specs/.pending 2>/dev/null || true
+   node game_skill/skills/scripts/check_mechanics.js cases/${PROJECT}/ --log ${LOG_FILE}
+   ```
+   通过后只标记 `expand.subtasks.mechanics=completed`，不要启动 Phase 3.x expander、不要生成 implementation-contract、不要进入 codegen。汇报 ray-cast / ammo / win scenario / balance 证据后等待用户决定是否继续。
+6. Phase 3.x 中的 `rule` 和 `event-graph` expander prompt 必须新增两行：
    `【Spec澄清】cases/${PROJECT}/docs/spec-clarifications.md`
    `【机械基线】cases/${PROJECT}/specs/.pending/mechanics.yaml`（expander 必须引用其中 node id，不得写散文 effect）
 
 ---
 
 ### Phase 3.x — Expanders
+
+只有 phase plan 的 `plannedPhases` 包含 `expand` 时才进入本节。`mechanics-only` 到 Phase 3.0 的 mechanics gate 后必须停止。
 
 1. 跑 `node game_skill/skills/scripts/extract_game_prd.js cases/${PROJECT}/docs/game-prd.md --list`
 2. Read `game_skill/skills/expand.md` 获取 yaml 模板

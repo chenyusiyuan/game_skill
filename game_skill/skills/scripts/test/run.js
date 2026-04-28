@@ -46,6 +46,46 @@ if (existsSync(tmp)) rmSync(tmp, { recursive: true });
 mkdirSync(tmp, { recursive: true });
 
 // =============================
+// Phase plan: staged execution boundaries
+// =============================
+console.log("\n[phase-plan] staged execution boundaries");
+{
+  const { initState, readState, markPhase, markSubtask } = await import("../_state.js");
+
+  test("mechanics-only 可从新 case 的 understand 开始，但阻止完整 expand/codegen", () => {
+    const project = "phase-plan-mechanics-only";
+    const caseDir = join(tmp, "cases", project);
+    const statePath = join(caseDir, ".game/state.json");
+    mkdirSync(join(caseDir, ".game"), { recursive: true });
+    writeFileSync(statePath, JSON.stringify(initState({ project, runtime: "canvas" }), null, 2) + "\n");
+
+    const r = run([
+      join(scriptsDir, "phase_plan.js"),
+      "--mode", "mechanics-only",
+      "--project", project,
+      "--write-state",
+    ], { cwd: tmp });
+    assert(r.status === 0, `phase_plan 应成功写入 state，exit=${r.status}\n${r.stderr}\n${r.stdout}`);
+
+    const st = readState(statePath);
+    assert(st.phasePlan?.hardStop === "after:mechanics", "hardStop 应为 after:mechanics");
+    assert(st.phasePlan?.plannedPhases?.includes("understand"), "mechanics-only 应允许 understand");
+    assert(st.phasePlan?.plannedPhases?.includes("mechanics"), "mechanics-only 应允许 mechanics");
+    assert(!st.phasePlan?.plannedPhases?.includes("codegen"), "mechanics-only 不应包含 codegen");
+    assert(markPhase(st, "understand", "running").currentPhase === "understand", "understand running 不应被 phase boundary 拦截");
+    markSubtask(st, "mechanics", "running");
+
+    let blocked = false;
+    try {
+      markSubtask(st, "scene", "running");
+    } catch (e) {
+      blocked = /phase boundary/.test(e.message);
+    }
+    assert(blocked, "mechanics-only 应阻止 scene/rule/data/assets 等完整 expand subtask");
+  });
+}
+
+// =============================
 // P2-1: extract_game_prd --emit-rule-traces 抽 state.score
 // =============================
 console.log("\n[P2-1] extract_game_prd: state.* 必须被抽取");
@@ -408,9 +448,14 @@ function writeGeneratedUsageCase(caseDir, withDrawCall) {
     "<!-- ENGINE: canvas | VERSION: test | RUN: file -->",
     "<canvas id=\"game\"></canvas>",
     "<script>",
+    "window.__assetUsage = window.__assetUsage || [];",
     "const assetId = 'pig-shape';",
     "const ctx = document.getElementById('game').getContext('2d');",
-    withDrawCall ? "ctx.fillRect(0, 0, 12, 12);" : "console.log(assetId);",
+    "function renderGeneratedPrimitive(id) {",
+    "  window.__assetUsage.push({ id, section: 'images', kind: 'generated' });",
+    "  ctx.fillRect(0, 0, 12, 12);",
+    "}",
+    withDrawCall ? "renderGeneratedPrimitive('pig-shape');" : "console.log(assetId);",
     "</script>",
   ].join("\n"));
 }
@@ -1223,6 +1268,60 @@ console.log("\n[P0.2] _runtime_probes: ray-cast 语义复算");
   });
 }
 
+function writeRuntimeSemanticsCase(caseDir, scriptLines) {
+  mkdirSync(join(caseDir, "specs"), { recursive: true });
+  mkdirSync(join(caseDir, "game"), { recursive: true });
+  writeFileSync(join(caseDir, "specs/mechanics.yaml"), [
+    "mechanics:",
+    "  - node: move",
+    "    primitive: parametric-track@v1",
+    "  - node: attack",
+    "    primitive: ray-cast@v1",
+    "    params:",
+    "      stop-on: first-hit",
+  ].join("\n"));
+  writeFileSync(join(caseDir, "game/index.html"), [
+    "<!-- ENGINE: canvas | VERSION: test | RUN: file -->",
+    "<script>",
+    ...scriptLines,
+    "</script>",
+  ].join("\n"));
+}
+
+test("check_runtime_semantics: 有适用 probe 但缺 probes API 应 fail", () => {
+  const caseDir = join(tmp, "runtime-semantics-no-probes");
+  writeRuntimeSemanticsCase(caseDir, [
+    "window.__trace = [];",
+  ]);
+  const r = run([join(scriptsDir, "check_runtime_semantics.js"), caseDir]);
+  assert(r.status !== 0, `缺 probes API 应失败，实际 exit=${r.status}\n${r.stdout}\n${r.stderr}`);
+  assert(/resetWithScenario 未暴露/.test(r.stdout), `应报 probes API 缺失，实际:\n${r.stdout}`);
+});
+
+test("check_runtime_semantics: trace 缺 before/after 不能再 soft-skip", () => {
+  const caseDir = join(tmp, "runtime-semantics-missing-before");
+  writeRuntimeSemanticsCase(caseDir, [
+    "window.__trace = [];",
+    "let currentState = {};",
+    "window.gameTest = {",
+    "  probes: {",
+    "    resetWithScenario(state) { currentState = JSON.parse(JSON.stringify(state)); },",
+    "    resetPig(pigPatch) { currentState.pig = { ...currentState.pig, ...pigPatch }; }",
+    "  },",
+    "  drivers: {",
+    "    dispatchPig() {",
+    "      const col = currentState.pig?.gridPosition?.col;",
+    "      const hit = (currentState.blocks || []).find((b) => b.col === col && b.alive !== false);",
+    "      window.__trace.push({ primitive: 'ray-cast@v1', before: null, after: { returnedHits: hit ? [hit] : [] } });",
+    "    }",
+    "  }",
+    "};",
+  ]);
+  const r = run([join(scriptsDir, "check_runtime_semantics.js"), caseDir]);
+  assert(r.status !== 0, `缺 before/after 应失败，实际 exit=${r.status}\n${r.stdout}\n${r.stderr}`);
+  assert(/复算缺证据|缺 before\/after/.test(r.stdout), `应报 trace 证据不足，实际:\n${r.stdout}`);
+});
+
 // =============================
 // P1.1 (spike): ray-cast.runtime.mjs
 // =============================
@@ -1493,10 +1592,12 @@ console.log("\n[P1.4] _primitive_runtime_map: parseEsmImports + isPrimitivesImpo
     isEngineEnforced,
   } = await import("../_primitive_runtime_map.js");
 
-  test("isEngineEnforced: canvas / pixijs → true；其它 → false", () => {
+  test("isEngineEnforced: all supported engines → true；空 engine → false", () => {
     assert(isEngineEnforced("canvas"), "canvas enforced");
     assert(isEngineEnforced("pixijs"), "pixijs enforced");
-    assert(!isEngineEnforced("phaser3"), "phaser3 not enforced");
+    assert(isEngineEnforced("phaser3"), "phaser3 enforced");
+    assert(isEngineEnforced("dom-ui"), "dom-ui enforced");
+    assert(isEngineEnforced("three"), "three enforced");
     assert(!isEngineEnforced(""), "空 engine not enforced");
   });
 
@@ -1727,7 +1828,7 @@ console.log("\n[P1.4] check_implementation_contract: canvas 正确 import 应通
   });
 }
 
-console.log("\n[P1.4] check_implementation_contract: phaser3 引擎跳过 runtime 校验");
+console.log("\n[P1.4] check_implementation_contract: phaser3 引擎必须接入 runtime primitive");
 
 {
   const caseDir = join(tmp, "p14-phaser-skip");
@@ -1799,10 +1900,10 @@ console.log("\n[P1.4] check_implementation_contract: phaser3 引擎跳过 runtim
     encoding: "utf-8",
   });
   const output = (r.stdout || "") + (r.stderr || "");
-  test("phaser3 引擎 → runtime 段跳过（即使没 import）", () => {
+  test("phaser3 引擎 → 缺 runtime import 应 fail", () => {
     assert(
-      /\[runtime\].*非 canvas\/pixijs，跳过/.test(output),
-      `应报 runtime 段跳过\n${output}`,
+      /\[runtime\].*runtime-backed primitive 未 import/.test(output),
+      `应报 runtime import 缺失\n${output}`,
     );
   });
 }

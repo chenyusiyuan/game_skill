@@ -10,7 +10,7 @@
  * 用法: node check_runtime_semantics.js <case-dir>
  *
  * 退出码:
- *   0 = passed（含"无 ray-cast → ok-skip"、"probes API 未暴露 → ok-skip"）
+ *   0 = passed（含"无 applicable probes → ok-skip"）
  *   1 = 语义违规 / expected-trace 未满足
  *   3 = 环境问题（Playwright 没装 / index.html 不存在）
  */
@@ -93,7 +93,7 @@ page.on("console", (msg) => {
 try {
   await page.goto(launch.url, { waitUntil: "load", timeout: 10000 });
 
-  // 等待 gameTest.probes 存在（软超时 + skip，不 fail）
+  // 有适用 probe 时，缺 probes API 代表运行时语义不可观测，必须 fail。
   const hasProbes = await page
     .waitForFunction(
       () => typeof window?.gameTest?.probes?.resetWithScenario === "function",
@@ -103,9 +103,10 @@ try {
     .then(() => true)
     .catch(() => false);
   if (!hasProbes) {
+    fail(`window.gameTest.probes.resetWithScenario 未暴露；mechanics 匹配 ${probes.length} 个 runtime probe，不能跳过`);
     await browser.close();
-    ok(`window.gameTest.probes.resetWithScenario 未暴露，跳过（P0 过渡期允许；P1 会硬约束）`);
-    finish(0, "no-probes-api");
+    if (launch?.close) await launch.close();
+    finish(1, "no-probes-api");
   }
 
   for (const probe of probes) {
@@ -128,7 +129,7 @@ try {
         try {
           await page.evaluate(({ name, args }) => window.gameTest.probes[name](...args), { name, args });
         } catch (e) {
-          warn(`[${probe.id}] probe.${act.args[0]} 不可用: ${e.message}`);
+          fail(`[${probe.id}] probe.${act.args[0]} 不可用: ${e.message}`);
         }
         continue;
       }
@@ -142,7 +143,7 @@ try {
           { driver: act.driver, args: act.args ?? [] },
         );
       } catch (e) {
-        warn(`[${probe.id}] driver ${act.driver} 抛错: ${e.message}`);
+        fail(`[${probe.id}] driver ${act.driver} 抛错: ${e.message}`);
       }
     }
 
@@ -152,6 +153,10 @@ try {
     // 4) 取 trace
     const trace = await page.evaluate(() => Array.isArray(window.__trace) ? window.__trace.slice() : []);
     console.log(`    · trace events: ${trace.length}`);
+    if (trace.length === 0) {
+      fail(`[${probe.id}] 未产生任何 runtime trace；无法证明 primitive 被真实执行`);
+      continue;
+    }
 
     // 5) 语义复算每条 trace 事件（P1.5：所有 runtime-backed primitive）
     const mechIndex = indexMechanics(mech);
@@ -167,6 +172,7 @@ try {
       });
       if (res.ok === null) {
         skippedCount++;
+        fail(`[${probe.id}][trace#${i}][${ev.primitive}] 复算缺证据: ${res.reason}`);
         continue;
       }
       replayedCount++;
@@ -176,7 +182,7 @@ try {
       }
     }
     if (skippedCount > 0) {
-      warn(`[${probe.id}] 跳过 ${skippedCount} 条 trace 事件（缺 before/after 或 primitive 未支持复算）`);
+      fail(`[${probe.id}] ${skippedCount} 条 trace 事件缺 before/after 或 primitive 复算支持，不能作为 runtime 语义证据`);
     }
 
     // 6) expected-trace 断言
@@ -185,15 +191,7 @@ try {
       if (hit) {
         ok(`[${probe.id}] traceContains 命中: ${JSON.stringify(assertion)}`);
       } else {
-        // 过渡期：若所有相关事件都因缺 before 被 skip，应降级为 warn
-        const softlySkipped = trace.filter(
-          (ev) => ev?.primitive === assertion.primitive,
-        ).every((ev) => !ev.before);
-        if (softlySkipped) {
-          warn(`[${probe.id}] traceContains 未验证（trace 缺 before 字段全跳过）: ${JSON.stringify(assertion)}`);
-        } else {
-          fail(`[${probe.id}] traceContains 未命中: ${JSON.stringify(assertion)}`);
-        }
+        fail(`[${probe.id}] traceContains 未命中: ${JSON.stringify(assertion)}`);
       }
     }
 

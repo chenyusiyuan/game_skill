@@ -9,16 +9,10 @@
  * 产出"0 次 add.image / 0 次 new Sprite"问题的根因防线。
  *
  * 检查逻辑：
- *   对 specs/assets.yaml 中每个 type=local-file 的条目：
- *     1. 该 asset 的 id 必须在 game/src 或 index.html 中出现（走 registry 路径）
- *        或该 asset 的 basename 必须在代码中出现（走直接路径引用）
- *     2. 同时整份代码（index.html + src/**\/*.js）必须出现至少一次引擎级消费调用：
- *        canvas  → drawImage 或 <img src
- *        dom-ui  → <img src / background-image / getTextureUrl
- *        phaser3 → add.image / add.sprite / sound.play / sound.add
- *        pixijs  → new Sprite / Sprite.from / Sprite(
- *        three   → TextureLoader / GLTFLoader / SpriteMaterial / MeshBasicMaterial
- *   统计 used / total，比例 < 60% 或 0 次引擎级消费 → FAIL
+ *   1. 静态层：每个 must-render asset 必须出现在绑定自身 id/source 的消费调用中。
+ *      "asset id 字符串 + unrelated drawImage/Sprite" 不再算消费。
+ *   2. 运行时层：启动页面并读取 window.gameTest.observers.getAssetUsage()
+ *      或 window.__assetUsage；每个 must-render asset 必须有 per-id runtime entry。
  *
  * 退出码: 0 = OK, 1 = FAIL
  */
@@ -28,7 +22,7 @@ import { resolve, join, dirname, basename } from "path";
 import { fileURLToPath } from "url";
 import yaml from "js-yaml";
 import { createLogger, parseLogArg } from "./_logger.js";
-import { readGameMeta } from "./_run_mode.js";
+import { readGameMeta, resolveLaunchTarget } from "./_run_mode.js";
 import { readAssetStrategy } from "./_asset_strategy.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -179,16 +173,13 @@ for (const p of jsFiles) {
 const businessSrc = businessBlobs.join("\n");
 const generatedConsumerPattern = /fillRect\s*\(|strokeRect\s*\(|roundRect\s*\(|arc\s*\(|beginPath\s*\(|ctx\.fill\s*\(|ctx\.stroke\s*\(|new\s+Graphics\s*\(|\.add\.graphics\s*\(|\.fillRect\s*\(|\.fillCircle\s*\(|\.rect\s*\(|\.circle\s*\(|\.fill\s*\(|\.stroke\s*\(|<svg\b|createElementNS\s*\([^)]*svg/;
 
-// 4) 单条 asset 被引用判定：id 或 basename 命中 allSrc（allSrc 含 manifest，id 在 manifest 里也算用了）
+// 4) 单条 asset 被引用判定：必须绑定到当前 asset id/source 的消费调用
 // T9: 只统计 required（contract 声明 must-render=true）子集；其它 asset 存在不报错
 let used = 0;
 const unused = [];
 for (const a of requiredAssets) {
-  const base = a.source ? basename(a.source) : "";
-  const hasRef = (a.id && new RegExp(`["'\`]${escapeReg(a.id)}["'\`]`).test(businessSrc)) ||
-    (a.type === "local-file" && base && businessSrc.includes(base));
-  const hasConsumer = consumerPatternForAsset(a).test(businessSrc);
-  if (hasRef && hasConsumer) {
+  const hasBoundConsumer = consumerPatternsForAsset(a).some((re) => re.test(businessSrc));
+  if (hasBoundConsumer) {
     used++;
   } else {
     unused.push(a);
@@ -250,6 +241,11 @@ if (!patterns) {
   ok(`[ENGINE-${engineId}] 无 required local/generated 视觉素材，跳过引擎级消费调用检查`);
 }
 
+// 6) runtime evidence：业务运行后必须能观察到 per-id asset usage。
+if (requiredAssets.length > 0) {
+  await checkRuntimeAssetUsage(requiredAssets);
+}
+
 function escapeReg(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 
 function normalizeAssetType(item, section) {
@@ -264,16 +260,154 @@ function normalizeAssetType(item, section) {
   return "unknown";
 }
 
-function consumerPatternForAsset(asset) {
+function consumerPatternsForAsset(asset) {
+  const id = escapeReg(asset.id ?? "");
+  const quotedId = `["'\`]${id}["'\`]`;
+  const base = asset.source ? escapeReg(basename(asset.source)) : "";
+  const source = asset.source ? escapeReg(asset.source) : "";
+  const renderSlot = new RegExp(`renderSlot\\s*\\(\\s*\\{[\\s\\S]{0,500}assetId\\s*:\\s*${quotedId}`, "m");
+  const recordUsage = new RegExp(`recordAssetUsage\\s*\\(\\s*\\{[\\s\\S]{0,300}id\\s*:\\s*${quotedId}`, "m");
+  const genericDrawAsset = new RegExp(`drawAsset\\s*\\([\\s\\S]{0,160}${quotedId}`, "m");
+
   if (asset.section === "audio") {
-    return asset.type === "synthesized"
-      ? /AudioContext\s*\(|OscillatorNode|createOscillator\s*\(|beep\s*\(|playTone\s*\(/
-      : /getAudio\s*\(|playSound\s*\(|sound\.add\s*\(|sound\.play\s*\(/;
+    if (asset.type === "synthesized") {
+      return [
+        recordUsage,
+        new RegExp(`playTone\\s*\\([\\s\\S]{0,120}${quotedId}`, "m"),
+        new RegExp(`beep\\s*\\([\\s\\S]{0,120}${quotedId}`, "m"),
+      ];
+    }
+    return [
+      recordUsage,
+      new RegExp(`getAudio\\s*\\(\\s*${quotedId}`),
+      new RegExp(`playSound\\s*\\(\\s*${quotedId}`),
+      new RegExp(`sound\\.add\\s*\\(\\s*${quotedId}`),
+      new RegExp(`sound\\.play\\s*\\(\\s*${quotedId}`),
+    ];
   }
   if (asset.type === "graphics-generated" || asset.type === "inline-svg") {
-    return generatedConsumerPattern;
+    return [
+      recordUsage,
+      renderSlot,
+      new RegExp(`renderGeneratedPrimitive\\s*\\(\\s*${quotedId}`),
+      new RegExp(`drawGeneratedAsset\\s*\\([\\s\\S]{0,120}${quotedId}`, "m"),
+    ];
   }
-  return /getTexture\s*\(|new\s+Sprite\s*\(|\.add\.image\s*\(|\.add\.sprite\s*\(|drawImage\s*\(|Sprite\.from\s*\(/;
+  const out = [
+    recordUsage,
+    renderSlot,
+    genericDrawAsset,
+    new RegExp(`getTexture\\s*\\(\\s*${quotedId}`),
+    new RegExp(`getTextureUrl\\s*\\(\\s*${quotedId}`),
+    new RegExp(`\\.add\\.image\\s*\\([\\s\\S]{0,200}${quotedId}`, "m"),
+    new RegExp(`\\.add\\.sprite\\s*\\([\\s\\S]{0,200}${quotedId}`, "m"),
+    new RegExp(`Sprite\\.from\\s*\\(\\s*${quotedId}`),
+    new RegExp(`PIXI\\.Sprite\\.from\\s*\\(\\s*${quotedId}`),
+  ];
+  if (base) {
+    out.push(new RegExp(`<img\\s+[^>]*src\\s*=\\s*["'][^"']*${base}[^"']*["']`, "i"));
+    out.push(new RegExp(`background-image\\s*:\\s*url\\([^)]*${base}`, "i"));
+    out.push(new RegExp(`drawImage\\s*\\([\\s\\S]{0,200}${base}`, "m"));
+  }
+  if (source) {
+    out.push(new RegExp(`<img\\s+[^>]*src\\s*=\\s*["'][^"']*${source}[^"']*["']`, "i"));
+  }
+  return out;
+}
+
+async function checkRuntimeAssetUsage(required) {
+  let chromium;
+  try {
+    ({ chromium } = await import("playwright"));
+  } catch {
+    fail("runtime asset usage 校验需要 playwright；无法读取 window.__assetUsage");
+    return;
+  }
+
+  let launch;
+  let browser;
+  const runtimeErrors = [];
+  try {
+    launch = await resolveLaunchTarget(gameDir);
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    page.on("pageerror", (e) => runtimeErrors.push(`pageerror: ${e.message}`));
+    page.on("console", (msg) => {
+      if (msg.type() === "error") runtimeErrors.push(`console: ${msg.text()}`);
+    });
+    await page.goto(launch.url, { waitUntil: "load", timeout: 10000 });
+    await page.waitForTimeout(800);
+
+    let usage = await readRuntimeUsage(page);
+    let missing = missingRuntimeUsage(required, usage);
+    if (missing.length > 0) {
+      await tryStartGame(page);
+      await page.waitForTimeout(1000);
+      usage = await readRuntimeUsage(page);
+      missing = missingRuntimeUsage(required, usage);
+    }
+
+    if (!Array.isArray(usage)) {
+      fail("runtime asset usage observer 缺失：需要 window.gameTest.observers.getAssetUsage() 或 window.__assetUsage");
+    } else if (missing.length > 0) {
+      fail(`runtime asset usage 缺少 must-render asset: ${missing.slice(0, 12).join(", ")}`);
+    } else {
+      ok(`runtime asset usage 覆盖 must-render asset (${required.length}/${required.length})`);
+    }
+  } catch (e) {
+    fail(`runtime asset usage 校验执行失败: ${e.message}`);
+  } finally {
+    if (runtimeErrors.length > 0) {
+      fail(`runtime asset usage 期间发现错误: ${runtimeErrors.slice(0, 5).join(" | ")}`);
+    }
+    if (browser) await browser.close();
+    if (launch?.close) await launch.close();
+  }
+}
+
+async function readRuntimeUsage(page) {
+  return page.evaluate(() => {
+    try {
+      const obs = window?.gameTest?.observers?.getAssetUsage;
+      if (typeof obs === "function") {
+        const value = obs();
+        return Array.isArray(value) ? value.map((e) => ({ ...e })) : null;
+      }
+      if (Array.isArray(window?.__assetUsage)) {
+        return window.__assetUsage.map((e) => ({ ...e }));
+      }
+    } catch {}
+    return null;
+  });
+}
+
+async function tryStartGame(page) {
+  await page.evaluate(() => {
+    const drivers = window?.gameTest?.drivers ?? {};
+    if (typeof drivers.clickStartButton === "function") return drivers.clickStartButton();
+    if (typeof window?.gameTest?.clickStartButton === "function") return window.gameTest.clickStartButton();
+    const selectors = [
+      "[data-testid='start-button']",
+      "[data-role='start']",
+      "button",
+    ];
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      if (el instanceof HTMLElement && /开始|start|play/i.test(el.textContent || "")) {
+        el.click();
+        return true;
+      }
+    }
+    return false;
+  }).catch(() => false);
+}
+
+function missingRuntimeUsage(required, usage) {
+  if (!Array.isArray(usage)) return required.map((a) => a.id);
+  const usedIds = new Set(usage.map((e) => String(e?.id ?? e?.assetId ?? "")));
+  return required
+    .map((a) => String(a.id))
+    .filter((id) => !usedIds.has(id));
 }
 
 finish();
