@@ -147,7 +147,14 @@
     window.gameTest.drivers = {};
     window.gameTest.probes = {
       resetWithScenario: (scenario) => {
-        console.warn('probes.resetWithScenario: stub — codegen 需实现');
+        // TODO(codegen): 此 stub 必须被完整实现。契约清单（codegen.md Step 4.0.5.1）：
+        //   1. scenario.fields 每一条都要写回 state（entities[].initial 里声明的所有字段）
+        //   2. scenario 每个 entity collection teardown（innerHTML 清 + removeEventListener）+ rebuild
+        //   3. 清所有 setTimeout / setInterval / rAF timer + pool/gate accounting
+        //   4. 尊重 scenario.fields['game.phase']，不硬写成 idle
+        //   5. 结束前调 keyed render()，不整页 innerHTML 覆盖
+        // check_project 会静态扫描；只 warn 或只改 score/misses 都会 fail。
+        console.warn('probes.resetWithScenario: stub — codegen 需实现完整契约');
       },
       stepTicks: (n) => {
         console.warn('probes.stepTicks: stub — codegen 需实现');

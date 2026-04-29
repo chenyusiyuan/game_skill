@@ -78,7 +78,15 @@ import { state } from "./state.js";
   };
   window.gameTest.probes = {
     resetWithScenario: (scenario) => {
-      console.warn('probes.resetWithScenario: stub — codegen 需实现');
+      // TODO(codegen): 此 stub 必须被完整实现，不是占位符。契约清单（codegen.md Step 4.0.5.1）：
+      //   1. scenario.fields 每一条都要写回 state（entities[].initial 里声明的所有字段）
+      //   2. scenario 每个 entity collection（moles / grid-cells / pigs / blocks 等）
+      //      teardown（销毁 sprite + off 事件）+ rebuild（按声明重建）
+      //   3. 清所有 spawn/cooldown timer（clearTimeout / app.ticker.remove）+ pool/gate accounting
+      //   4. 尊重 scenario.fields['game.phase']，不硬写成 idle
+      //   5. 结束前刷 UI（updateUI()、scoreLabel.text 等）
+      // check_project 会静态扫描；只 warn 或只改 score/misses 都会 fail。
+      console.warn('probes.resetWithScenario: stub — codegen 需实现完整契约');
     },
     stepTicks: (n) => {
       console.warn('probes.stepTicks: stub — codegen 需实现');

@@ -295,6 +295,122 @@ if (["phaser3", "phaser", "pixijs", "pixi", "canvas", "three"].includes(engineId
   }
 }
 
+// ─── 8.2 probes.resetWithScenario 静态反 stub 检查（SYSTEMATIC Blocker 防御） ─
+// 契约见 codegen.md Step 4.0.5.1；半实现（只 console.warn / 只改 score/misses）
+// 会让 check_runtime_semantics 基于错状态继续验证。Phase 4 硬门。
+if (["phaser3", "phaser", "pixijs", "pixi", "canvas", "three", "dom-ui", "dom"].includes(engineId)) {
+  const body = extractResetWithScenarioBody(allSrc);
+  if (body === null) {
+    // 未暴露 probes.resetWithScenario 在其他 check 已拦截（check_implementation_contract /
+    // check_runtime_semantics），这里不重复报
+  } else {
+    const issues = evaluateResetStubBody(body, mechanicsPath);
+    if (issues.length > 0) {
+      fail(`[PROBES-RESET-STUB] probes.resetWithScenario 是半实现 / stub: ${issues.join("; ")}（见 codegen.md Step 4.0.5.1）`);
+    } else {
+      ok("[PROBES-RESET-STUB] probes.resetWithScenario 非 stub，契约清单命中");
+    }
+  }
+}
+
+function extractResetWithScenarioBody(src) {
+  // 匹配 "resetWithScenario: (scenario) => { ... }" 或 "resetWithScenario(scenario) { ... }"
+  // 取最外层大括号。函数体里可能嵌套 { }，用计数器扫。
+  const arrowHead = /resetWithScenario\s*:\s*(?:async\s+)?(?:\(([^)]*)\)|([A-Za-z_$][\w$]*))\s*=>\s*\{/;
+  const methodHead = /resetWithScenario\s*(?:async\s+)?\(([^)]*)\)\s*\{/;
+  let m = src.match(arrowHead) || src.match(methodHead);
+  if (!m) return null;
+  const start = m.index + m[0].length; // 指向 '{' 之后
+  let depth = 1;
+  let i = start;
+  while (i < src.length && depth > 0) {
+    const ch = src[i];
+    if (ch === "{") depth++;
+    else if (ch === "}") depth--;
+    i++;
+    if (depth === 0) break;
+  }
+  if (depth !== 0) return null;
+  return src.slice(start, i - 1);
+}
+
+function evaluateResetStubBody(body, mechYamlPath) {
+  const issues = [];
+  const stripped = body.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "").trim();
+
+  // 1. 仅 console.warn / console.log → stub
+  const onlyWarn = /^[\s;]*console\.(warn|log|error)\s*\(/.test(stripped) &&
+                   !/=|scenario\./.test(stripped);
+  if (onlyWarn) {
+    issues.push("函数体仅 console.warn，未实现");
+    return issues;
+  }
+
+  // 2. 完全未读 scenario 参数
+  const touchesScenario = /\bscenario\b/.test(stripped);
+  if (!touchesScenario) {
+    issues.push("函数体未引用 scenario 参数");
+  }
+
+  // 3. 只触碰 score / misses → 半实现
+  const assignedFields = new Set();
+  for (const mm of stripped.matchAll(/state\.([A-Za-z_$][\w$]*)\s*=/g)) assignedFields.add(mm[1]);
+  for (const mm of stripped.matchAll(/gameState\.([A-Za-z_$][\w$]*)\s*=/g)) assignedFields.add(mm[1]);
+  const onlyScoreMisses = assignedFields.size > 0 &&
+    [...assignedFields].every((f) => /^(score|misses)$/.test(f));
+  if (onlyScoreMisses) {
+    issues.push(`仅触碰 score/misses 字段（${[...assignedFields].join(", ")}），未处理 timer/phase/collections`);
+  }
+
+  // 4. 未对任何 mechanics collection 做循环/解构
+  // 期望看到 forEach / for-of / map / filter / Object.keys 等对 scenario 成员的迭代
+  // 或至少对 scenario.fields 做遍历
+  const hasIteration = /\b(for|forEach|map|filter|Object\.(keys|entries|values))\b/.test(stripped) ||
+                       /scenario\.\w+\s*(?:\?\.)?\.\s*(forEach|map|filter)/.test(stripped);
+  const readsScenarioMember = /scenario\.[A-Za-z_$]/.test(stripped);
+  if (touchesScenario && !readsScenarioMember) {
+    issues.push("函数体读取了 scenario 但未访问任何成员（scenario.fields / scenario.<collection>）");
+  } else if (touchesScenario && !hasIteration && !onlyScoreMisses) {
+    // 没迭代不算硬 fail；若 scenario 只有 fields 且完全覆盖也可以是一串直写
+    // 但当 mechanics 声明多个 entity collection 时，直写几乎不可能
+    const mechanicsCollections = readMechanicsCollectionHints(mechYamlPath);
+    const hitsAnyCollection = mechanicsCollections.some((name) => new RegExp(`scenario\\.${name}\\b`).test(stripped));
+    if (mechanicsCollections.length > 0 && !hitsAnyCollection) {
+      issues.push(`未访问 mechanics.yaml 声明的任何 entity collection（${mechanicsCollections.join(" / ")}）`);
+    }
+  }
+
+  // 5. 总体长度 heuristics：函数体 < 80 chars 且未命中上面任意硬门 → 提示可能仍是半实现
+  if (issues.length === 0 && stripped.length < 80) {
+    issues.push(`函数体过短（${stripped.length} chars），可能未覆盖 teardown / rebuild / timer 清理`);
+  }
+
+  return issues;
+}
+
+function readMechanicsCollectionHints(mechPath) {
+  if (!mechPath || !existsSync(mechPath)) return [];
+  const raw = readFileSync(mechPath, "utf-8");
+  // 粗略从 entities: 段抽 id，再把 id 单复数化
+  const ids = [];
+  const entitiesMatch = raw.match(/^entities:\s*\n([\s\S]*?)(?=^\S|\Z)/m);
+  if (!entitiesMatch) return [];
+  for (const m of entitiesMatch[1].matchAll(/^\s*-\s*id:\s*([A-Za-z_][\w-]*)/gm)) {
+    ids.push(m[1]);
+  }
+  // 展开候选命名：id、复数、驼峰、kebab→camel
+  const out = new Set();
+  for (const id of ids) {
+    out.add(id);
+    out.add(id + "s");
+    out.add(id.replace(/-([a-z])/g, (_, c) => c.toUpperCase()));
+    out.add(id.replace(/-([a-z])/g, (_, c) => c.toUpperCase()) + "s");
+    out.add(id.replace(/-/g, ""));
+  }
+  return [...out];
+}
+
+
 // 通用：交互/匹配类玩法必须有异步锁
 if (/match|select|click.*card|配对|消除/.test(allSrc.toLowerCase())) {
   const hasLock = /isProcessing|_locked|inputLocked|isAnimating|canInteract/.test(allSrc);

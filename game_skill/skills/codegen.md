@@ -74,7 +74,7 @@ mechanics。正确处理是回到 Phase 3.0 修 `mechanics.yaml`：
 
 - `grid-board + 四周/外圈传送带` 必须是 `parametric-track.shape=rect-loop`，不是 `ring`
 - `ray-cast.coord-system=grid` 必须由上游 agent 提供 `gridPosition`
-- 至少一个 `simulation-scenarios` 能到达 `expected-outcome: win`
+- 至少一个 `simulation-scenarios` 能到达正向终局：`expected-outcome: win` 或 `expected-outcome: settle`
 - 每个 hard-rule 都映射到 primitive 字段或 invariant
 
 ### Step 1：解析 runtime / run-mode 并加载引擎资源
@@ -339,21 +339,57 @@ window.__assetUsage = window.__assetUsage || [];
      clickRetryButton: () => { /* 点击重试按钮 */ },
    };
    ```
-4. **实现** `window.gameTest.probes.resetWithScenario(scenario)` — 接收一个 scenario 对象（与 mechanics.yaml simulation-scenarios.setup 结构相同），将游戏状态重置到该场景：
-   ```js
-   window.gameTest.probes = {
-     resetWithScenario: (scenario) => {
-       // 清空当前棋盘/实体
-       // 按 scenario.pigs / scenario.blocks 重建
-       // 重置 score/phase
-       // 调用渲染刷新
-     },
-     stepTicks: (n) => {
-       // 强制推进 n 个 game tick（跳过 RAF）
-     },
-   };
-   ```
+4. **实现** `window.gameTest.probes.resetWithScenario(scenario)` — **契约级要求，不是伪代码示例**。
+   scenario 对象的 shape 与 `specs/mechanics.yaml.simulation-scenarios[*].setup` **完全一致**
+   （fields + 每个 entity collection 作为数组）。实现必须逐条覆盖下列范围，缺一即视为半实现：
+
+   **contract 清单（每条都必须做，不是"按需"）**：
+
+   1. **scenario.fields 必须逐字段写回 state**：
+      ```js
+      for (const [path, value] of Object.entries(scenario.fields ?? {})) {
+        // 'game.score' → state.score；'game.misses' → state.misses；
+        // 'game.timeLeftMs' → state.timeLeftMs；'game.phase' → state.phase
+        // 对每个 mechanics.yaml.entities[].initial 声明的字段都必须能接受
+      }
+      ```
+      **禁止**只挑 score / misses 两个字段；entities[].initial 里列出的每个字段
+      都可能被 scenario.fields 引用，全部都要接。
+
+   2. **scenario 里每一个 entity collection 必须 teardown + rebuild**：
+      mechanics.yaml.entities 每一个 id（如 `mole` / `grid-cell` / `pig` / `block`）
+      在 scenario 里会出现一个同名（或复数化）的 key（如 `moles` / `grid-cells` / `pigs` / `blocks`）。
+      对每个这样的 collection：
+      - 清除现有渲染节点（sprite / dom / mesh），释放事件监听
+      - 清除任何承载该实体的运行时容器（spawn queue、active list、pool index）
+      - 按 scenario.<collection>[*] 重建实体与渲染，保持 lifecycle / visible / alive / pos 与声明一致
+
+   3. **运行时循环必须停下并重建**：
+      - 清理所有 spawn timer / cooldown timer（`clearTimeout` / `clearInterval` /
+        `app.ticker.remove` / `scene.time.removeAllEvents` / `setInterval` handle）
+      - 清理 pool / gate 的 accounting（`occupiedSlots` / `activeCount` 等）
+      - 如果 scenario.fields 声明了 `game.phase`，把主循环切到对应阶段
+        （不要无条件回到 `idle`；尊重 scenario 声明）
+
+   4. **UI / 渲染刷新**：
+      调用已有的 `updateUI()` / `render()` / 引擎 `scene.refresh()`，让 HUD（score / misses /
+      timer）和画面立刻反映 scenario 状态，不依赖下一次 tick 自然刷新。
+
+   5. **不允许 scenario 未覆盖的字段保留前一次的残值**：
+      如果 scenario 没声明某 entity collection，按 mechanics.yaml.entities[].initial
+      把对应 runtime 容器重置回初始状态（例如 scenario 没给 `moles` 就把所有地鼠退回
+      `waiting` + hidden）。目标：**一次调用后，runtime 状态完全由 scenario 决定，
+      和调用前无关**。
+
 5. **probes 不参与 playthrough profile** — 只有 `check_runtime_semantics.js` 使用；playthrough 调用 probes 会被反作弊拦截
+
+**反模式（check_project 会静态扫描并 fail）**：
+- 函数体只有 `console.warn(...)`（残留 stub）
+- 函数体只赋值 `state.score` / `state.misses` 两个字段（半实现）
+- 函数体没有任何对 `scenario` 参数的解构或成员访问
+- 没有对任何 mechanics.yaml.entities 声明的 collection 做循环/赋值
+
+满足上述任一即判 SYSTEMATIC 半实现，Phase 4 red。
 
 **检查清单**（codegen 完成后自检）：
 - [ ] `window.__trace` 在状态初始化后存在
@@ -361,6 +397,10 @@ window.__assetUsage = window.__assetUsage || [];
 - [ ] `window.gameTest.observers.getSnapshot()` 返回 gameState 深拷贝
 - [ ] `window.gameTest.drivers` 至少有 `clickStartButton`
 - [ ] `window.gameTest.probes.resetWithScenario` 已实现（不是 console.warn stub）
+- [ ] `resetWithScenario` 处理 scenario.fields **所有** 条目（不是只 score/misses）
+- [ ] `resetWithScenario` 对 mechanics.entities 每个 collection 做 teardown + rebuild
+- [ ] `resetWithScenario` 清理了 spawn/cooldown timer 和 pool/gate accounting
+- [ ] `resetWithScenario` 结束前调用 UI/render 刷新
 
 ### Step 4.0.6：强制 import primitive runtime（P1-1 新增；canvas + pixijs + phaser3 + dom-ui 子集）
 
@@ -1054,7 +1094,7 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"fix-applied","phase":"codegen"
 - [ ] JS 文件 `node --check` 全通过
 - [ ] 所有 hard-rule 在代码里有对应注释
 - [ ] 所有 `must-have-features` 有对应实现或显式降级说明
-- [ ] **`check_mechanics.js` 退出 0**（玩法 primitive DAG 可执行，至少一个 win scenario 可达）
+- [ ] **`check_mechanics.js` 退出 0**（玩法 primitive DAG 可执行，至少一个 win/settle scenario 可达）
 - [ ] **`check_project.js` 退出 0**（含引擎专属静态检查、implementation-contract、asset-selection、asset-usage）
 - [ ] **`check_game_boots.js` 退出 0**（游戏能启动 + 能开始一局）
 - [ ] `state.json` `codegen.status = "completed"`
