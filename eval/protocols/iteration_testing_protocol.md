@@ -322,6 +322,25 @@ FIX ORDER: start at L1; L3/L4 will likely self-resolve.
 
 ---
 
+## 7.5 架构级结论必须实机复现
+
+模型（特别是跑 case 的会话 A）在 failure attribution 里有两种截然不同的结论量级：
+
+- **窄面结论**：如 "X 坐标写错 / Y API 未调用 / Z schema 字段缺失"——这种结论天然可定位、可快速复现。
+- **宽面结论**：如 "A 组件 + B 框架 + C 规则三者架构不兼容"——这种结论代价极大，**必然推动 skill 层大改**，但风险同样巨大：说错了就让所有人绕远路。
+
+**硬规则**：任何宽面结论（"架构不兼容" / "事件模型冲突" / "框架升级需要" / "需要新增引擎适配层" 等）必须满足下列**全部**条件才能写进 failure attribution：
+
+1. **实机反例**：给出一段 ≤30 行可独立跑的脚本（Node + Playwright / 最小 HTML），在**最小环境**下复现出同样症状。不依赖本 case 的 profile、不依赖 checker、不依赖任何 skill 脚手架。
+2. **反证尝试**：给出至少一次"若结论为真，下列场景也应失败"的反证。比如"若 PointerEvent 不被 Chromium 合成，则 `page.mouse.click` 在**任何** PixiJS v8 demo 上都应无效"——跑一个这类 demo。
+3. **正交隔离**：证明问题不是"本 case 产物 + checker + profile"三者某一层的配置错误；至少已在 L1-L3 层上排查过。
+
+未满足任一条 → 结论降级为窄面（"我不确定，症状看起来像 X"），回到常规 cascade 定位；**禁止**直接主张大改 skill。
+
+**为什么**：错误的宽面结论会让下游会话（B / C / D）按"需要引擎层大改"的方向投入时间。whack-a-mole-pixijs-min 2026-04-29 就发生过：会话 A 写下 "PixiJS v8 + Playwright 架构不兼容"，实际根因是 `check_playthrough` 一段 10 行的 click 坐标解析漏洞（`step.options.position` 未识别）。复现脚本只要 20 行就能证明 `page.mouse.click` 对 PixiJS 完全有效。
+
+---
+
 ## 8. 具体命令速查
 
 ```bash
@@ -365,3 +384,4 @@ diff cases/anchors/<a>/eval/report.json cases/anchors/<a>/eval/report.baseline.j
 ### Changelog
 
 - 2026-04-28 初版。覆盖生成层重构 P0/P1/P2 + 引擎收编（canvas/pixijs/phaser3/dom-ui）+ test-hooks 三分类 + P2 solvability + catalog 语义审计。three + profile 迁移未覆盖，相关协议条款在对应 TODO 落地后再增补。
+- 2026-04-29 §7.5 新增 "架构级结论必须实机复现" 硬规则。触发事件：whack-a-mole-pixijs-min 会话 A 把一段 10 行的 checker 坐标解析漏洞误断为 "PixiJS v8 + Playwright 架构不兼容"，若采信会让 skill 层做不必要的大改。
