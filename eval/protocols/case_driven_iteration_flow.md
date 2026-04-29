@@ -39,6 +39,11 @@ cat > cases/$CASE/INTENT.md <<'EOF'
 本轮目的: 测试 dom-ui 引擎 + edu-practice genre + 三分类 hooks 的完整链路
 预期 blast layers: 无预设；根据失败暴露
 不允许的修复: 不在 profile 层补丁，不在 checker 层加豁免
+
+预期 ok-skip whitelist（强制段，没有就不允许开跑）:
+- runtime_semantics: [预期结果]（例如 no-applicable-probes，因本 case 无 ray-cast@v1 组合）或 [必须实跑]
+- level_solvability: [预期结果]（例如 done:reflex 因本 case 是 reflex genre）或 [必须实跑]
+- 其它 check 若有预期 skip，逐条写上理由
 EOF
 ```
 
@@ -160,6 +165,8 @@ check_mechanics，给我 exit code。不要跑 Phase 5 playthrough。"
 ```
 
 **不写这个分析不允许开始修。**
+
+**硬门**（2026-04-29）：`verify_all.js` 启动时会扫 `cases/$CASE/failures/*.md`，任意文件仍含 `TODO` 字符串或"起源层" checkbox 一个没勾，**直接 exit 2 不跑任何 check**。填完模板才能继续跑。
 
 ### Cascade 速查表（verify_all 红时先对照）
 
@@ -307,6 +314,9 @@ cp cases/$CASE/eval/report.json cases/anchors/<descriptive-name>-min/eval/report
 - 🔴 手改 codegen 产出的 `game/` 里的代码（应改 codegen.md / 模板）
 - 🔴 为让某个 case 过而放宽 checker 正则（应追问为什么 checker 原本的判定是对的）
 - 🔴 改 mechanics.yaml 来绕过 runtime_semantics（应修 primitive runtime / 业务代码）
+- 🔴 **单个 commit 同时修改 ≥ 3 个 skill 文件的逻辑**（本轮 whack-a-mole 触发过：跨 codegen.md + check_* + 模板三层的改动应拆独立 commit，便于 regression 时精准回滚）
+- 🔴 **跑 case 的会话直接修 `game_skill/skills/**`**（WORKFLOW.md 红线；本轮 whack-a-mole 触发过 `651b49a`。修 skill 必须回会话 D / 独立冷启会话做；case 会话只能修 `cases/<slug>/` 下的产物）
+- 🔴 **failures/<ts>-<check>-fail.md 有 TODO 未填就再跑 verify_all**（`verify_all.js` 已在启动时硬门拦截；如果你看到 exit 2 的"未填 attribution"信号，别用"跳过一下"绕过——补填才是 Stage 2 的全部要义）
 
 ---
 
@@ -323,3 +333,4 @@ cp cases/$CASE/eval/report.json cases/anchors/<descriptive-name>-min/eval/report
 ## Changelog
 
 - 2026-04-28 初版。覆盖 Phase 1-5 完整流程、Stage 0-5 阶段纪律、失败层归属模板、模式抽象升级触发规则、模型接管 prompt 骨架。
+- 2026-04-29 Stage 0 模板强制写 ok-skip whitelist；Stage 2 引入 `failures/*.md` TODO 未填即拒的硬门（verify_all.js:L27 扫描）；反模式清单加 3 条：单 commit 跨 ≥3 skill 文件禁止 / 跑 case 的会话禁改 skill 源 / failures TODO 未填禁再跑 verify_all。触发事件：whack-a-mole-pixijs-min Phase 5 deep review addendum + C 会话 review 维度 4 判 FAIL。

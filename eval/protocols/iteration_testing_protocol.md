@@ -187,6 +187,7 @@ git add cases/anchors/<anchor>/eval/report.baseline.json
 | runtime primitive 新增 | L1 + L2 + L4 | L1 → L2 → L4（1 个 anchor） |
 | 引擎收编（A/B/C 这种） | L1 + L2 + L4 + L5 | L1 → L2 → L4 → L5 |
 | 多层耦合重构 | L1 + L4 + L5 + L6 | L1 → L4（1 anchor 起步）→ L5（全锚）→ L6（diff baseline） |
+| **跨 ≥3 个 skill 文件的改动** | 禁止在 **单 case 会话**内完成 | 必须拆到独立 skill 会话（会话 D）；case 会话撞到这种情况时，停下告知用户，转交会话 D 处理。见 case_driven_iteration_flow.md 反模式清单 |
 | 文档 / 注释 / TODO md | — | 不跑；但要确认 `grep` 不引入不一致的术语 |
 
 ---
@@ -226,6 +227,14 @@ FIX ORDER: start at L1; L3/L4 will likely self-resolve.
 ---
 
 ## 4. Anchor Case 维护规约
+
+**前置硬门**（2026-04-29）：升 anchor 必须满足
+1. `cases/anchors/` 目录已存在（若不存在，先创建，并在下一条 case 升格时同步建立 baseline 产物规范）
+2. 要升格的 case 已在 **≥1 个现有锚 case** 上跑过 L4 `verify_all`，证明本 case 的改动未打坏其它锚（L5 全锚回归是理想；最低必须有 L4 on ≥1 anchor）
+3. 该 case 自身的 `eval/report.json`、`eval/report.baseline.json`、`eval/ok-skip-whitelist.md`、`eval/README.md` 齐全（见 §4.1）
+4. 该 case 的 `DEBT.md` 没有过时条目（近期 commit 已修好但未关闭的 Debt 必须在升格前清理）
+
+任一条不满足就**不许**升 anchor；把 case 当"一次性压测存档"保留即可，等下一个 case 合格时再升。这一门主要目的是防止"把只在本 case 成立的修复固化成全局真理"。
 
 ### 4.1 最低集合
 
@@ -385,3 +394,4 @@ diff cases/anchors/<a>/eval/report.json cases/anchors/<a>/eval/report.baseline.j
 
 - 2026-04-28 初版。覆盖生成层重构 P0/P1/P2 + 引擎收编（canvas/pixijs/phaser3/dom-ui）+ test-hooks 三分类 + P2 solvability + catalog 语义审计。three + profile 迁移未覆盖，相关协议条款在对应 TODO 落地后再增补。
 - 2026-04-29 §7.5 新增 "架构级结论必须实机复现" 硬规则。触发事件：whack-a-mole-pixijs-min 会话 A 把一段 10 行的 checker 坐标解析漏洞误断为 "PixiJS v8 + Playwright 架构不兼容"，若采信会让 skill 层做不必要的大改。
+- 2026-04-29 §2 决策表新增"跨 ≥3 个 skill 文件的改动 → 禁止在单 case 会话内完成"；§4 新增 anchor 升格前置硬门（≥1 anchor L4 回归 + 产物齐全 + DEBT.md 干净）。触发事件：whack-a-mole-pixijs-min Phase 5 deep review 会话 C 维度 6 判 FAIL。
