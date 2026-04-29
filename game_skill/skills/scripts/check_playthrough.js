@@ -430,6 +430,7 @@ try {
 const hasTraceBaseline = expectedRuleIds.length > 0;
 
 // 运行 profile 驱动脚本（每条 assertion 跑一遍 setup）
+const clickStateDeltas = []; // { assertionId, kind, before, after, coord, changed }
 for (let idx = 0; idx < allAssertions.length; idx++) {
   const a = allAssertions[idx];
   const label = `[${a.id}] ${a.description}`;
@@ -440,6 +441,12 @@ for (let idx = 0; idx < allAssertions.length; idx++) {
     }
     for (const step of a.setup ?? []) {
       if (step.action === "click") {
+        // click 前取 gameState 浅快照，click 后再取；差异 0 即本次 click 没推进任何语义。
+        // 对 interaction kind 的 assertion，连续多次 click 前后全无差异即判 [CLICK-HITS-NOTHING]。
+        // 比 SB-1 启发式（3+ 共用坐标）更硬：直接看效果，不靠坐标推测。
+        const before = await page.evaluate(() => {
+          try { return JSON.stringify(window.gameState ?? null); } catch { return null; }
+        });
         if (step.selector) {
           const options = { timeout: 2000 };
           // 支持两种坐标表达：顶层 step.x/y，或嵌套 step.options.position.{x,y}
@@ -456,6 +463,16 @@ for (let idx = 0; idx < allAssertions.length; idx++) {
         } else {
           throw new Error("click step 需要 selector 或 x/y 坐标");
         }
+        // 给 click 的同步/微任务完成点时间（常见情况下 PixiJS 的 pointerdown → 业务 handler 走完）
+        await page.waitForTimeout(80);
+        const after = await page.evaluate(() => {
+          try { return JSON.stringify(window.gameState ?? null); } catch { return null; }
+        });
+        clickStateDeltas.push({
+          assertionId: a.id,
+          kind: a.kind,
+          changed: before !== after,
+        });
       } else if (step.action === "wait") {
         await page.waitForTimeout(step.ms ?? 100);
       } else if (step.action === "eval") {
@@ -476,6 +493,33 @@ for (let idx = 0; idx < allAssertions.length; idx++) {
   }
 }
 await collectTraceSnapshot();
+
+// Round 1 #3（addendum 方案 A）：click 前后 gameState 快照比对。
+// interaction kind 的 assertion 里，若该 assertion 全部 click step 的 state 快照全 0 变化，
+// 本 assertion 算"click-hits-nothing"。累计 3+ 条即 fail。
+// 这条硬于 3ff95a6 的坐标启发式：直接看效果，不靠坐标推测，也不在乎 drivers.* 是否同步。
+// 注意：需要 window.gameState 已暴露且为 JSON-serializable；一些业务在 click 后异步更新，
+// 故 click 后加了 80ms 等待。
+const interactionInertAssertions = (() => {
+  const byAssertion = new Map();
+  for (const d of clickStateDeltas) {
+    if (d.kind !== "interaction") continue;
+    if (!byAssertion.has(d.assertionId)) byAssertion.set(d.assertionId, []);
+    byAssertion.get(d.assertionId).push(d.changed);
+  }
+  const out = [];
+  for (const [id, arr] of byAssertion) {
+    if (arr.length > 0 && arr.every((c) => c === false)) out.push(id);
+  }
+  return out;
+})();
+if (interactionInertAssertions.length >= 3) {
+  profileShapeErrors.push(
+    `[PROFILE] click-hits-nothing：${interactionInertAssertions.length} 条 interaction assertion 的全部 click 前后 gameState 无变化: ${interactionInertAssertions.slice(0, 6).join(", ")}${interactionInertAssertions.length > 6 ? " ..." : ""}。坐标可能没命中 UI、或业务 handler 未绑、或 profile 用 drivers.* 在 click 外推进业务。请用 observers 读到真实 UI 坐标再点，或用 selector 命中实际元素。`,
+  );
+} else if (interactionInertAssertions.length > 0) {
+  console.log(`  ⚠ [click-hits-nothing] ${interactionInertAssertions.length} 条 interaction assertion click 无 state 变化（阈值 3 未触发 fail，持续观察）: ${interactionInertAssertions.join(", ")}`);
+}
 
 // ── T4 核心：trace 覆盖率判定 ──
 const trace = aggregateTrace.length > 0 ? aggregateTrace : null;
