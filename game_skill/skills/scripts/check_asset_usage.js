@@ -291,6 +291,8 @@ function consumerPatternsForAsset(asset) {
       renderSlot,
       new RegExp(`renderGeneratedPrimitive\\s*\\(\\s*${quotedId}`),
       new RegExp(`drawGeneratedAsset\\s*\\([\\s\\S]{0,120}${quotedId}`, "m"),
+      new RegExp(`getTexture\\s*\\(\\s*${quotedId}`),
+      new RegExp(`registry\\.getTexture\\s*\\(\\s*${quotedId}`),
     ];
   }
   const out = [
