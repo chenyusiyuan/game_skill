@@ -161,6 +161,32 @@ const clickOk = allAssertions.some(hasRealClickStep);
 if (!clickOk) {
   profileShapeErrors.push(`[PROFILE] profile 中没有任何真实 action: click 步骤——必须至少 1 条 selector click 或 x/y 坐标 click，否则无法暴露 hitArea/按钮错位类 bug`);
 }
+
+// SB-1 启发式（2026-04-29）：反"陪衬 click + drivers.* 替代业务"模式。
+// 当 3+ 条 interaction 类 assertion 共享同一 (x,y) click 坐标时，几乎可以肯定坐标打到空地，
+// 真实业务推进靠 drivers.*。此时 click 虽存在但语义失效，profile 无法验证 UI 对齐/按钮位置。
+{
+  const coordUse = new Map(); // "x,y" → [assertionId...]
+  for (const a of allAssertions) {
+    if (a.kind !== "interaction") continue;
+    for (const s of a.setup ?? []) {
+      if (s.action !== "click") continue;
+      if (!Number.isFinite(s.x) || !Number.isFinite(s.y)) continue; // 只 heuristic 坐标 click，selector 不在此规则
+      const key = `${s.x},${s.y}`;
+      if (!coordUse.has(key)) coordUse.set(key, []);
+      coordUse.get(key).push(a.id);
+    }
+  }
+  for (const [coord, ids] of coordUse) {
+    const unique = [...new Set(ids)];
+    if (unique.length >= 3) {
+      profileShapeErrors.push(
+        `[PROFILE] 反陪衬 click 启发式命中：${unique.length} 条 interaction assertion 共用同一坐标 (${coord}): ${unique.slice(0, 5).join(", ")}${unique.length > 5 ? " ..." : ""}。真实 UI 驱动不会让这么多不同语义的动作落到同一坐标，典型反模式是 drivers.* 接管业务、click 坐标只是陪衬。请为每条 assertion 用真实命中元素的 selector/坐标，或改成 selector click。`,
+      );
+    }
+  }
+}
+
 for (const a of allAssertions) {
   const hookCalls = scanProfileHookNamespaces(a);
   const hasDriverCall = hookCalls.some((h) => h.namespace === "drivers");
