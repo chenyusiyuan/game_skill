@@ -5,7 +5,7 @@
  * 读取 cases/<slug>/specs/mechanics.yaml，按照 DAG 组装每个 primitive 的
  * reference reducer，跑 mechanics.yaml 中声明的 simulation-scenarios，验证：
  *   1. 每个 primitive 的 invariants 是否持有
- *   2. 至少一个 scenario 能到达 expected-outcome (win/lose/...)
+ *   2. 至少一个 scenario 能到达 expected-outcome (win/settle/...)
  *   3. PRD @constraint → primitive 字段的 maps-to 值是否一致
  *
  * 这是玩法"前置真值"源，取代 Phase 5 __trace 覆盖率作为玩法结构合格判据。
@@ -91,9 +91,9 @@ checkScenarioSetup(mech);
 
 // 4. 跑每个 scenario，收集 per-node history，结尾验证每个 node 的 reducer.checkInvariants
 const scenarios = mech["simulation-scenarios"] || [];
-if (scenarios.length === 0) fail(`mechanics.yaml 未声明 simulation-scenarios（至少需要一条 expected-outcome:win）`);
+if (scenarios.length === 0) fail(`mechanics.yaml 未声明 simulation-scenarios（至少需要一条 expected-outcome: win 或 settle）`);
 
-let anyWin = false;
+let anyPositiveTerminal = false;
 for (const sc of scenarios) {
   console.log(`  · scenario: ${sc.name}`);
   const result = runScenario(mech, sc, reducers);
@@ -104,7 +104,7 @@ for (const sc of scenarios) {
     || (expected == null && actual == null);
   if (matches) {
     ok(`    outcome=${actual ?? "<none>"} 符合 expected`);
-    if (actual === "win") anyWin = true;
+    if (actual === "win" || actual === "settle") anyPositiveTerminal = true;
   } else {
     fail(`    outcome=${actual ?? "<none>"} 不等于 expected=${expected} (ticks=${result.ticks})`);
   }
@@ -128,7 +128,7 @@ for (const sc of scenarios) {
   }
 }
 
-if (!anyWin) fail("no scenario reached 'win' — PRD/mechanics.yaml 可能结构性不可完成");
+if (!anyPositiveTerminal) fail("no scenario reached 'win' or 'settle' — PRD/mechanics.yaml 可能结构性不可完成");
 
 finish(errors.length ? 1 : 0);
 
@@ -273,16 +273,19 @@ function checkTriggerPayloadCompat(m, reducers) {
 }
 
 /**
- * 扫描 PRD，抽出所有 @constraint(... kind=hard-rule ...) 的 id，
- * 要求 mechanics.yaml.invariants[].ref 覆盖每一条 hard-rule。
- * 这是链路的核心语义门禁：PRD 的硬约束必须被编译到原语字段或 reducer invariant 上，
- * 不得被 decomposer 漏掉。
+ * 扫描 PRD，抽出所有 @constraint(... kind=hard-rule ...)。
+ * 要求玩法/规则语义 hard-rule 被 mechanics.yaml.invariants[].ref 覆盖；
+ * 对 "不做音效/排行榜/多关卡" 这种非 mechanics DAG 行为，允许标记
+ * `mechanics-scope: non-mechanics` / `mechanics: false` 后不映射。
+ *
+ * 这是链路的核心语义门禁：PRD 的玩法硬约束必须被编译到原语字段或
+ * reducer invariant 上；但不存在的周边功能不能强行塞入 mechanics DAG。
  */
 function checkConstraintCoverage(m, caseDir) {
   const prdPath = join(caseDir, "docs/game-prd.md");
   if (!existsSync(prdPath)) { warn(`无 docs/game-prd.md，跳过 constraint 覆盖率检查`); return; }
   const prd = readFileSync(prdPath, "utf8");
-  const hardIds = [];
+  const hardConstraints = [];
   const lines = prd.split(/\r?\n/);
   const idRe = /@constraint\s*\(\s*([^)\s,]+)\s*[),]([^\n]*)/;
   for (let i = 0; i < lines.length; i++) {
@@ -290,15 +293,21 @@ function checkConstraintCoverage(m, caseDir) {
     if (!m1) continue;
     const id = m1[1].trim();
     const tail = m1[2] || "";
-    // 在本行 + 接下来 6 行的窗口内找 kind 信息，接受两种形式：
+    // 在当前 constraint 块内找 kind 信息，接受两种形式：
     //   - 同行内 @constraint(id, kind:hard-rule, ...) / @constraint(id){kind:hard-rule}
     //   - 紧跟 markdown 引用块 "> kind: hard-rule"
-    const window = [tail, ...lines.slice(i + 1, i + 7)].join("\n");
+    const window = [lines[i], tail, ...constraintBlockAfter(lines, i)].join("\n");
     if (/kind\s*[:=]\s*["']?hard-rule/.test(window)) {
-      if (!hardIds.includes(id)) hardIds.push(id);
+      if (!hardConstraints.some(c => c.id === id)) {
+        hardConstraints.push({
+          id,
+          window,
+          mechanicsScope: classifyConstraintMechanicsScope(id, window),
+        });
+      }
     }
   }
-  if (hardIds.length === 0) {
+  if (hardConstraints.length === 0) {
     warn(`PRD 未声明 kind:hard-rule 的 @constraint；此项检查无作用`);
     return;
   }
@@ -309,22 +318,76 @@ function checkConstraintCoverage(m, caseDir) {
     if (rm) covered.add(rm[1]);
     else covered.add(ref.trim()); // 也允许纯 id
   }
-  const missing = hardIds.filter(id => !covered.has(id));
+  const required = hardConstraints.filter(c => c.mechanicsScope !== "non-mechanics");
+  const exempt = hardConstraints.filter(c => c.mechanicsScope === "non-mechanics");
+  const missing = required.map(c => c.id).filter(id => !covered.has(id));
   if (missing.length) {
     for (const id of missing) {
       fail(`constraint-coverage: hard-rule '@constraint(${id})' 未映射到 mechanics.yaml.invariants（decomposer 漏映射或 ref 写法不对）`);
     }
   } else {
-    ok(`constraint-coverage: ${hardIds.length} 条 hard-rule 全部映射 (${hardIds.join(", ")})`);
+    ok(`constraint-coverage: ${required.length} 条 mechanics hard-rule 全部映射 (${required.map(c => c.id).join(", ") || "<none>"})`);
+  }
+  if (exempt.length > 0) {
+    ok(`constraint-coverage: ${exempt.length} 条 non-mechanics hard-rule 不要求 mechanics 映射 (${exempt.map(c => c.id).join(", ")})`);
   }
 }
 
 function getDeep(obj, path) {
   if (!obj) return undefined;
-  const parts = String(path).split(".");
+  const parts = String(path)
+    .replace(/\[(\d+)\]/g, ".$1")
+    .split(".")
+    .filter(Boolean);
   let cur = obj;
   for (const p of parts) { if (cur == null) return undefined; cur = cur[p]; }
   return cur;
+}
+
+function classifyConstraintMechanicsScope(id, text) {
+  if (/mechanics(?:-scope)?\s*[:=]\s*["']?(none|non-mechanics|not-applicable|n\/a)/i.test(text)) {
+    return "non-mechanics";
+  }
+  if (/mechanics\s*[:=]\s*["']?false\b/i.test(text)) {
+    return "non-mechanics";
+  }
+  if (/polarity\s*[:=]\s*["']?(require|required|must|mechanics)/i.test(text)) {
+    return "mechanics";
+  }
+
+  // Backward-compatible inference for old PRDs that did not yet carry
+  // mechanics-scope. Keep this narrow: gameplay forbids such as
+  // no-global-autoaim/no-penetration must still be mapped to mechanics.
+  const hay = `${id}\n${text}`.toLowerCase();
+  const nonMechanicsTerms = [
+    "multi-level",
+    "level system",
+    "关卡系统",
+    "多关卡",
+    "difficulty-scaling",
+    "difficulty scaling",
+    "难度递增",
+    "音效",
+    "sound",
+    "audio",
+    "leaderboard",
+    "ranking",
+    "排行榜",
+    "存档",
+    "save",
+    "backend",
+    "后端",
+  ];
+  return nonMechanicsTerms.some(term => hay.includes(term)) ? "non-mechanics" : "mechanics";
+}
+
+function constraintBlockAfter(lines, startIndex) {
+  const out = [];
+  for (let i = startIndex + 1; i < lines.length; i++) {
+    if (/^#{1,6}\s+@constraint\s*\(/.test(lines[i])) break;
+    out.push(lines[i]);
+  }
+  return out;
 }
 
 /**
@@ -411,6 +474,12 @@ function checkSpecPrimitiveRefs(mech, caseDir, reducers) {
 function checkScenarioSetup(mech) {
   for (const sc of mech["simulation-scenarios"] || []) {
     for (const [collection, list] of Object.entries(sc.setup || {})) {
+      if (collection === "fields") {
+        if (!list || typeof list !== "object" || Array.isArray(list)) {
+          fail(`scenario[${sc.name}].setup.fields: 必须是对象映射`);
+        }
+        continue;
+      }
       if (!Array.isArray(list)) {
         fail(`scenario[${sc.name}].setup.${collection}: 必须是数组`);
         continue;
@@ -617,6 +686,12 @@ function runScenario(mech, sc, reducers) {
 function buildInitialState(mech, sc) {
   const state = { entities: {}, collections: {}, fields: {}, winLose: {} };
   for (const [name, list] of Object.entries(sc.setup || {})) {
+    if (name === "fields") {
+      if (list && typeof list === "object" && !Array.isArray(list)) {
+        state.fields = { ...list };
+      }
+      continue;
+    }
     // setup 段的 key 是 collection 名（pigs/blocks/...），转成单数的 entity id 只为便于 apply
     // 我们同时按集合与 entity 类型做索引。
     state.collections[name] = list.map(item => ({ ...item }));

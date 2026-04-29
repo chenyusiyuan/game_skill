@@ -53,7 +53,7 @@ Phase 5 必须先区分本轮是“分层诊断”还是“最终回归”：
 
 | 层 | 脚本 | 预算 | 理由 |
 |---|---|---|---|
-| 玩法语义 | `check_mechanics.js` | Phase 3/4 前置 | primitive DAG 可执行，至少一个 win scenario 可达 |
+| 玩法语义 | `check_mechanics.js` | Phase 3/4 前置 | primitive DAG 可执行，至少一个 win/settle scenario 可达 |
 | 冒烟 | `check_game_boots.js` | ≤ 2 轮 | 最低门槛：游戏能起、无 console error、gameState 暴露 |
 | 工程侧 | `check_project.js` | ≤ 3 轮 | 启动错、语法错、资源错，以及 contract / asset-selection / asset-usage gate |
 | 产品侧 | `check_playthrough.js` | ≤ 10 轮 | 玩法 bug 修复更慢 |
@@ -75,7 +75,7 @@ node ${SKILL_DIR}/scripts/check_mechanics.js cases/${PROJECT}
 - `grid-board + grid-projection track` 使用 `rect-loop`，不是 `ring`
 - `ray-cast.coord-system=grid` 的上游 source 有 `gridPosition`
 - hard-rule 全部映射到 invariant/field/nodes
-- 至少一个 simulation scenario 到达 `win`
+- 至少一个 simulation scenario 到达正向终局 `win` 或 `settle`
 
 这一步失败时，优先回 Phase 3 修 mechanics / rule / event-graph；不要先改 case 代码。
 

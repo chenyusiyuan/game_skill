@@ -37,7 +37,7 @@ node game_skill/skills/scripts/phase_plan.js --mode full --stop-before codegen
 | mode | 用途 | 允许到达 | E2E |
 |---|---|---|---|
 | `full` | 默认完整生成交付 | deliver | 允许 |
-| `mechanics-only` | 只确认玩法原语、数值和 win 可达 | mechanics | 禁止 |
+| `mechanics-only` | 只确认玩法原语、数值和正向终局可达（win 或 settle） | mechanics | 禁止 |
 | `expand-only` | 只产 specs/contract，不写游戏代码 | expand | 禁止 |
 | `codegen-only` | 基于已冻结 specs 只做代码生成和工程自检 | codegen | 禁止 |
 | `verify-layered` | 逐层定位已有 case 问题 | verify 单层脚本 | 禁止统一 E2E 修复循环 |
@@ -375,7 +375,7 @@ node game_skill/skills/scripts/phase_plan.js --mode ${PHASE_MODE:-full} --projec
 - **Phase 2.5 — Spec Clarify Gate**：先写 `docs/spec-clarifications.md`，把功能机制澄清/默认假设固定下来。
 - **Phase 3.0 — Mechanic Decomposition**：先产 `mechanics.yaml`（玩法原语 DAG），单独提交，作为 Phase 3.x / Phase 4 的语义骨架。
 - **Phase 3.x — Expanders**：原有 5 个 expander 并发写 `specs/.pending/*.yaml`，其中 `rule` 和 `event-graph` 可读 `mechanics.yaml` 作为引用源。
-- **Phase 3.5 — Symbolic Check**：`check_mechanics.js` 用原语 reducer 跑 profile 剧本，验证玩法 invariants + win 可达。不过则整个 Phase 3 failed，不进 codegen。
+- **Phase 3.5 — Symbolic Check**：`check_mechanics.js` 用原语 reducer 跑 profile 剧本，验证玩法 invariants + 正向终局可达（win 或 settle）。不过则整个 Phase 3 failed，不进 codegen。
 - board-grid genre 的 data expander 必须产出 `solution-path` + `playability`；其他 genre 可省略并由 P2 checker 自动 ok-skip。
 
 ---
@@ -401,7 +401,7 @@ node game_skill/skills/scripts/phase_plan.js --mode ${PHASE_MODE:-full} --projec
    rmdir cases/${PROJECT}/specs/.pending 2>/dev/null || true
    node game_skill/skills/scripts/check_mechanics.js cases/${PROJECT}/ --log ${LOG_FILE}
    ```
-   通过后只标记 `expand.subtasks.mechanics=completed`，不要启动 Phase 3.x expander、不要生成 implementation-contract、不要进入 codegen。汇报 ray-cast / ammo / win scenario / balance 证据后等待用户决定是否继续。
+   通过后只标记 `expand.subtasks.mechanics=completed`，不要启动 Phase 3.x expander、不要生成 implementation-contract、不要进入 codegen。汇报 ray-cast / ammo / terminal scenario / balance 证据后等待用户决定是否继续。
 6. Phase 3.x 中的 `rule` 和 `event-graph` expander prompt 必须新增两行：
    `【Spec澄清】cases/${PROJECT}/docs/spec-clarifications.md`
    `【机械基线】cases/${PROJECT}/specs/.pending/mechanics.yaml`（expander 必须引用其中 node id，不得写散文 effect）

@@ -305,7 +305,7 @@ Debt:
 [ ] 全绿，告诉会话 A 授权进入 Phase <N+1>
 
 [ ] 只有 CASE-LOCAL Blocker，让会话 A 修产物:
-    ```
+```
     Phase <N> 有 <n> 个 CASE-LOCAL Blocker:
     - B1: 修 cases/<CASE-slug>/<file> —— <具体改动>
     - B2: ...

@@ -98,6 +98,110 @@ test("node --test check_level_solvability.test.mjs 全绿", () => {
 });
 
 // =============================
+// Mechanics gate: constraint coverage + settle outcome
+// =============================
+console.log("\n[mechanics] check_mechanics constraint coverage");
+
+function writeMinimalMechanicsCase(caseDir, { prdConstraints = "", invariants = "", outcome = "win" } = {}) {
+  mkdirSync(join(caseDir, "docs"), { recursive: true });
+  mkdirSync(join(caseDir, "specs"), { recursive: true });
+  writeFileSync(join(caseDir, "docs/game-prd.md"), [
+    "---",
+    'game-aprd: "0.1"',
+    "project: mechanics-min",
+    "platform: [web]",
+    "runtime: canvas",
+    "mode: 单机",
+    "---",
+    "# Mechanics Min Game PRD",
+    "",
+    "## 10. 校验点与验收标准",
+    prdConstraints,
+  ].join("\n"));
+  const terminalParams = outcome === "settle"
+    ? [
+        "      settle:",
+        "        - kind: time-up",
+        "          threshold: 0",
+      ]
+    : [
+        "      win:",
+        "        - kind: score-reaches",
+        "          field: game.score",
+        "          threshold: 1",
+      ];
+  writeFileSync(join(caseDir, "specs/mechanics.yaml"), [
+    "version: 1",
+    "entities:",
+    "  - id: game",
+    "    uses: [win-lose-check]",
+    "    initial: { alive: true }",
+    "mechanics:",
+    "  - node: end-check",
+    "    primitive: win-lose-check@v1",
+    "    params:",
+    ...terminalParams,
+    "    produces-events: [win, settle]",
+    invariants ? "invariants:" : "invariants: []",
+    invariants,
+    "simulation-scenarios:",
+    "  - name: terminal-path",
+    "    setup:",
+    "      fields:",
+    "        game.score: 1",
+    `    expected-outcome: ${outcome}`,
+    "    max-ticks: 1",
+  ].filter(Boolean).join("\n"));
+}
+
+test("check_mechanics: bracket path invariants pass and non-mechanics hard-rule is exempt", () => {
+  const caseDir = join(tmp, "mechanics-constraint-non-mechanics");
+  writeMinimalMechanicsCase(caseDir, {
+    prdConstraints: [
+      "### @constraint(no-global-autoaim) 禁止全屏自动索敌",
+      "> kind: hard-rule",
+      "> mechanics-scope: mechanics",
+      "",
+      "### @constraint(no-sound) 禁止音效",
+      "> kind: hard-rule",
+      "> mechanics-scope: non-mechanics",
+    ].join("\n"),
+    invariants: [
+      "  - ref: \"@constraint(no-global-autoaim)\"",
+      "    maps-to:",
+      "      node: end-check",
+      "      field: \"win[0].threshold\"",
+      "      expected: 1",
+    ].join("\n"),
+  });
+  const r = run([join(scriptsDir, "check_mechanics.js"), caseDir]);
+  assert(r.status === 0, `mechanics check 应通过，exit=${r.status}\n${r.stdout}\n${r.stderr}`);
+  assert(/non-mechanics hard-rule/.test(r.stdout), `应输出 non-mechanics 豁免信息\n${r.stdout}`);
+});
+
+test("check_mechanics: gameplay hard-rule missing mapping still fails", () => {
+  const caseDir = join(tmp, "mechanics-constraint-missing-gameplay");
+  writeMinimalMechanicsCase(caseDir, {
+    prdConstraints: [
+      "### @constraint(no-global-autoaim) 禁止全屏自动索敌",
+      "> kind: hard-rule",
+      "> mechanics-scope: mechanics",
+    ].join("\n"),
+  });
+  const r = run([join(scriptsDir, "check_mechanics.js"), caseDir]);
+  assert(r.status !== 0, `缺 gameplay hard-rule mapping 应失败\n${r.stdout}\n${r.stderr}`);
+  assert(/no-global-autoaim/.test(r.stdout), `应点名 no-global-autoaim\n${r.stdout}`);
+});
+
+test("check_mechanics: settle terminal counts as positive reachable terminal", () => {
+  const caseDir = join(tmp, "mechanics-settle-terminal");
+  writeMinimalMechanicsCase(caseDir, { outcome: "settle" });
+  const r = run([join(scriptsDir, "check_mechanics.js"), caseDir]);
+  assert(r.status === 0, `settle terminal 应通过，exit=${r.status}\n${r.stdout}\n${r.stderr}`);
+  assert(!/no scenario reached/.test(r.stdout), `不应再要求必须 win\n${r.stdout}`);
+});
+
+// =============================
 // P2-1: extract_game_prd --emit-rule-traces 抽 state.score
 // =============================
 console.log("\n[P2-1] extract_game_prd: state.* 必须被抽取");

@@ -53,7 +53,7 @@ const GATES = {
       "docs/game-prd.md",
     ],
     checks: [
-      ["check_game_prd.js", caseDir],
+      ["check_game_prd.js", join(caseDir, "docs/game-prd.md")],
     ],
   },
 
