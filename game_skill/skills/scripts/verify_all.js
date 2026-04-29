@@ -9,7 +9,7 @@
  *   node verify_all.js <case-dir> --profile <profile-id> [--log <log.jsonl>]
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync, readdirSync, readFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 import { spawnSync } from "child_process";
@@ -27,6 +27,33 @@ const log = createLogger(logPath);
 if (!existsSync(caseDir)) {
   console.error(`✗ case-dir 不存在: ${caseDir}`);
   process.exit(2);
+}
+
+// 协议 Stage 2 硬门：任何 failures/<ts>-<check>-fail.md 未填完就不得再跑 verify_all。
+// 检测：文件里仍含 "TODO"，或"起源层"下所有 checkbox 都是 `- [ ]`（没勾过）。
+// 这条门由 e9a5602 落模板、本 commit 补齐填写强制。
+{
+  const failuresDir = join(caseDir, "failures");
+  if (existsSync(failuresDir)) {
+    const unfilled = [];
+    for (const f of readdirSync(failuresDir)) {
+      if (!/\.md$/.test(f)) continue;
+      const body = readFileSync(join(failuresDir, f), "utf-8");
+      const hasTodo = /\bTODO\b/.test(body);
+      // 起源层 checklist：至少一项被勾选 `- [x]` 才算填过
+      const originCheckboxes = body.match(/^-\s*\[([ xX])\]/gm) ?? [];
+      const anyChecked = originCheckboxes.some((s) => /\[[xX]\]/.test(s));
+      if (hasTodo || (originCheckboxes.length > 0 && !anyChecked)) {
+        unfilled.push(f);
+      }
+    }
+    if (unfilled.length > 0) {
+      console.error(`✗ failures/ 里有 ${unfilled.length} 份未填完的 attribution 模板，按 Stage 2 纪律禁止继续 verify_all:`);
+      for (const f of unfilled) console.error(`    · ${f}`);
+      console.error(`  修复方式：打开每份文件，勾选"起源层"唯一项、填写"根因/修在哪/不动哪"、删除所有 TODO 字样。`);
+      process.exit(2);
+    }
+  }
 }
 
 const gameDir = join(caseDir, "game");
