@@ -488,13 +488,32 @@ function checkTracePushPoints(businessSrc) {
     warn("[trace] event-graph.yaml 无 rule-traces 段（需跑 extract_game_prd --emit-rule-traces）");
     return;
   }
-  // 先检查业务代码是否有 window.__trace 初始化或 push
-  const hasTraceInit = /window\.__trace\s*=|window\.__trace\.push\s*\(/.test(businessSrc);
-  if (!hasTraceInit) {
-    fail(`[trace] 业务代码未见 window.__trace 初始化；codegen 必须保留 trace sink，并在每条 @rule 触发点产出 runtime trace`);
+
+  // 反模式检测：业务代码禁止手写 window.__trace.push(...) 或强制覆盖 __trace。
+  // 唯一合法初始化是 state.js / template 里的 `window.__trace = window.__trace || []`
+  // （幂等模式，runtime primitive 稍后自动 push）。
+  // 业务层的 __trace.push 会把 "trace = primitive 执行副产品" 的反作弊设计彻底绕开。
+  const forbiddenPush = /window\.__trace\.push\s*\(/g;
+  const pushHits = [...businessSrc.matchAll(forbiddenPush)].length;
+  // 赋值检测：逐行扫，命中 `window.__trace = ...` 且右侧不是合法的 `window.__trace || []` 幂等模式
+  let assignHits = 0;
+  for (const line of businessSrc.split("\n")) {
+    const m = line.match(/window\.__trace\s*=\s*(.+)/);
+    if (!m) continue;
+    const rhs = m[1].trim().replace(/;.*$/, "");
+    if (/^window\.__trace\s*\|\|\s*\[\s*\]$/.test(rhs)) continue; // 合法幂等
+    assignHits++;
+  }
+  if (pushHits > 0 || assignHits > 0) {
+    fail(
+      `[trace] 业务代码禁止手写 window.__trace（${pushHits} 处 push + ${assignHits} 处非幂等赋值）；` +
+      `trace 必须由 _common/primitives/*.runtime.mjs 的 ctx.rule 参数自动推送。` +
+      `见 codegen.md Step 4.0.6 禁止模式清单`,
+    );
     return;
   }
-  // 每条 rule-id 必须有对应 push
+
+  // 每条 rule-id 必须有对应 ctx.rule 字面量（来自业务层的 primitive 调用传参）
   const missing = [];
   for (const id of ruleIds) {
     const pat = new RegExp(`rule\\s*:\\s*["'\`]${escapeReg(id)}["'\`]`);
@@ -503,7 +522,7 @@ function checkTracePushPoints(businessSrc) {
   if (missing.length > 0) {
     const shown = missing.slice(0, 8).join(", ");
     const more = missing.length > 8 ? ` ...+${missing.length - 8}` : "";
-    fail(`[trace] ${missing.length}/${ruleIds.length} 个 @rule 在业务代码中缺少 trace rule 字面量（runtime ctx.rule 或手写 push）: ${shown}${more}`);
+    fail(`[trace] ${missing.length}/${ruleIds.length} 个 @rule 在业务代码中缺少 trace rule 字面量（应通过 primitive ctx.rule 参数体现）: ${shown}${more}`);
   } else {
     ok(`[trace] 所有 ${ruleIds.length} 个 @rule 都有 trace rule 字面量`);
   }
