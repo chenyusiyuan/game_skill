@@ -31,6 +31,7 @@ import {
   parseEsmImports,
   isPrimitivesImport,
 } from "./_primitive_runtime_map.js";
+import { ANTI_CHEAT_PATTERNS } from "./_profile_anti_cheat.js";
 import { selectApplicableProbes } from "./_runtime_probes.js";
 
 const args = process.argv.slice(2);
@@ -317,9 +318,10 @@ function checkGeneratedCode(c, assets, root) {
     .filter((b) => !/[/\\]adapters[/\\]/.test(b.path))
     .filter((b) => !/assets\.manifest\.json$/.test(b.path))
     .filter((b) => !/registry\.spec\.js$/.test(b.path))
-    // P1.4 fix: _common/primitives/** 是 runtime 自身 + JSDoc 示例，不能算业务调用点。
-    // 包含在 businessSrc 会让 call-site 检查把 JSDoc 里的 `requestDispatch({...})` 误判为业务调用。
-    .filter((b) => !/[/\\]_common[/\\]primitives[/\\]/.test(b.path))
+    // _common/** 整体是共享框架代码（不是业务产物）：primitives / test-hook / registry.spec /
+    // asset-usage / fx.spec 等 JSDoc 里的 API 示例会把 call-site 与 anti-cheat 检查误触发。
+    // P1.4 首修已排除 _common/primitives/**，本次扩到整个 _common。
+    .filter((b) => !/[/\\]_common[/\\]/.test(b.path))
     .filter((b) => !/[/\\]mechanics[/\\]/.test(b.path))
     .map((b) => b.text)
     .join("\n");
@@ -331,6 +333,7 @@ function checkGeneratedCode(c, assets, root) {
     checkRequiredAssetConsumption(c, businessSrc);
   }
   checkTracePushPoints(businessSrc);  // T3
+  checkBusinessAntiCheat(businessSrc);  // SB-unified: 业务代码同步跑 profile 反作弊子集
   checkPrimitiveImplementationCoverage(allSrc); // mechanics -> code 1:1
   checkRuntimePrimitiveImports(c, businessSrc); // P1.4: enforced engines must import runtime APIs
 
@@ -525,6 +528,36 @@ function checkTracePushPoints(businessSrc) {
     fail(`[trace] ${missing.length}/${ruleIds.length} 个 @rule 在业务代码中缺少 trace rule 字面量（应通过 primitive ctx.rule 参数体现）: ${shown}${more}`);
   } else {
     ok(`[trace] 所有 ${ruleIds.length} 个 @rule 都有 trace rule 字面量`);
+  }
+}
+
+// SB-unified: 反作弊规则的业务代码子集。profile 侧已有 _profile_anti_cheat.js 的 ANTI_CHEAT_PATTERNS
+// 扫 profile assertion.setup[*].js；业务代码这边也要扫一部分，否则 A 可以把 profile 要禁的
+// pattern 挪到业务源码里照样生效（例如 `forceWin()` 函数 / 调 probes 自调 / 非幂等 __trace=）。
+// 只挑**业务绝对不该有**的 pattern：强制判定函数 / 调自己的 probe / __trace 非幂等赋值 / push。
+// state.phase = 之类 pattern 业务本来就要用，不在此扫描。
+function checkBusinessAntiCheat(businessSrc) {
+  const businessOnlyPatterns = ANTI_CHEAT_PATTERNS.filter(({ kind }) =>
+    /forceWin|__trace|probes/.test(kind),
+  );
+  // 幂等初始化 `window.__trace = window.__trace || []` 是模板合法写法，先剔除再扫。
+  // 见 checkTracePushPoints 同款处理。
+  const cleaned = businessSrc
+    .split("\n")
+    .filter((line) => !/^\s*window\.__trace\s*=\s*window\.__trace\s*\|\|\s*\[\s*\]\s*;?\s*$/.test(line))
+    .join("\n");
+  const hits = [];
+  for (const { re, kind } of businessOnlyPatterns) {
+    // 全局扫一遍 businessSrc（含注释，不剥）
+    const global = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
+    const count = [...cleaned.matchAll(global)].length;
+    if (count > 0) hits.push({ kind, count });
+  }
+  if (hits.length > 0) {
+    const label = hits.map((h) => `${h.kind}×${h.count}`).join("; ");
+    fail(`[anti-cheat-business] 业务代码命中反作弊 pattern: ${label}（profile 反作弊规则的业务代码镜像；见 _profile_anti_cheat.js ANTI_CHEAT_PATTERNS）`);
+  } else {
+    ok("[anti-cheat-business] 业务代码未命中反作弊 pattern");
   }
 }
 
