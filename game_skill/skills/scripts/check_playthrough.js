@@ -171,8 +171,14 @@ if (!clickOk) {
     if (a.kind !== "interaction") continue;
     for (const s of a.setup ?? []) {
       if (s.action !== "click") continue;
-      if (!Number.isFinite(s.x) || !Number.isFinite(s.y)) continue; // 只 heuristic 坐标 click，selector 不在此规则
-      const key = `${s.x},${s.y}`;
+      // 两种坐标表达都要看：顶层 s.x/s.y，或嵌套 s.options.position.{x,y}
+      let x, y;
+      if (Number.isFinite(s.x) && Number.isFinite(s.y)) {
+        x = s.x; y = s.y;
+      } else if (Number.isFinite(s.options?.position?.x) && Number.isFinite(s.options?.position?.y)) {
+        x = s.options.position.x; y = s.options.position.y;
+      } else continue;
+      const key = `${x},${y}`;
       if (!coordUse.has(key)) coordUse.set(key, []);
       coordUse.get(key).push(a.id);
     }
@@ -436,8 +442,13 @@ for (let idx = 0; idx < allAssertions.length; idx++) {
       if (step.action === "click") {
         if (step.selector) {
           const options = { timeout: 2000 };
-          if (Number.isFinite(step.x) && Number.isFinite(step.y)) {
-            options.position = { x: step.x, y: step.y };
+          // 支持两种坐标表达：顶层 step.x/y，或嵌套 step.options.position.{x,y}
+          const topX = step.x, topY = step.y;
+          const nestedPos = step.options?.position;
+          if (Number.isFinite(topX) && Number.isFinite(topY)) {
+            options.position = { x: topX, y: topY };
+          } else if (nestedPos && Number.isFinite(nestedPos.x) && Number.isFinite(nestedPos.y)) {
+            options.position = { x: nestedPos.x, y: nestedPos.y };
           }
           await page.click(step.selector, options);
         } else if (Number.isFinite(step.x) && Number.isFinite(step.y)) {
