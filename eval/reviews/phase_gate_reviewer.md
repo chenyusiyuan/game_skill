@@ -224,6 +224,11 @@ Debt:
 
 产物: eval/report.json（必须 generated_by = verify_all.js）
 
+**强制附加步骤（Phase 5 独有，不能只看 report.json）**:
+- 读 `game_skill/skills/scripts/profiles/<CASE-slug>.json` 全文，逐条 assertion 观察
+- 读 `cases/<CASE-slug>/game/src/main.js`（或 dom 引擎的 index.html），检查业务代码反模式
+- 读 `cases/<CASE-slug>/INTENT.md`，核对 ok-skip 白名单
+
 Blocker:
 - B1. verify_all 任一 check 非预期红（预期红必须在 INTENT.md 记录）
 - B2. report.generated_by != "verify_all.js"
@@ -232,6 +237,9 @@ Blocker:
 - B5. level_solvability 该 replay 的 genre 走了 ok-skip
 - B6. profile 含 forceWin/forceLose/__trace.push/直改 gameState 等反作弊命中
 - B7. runtime_semantics 该覆盖 probe 的未覆盖
+- B8. **profile 里 3+ 条 interaction kind 的 assertion 共用同一 (x,y) click 坐标**（反陪衬 click 启发式；典型反模式是 drivers.* 接管业务、click 只是占位）。即使 checker 未在本轮新门下报 red，reviewer 仍判 SYSTEMATIC
+- B9. **main.js / business 源码出现 `window.__trace.push(`** —— codegen.md §4.0.6 禁止，trace 必须由 `_common/primitives/*.runtime.mjs` 的 ctx.rule 参数自动推送；手写 trace 等于自我申报 rule 覆盖，作弊
+- B10. **INTENT.md 未登记本 case 预期的 ok-skip**：runtime_semantics `[no-applicable-probes]` / level_solvability `[done:reflex]` 等 skip 必须在 INTENT.md 的 "ok-skip whitelist" 段显式声明。未登记即"未预期 skip"，升 Blocker
 
 Debt:
 - D1. warning 数量多
