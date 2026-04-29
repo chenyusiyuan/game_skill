@@ -77,6 +77,10 @@ if (!noWrite) {
   mkdirSync(dirname(reportPath), { recursive: true });
   writeFileSync(reportPath, JSON.stringify(report, null, 2) + "\n", "utf-8");
 }
+// Stage 2 硬门：任何失败的 check 自动落 failure attribution 模板到 failures/。
+// 独立于 report.json，`--no-write` 也会生成（这是诊断资产，不是产物）。
+// 未填完禁止用户进入下一次 verify_all 调用的约束由协议层保证；此处只负责模板生成。
+if (!passed) writeFailureTemplates(checks, caseDir);
 console.log(`\n${passed ? "✓" : "✗"} verify_all ${passed ? "passed" : "failed"}`);
 console.log(noWrite ? "report: <not written --no-write>" : `report: ${reportPath}`);
 
@@ -123,4 +127,66 @@ function tail(text, max) {
   const clean = String(text ?? "").trim();
   if (clean.length <= max) return clean;
   return clean.slice(clean.length - max);
+}
+
+function writeFailureTemplates(checksArr, caseRoot) {
+  const failuresDir = join(caseRoot, "failures");
+  mkdirSync(failuresDir, { recursive: true });
+  const ts = new Date().toISOString().replace(/[:.]/g, "-").replace("T", "-").slice(0, 19);
+  for (const c of checksArr) {
+    if (c.exit_code === 0) continue;
+    const slug = c.name.replace(/[^a-zA-Z0-9-]+/g, "-");
+    const fname = `${ts}-${slug}-fail.md`;
+    const fpath = join(failuresDir, fname);
+    if (existsSync(fpath)) continue;
+    const body = [
+      `# Failure Attribution — ${c.name} (exit ${c.exit_code})`,
+      "",
+      `**verify_all timestamp**: ${new Date().toISOString()}`,
+      `**check**: \`${c.name}\` via \`${c.script ?? "unknown"}\``,
+      `**exit_code**: ${c.exit_code}`,
+      "",
+      "## 起源层（唯一勾选）",
+      "",
+      "- [ ] PRD",
+      "- [ ] Spec clarify",
+      "- [ ] Mechanics DAG",
+      "- [ ] Scene / rule / data / assets / event-graph / implementation-contract expand",
+      "- [ ] Codegen / engine template",
+      "- [ ] Profile",
+      "- [ ] Checker bug / checker 规则误报",
+      "- [ ] 其他（详述）：",
+      "",
+      "## 错误摘要（output_tail 自动带入）",
+      "",
+      "```",
+      tail(c.output_tail ?? "", 2000),
+      "```",
+      "",
+      "## 你认为的根因（一句话）",
+      "",
+      "> TODO",
+      "",
+      "## 修在哪里（只修起源层）",
+      "",
+      "- 文件: TODO",
+      "- 改动: TODO",
+      "",
+      "## 不动哪里",
+      "",
+      "- TODO",
+      "",
+      "## 下一次 verify_all 前的自检",
+      "",
+      `- [ ] 根因写清楚，不是"改完再说"`,
+      "- [ ] 只修起源层，未触及症状层（profile / checker 豁免 / 跳过 schema）",
+      "- [ ] 是否属于 pattern 重复？累计次数 __",
+      "",
+      "---",
+      "",
+      `_本模板由 verify_all.js 在 exit ${c.exit_code} 时自动生成；填写完毕即可删除本尾注并 commit。_`,
+    ].join("\n");
+    writeFileSync(fpath, body, "utf-8");
+    console.log(`  · failure template: ${fpath}`);
+  }
 }
