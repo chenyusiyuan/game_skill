@@ -2087,6 +2087,104 @@ console.log("\n[P1.4] check_implementation_contract: canvas 正确 import 应通
   });
 }
 
+console.log("\n[P1.4] check_implementation_contract: import 存在但业务代码未调用（仅 JSDoc 示例 / import 语句） → 应 fail");
+
+{
+  const caseDir = join(tmp, "p14-import-but-not-called");
+  rmSync(caseDir, { recursive: true, force: true });
+  mkdirSync(caseDir, { recursive: true });
+  mkdirSync(join(caseDir, "docs"), { recursive: true });
+  writeFileSync(join(caseDir, "docs/game-prd.md"), [
+    "---",
+    'game-aprd: "0.1"',
+    "project: p14fp",
+    "platform: [web]",
+    "runtime: canvas",
+    "is-3d: false",
+    "mode: 单机",
+    "language: zh-CN",
+    "asset-strategy:",
+    "  mode: none",
+    `  rationale: "${"极简 case 验 runtime call-site false-positive 修复，需要至少八十字的解释文字才能过最小长度阈值。".repeat(1)}"`,
+    "  visual-core-entities: []",
+    "  visual-peripheral: []",
+    "---",
+    "## 1. 项目概述",
+    "### @game(main) P14 FP",
+    "> genre: board-grid",
+    "> platform: [web]",
+    "> runtime: canvas",
+    "> mode: 单机",
+    "> core-loop: test",
+    "> player-goal: test",
+  ].join("\n"));
+
+  mkdirSync(join(caseDir, "specs"), { recursive: true });
+  writeFileSync(join(caseDir, "specs/mechanics.yaml"), [
+    "mechanics:",
+    "  - node: attack-consume",
+    "    primitive: ray-cast@v1",
+    "    params:",
+    '      coord-system: "grid"',
+    '      stop-on: "first-hit"',
+  ].join("\n"));
+  writeFileSync(join(caseDir, "specs/scene.yaml"), "scenes: []\n");
+  writeFileSync(join(caseDir, "specs/assets.yaml"), "images: []\naudio: []\nspritesheets: []\n");
+  writeFileSync(join(caseDir, "specs/implementation-contract.yaml"), [
+    "runtime:",
+    "  engine: canvas",
+    "boot:",
+    "  first-scene: play",
+    "  ready-condition: canvas-ready",
+    "  start-action: click-start",
+    "  transitions: []",
+    "asset-bindings: []",
+    "engine-lifecycle:",
+    "  canvas: { phase: init, notes: 'n/a' }",
+    "verification: []",
+  ].join("\n"));
+
+  // 业务代码只 import + 注释里假装调用，真正业务代码手写了算法
+  mkdirSync(join(caseDir, "game/src"), { recursive: true });
+  writeFileSync(join(caseDir, "game/src/main.js"), [
+    "// @primitive(ray-cast@v1): node-id=attack-consume",
+    "import { rayCastGridFirstHit } from './_common/primitives/index.mjs';",
+    "// 用法示例: rayCastGridFirstHit({ source, direction, targets, params })",
+    "/* 或者: const r = rayCastGridFirstHit({ ... }); */",
+    "export function handleAttack(pig, blocks) {",
+    "  // 手写算法（反模式）",
+    "  for (const b of blocks) if (b.x === pig.x) return b;",
+    "  return null;",
+    "}",
+  ].join("\n"));
+
+  // runtime 本体（含 JSDoc 示例里包含 rayCastGridFirstHit(...) 字面量）
+  mkdirSync(join(caseDir, "game/src/_common/primitives"), { recursive: true });
+  writeFileSync(join(caseDir, "game/src/_common/primitives/index.mjs"), [
+    "export { rayCastGridFirstHit } from './ray-cast.runtime.mjs';",
+  ].join("\n"));
+  writeFileSync(join(caseDir, "game/src/_common/primitives/ray-cast.runtime.mjs"), [
+    "/**",
+    " * 示例:",
+    " *   const hit = rayCastGridFirstHit({ source, direction, targets, params });",
+    " */",
+    "export function rayCastGridFirstHit(ctx) { return null; }",
+  ].join("\n"));
+
+  const checker = resolve(here, "../check_implementation_contract.js");
+  const r = spawnSync("node", [checker, caseDir, "--stage", "codegen"], {
+    encoding: "utf-8",
+  });
+  const output = (r.stdout || "") + (r.stderr || "");
+  test("import 存在但仅注释/import 伪调用 + _common/primitives 自身不算业务调用 → fail", () => {
+    assert(
+      /\[runtime\].*已 import 但未调用.*rayCastGridFirstHit/.test(output),
+      `应识别为未调用\n${output}`,
+    );
+    assert(r.status !== 0, `退出码应非 0，实际 ${r.status}`);
+  });
+}
+
 console.log("\n[P1.4] check_implementation_contract: phaser3 引擎必须接入 runtime primitive");
 
 {

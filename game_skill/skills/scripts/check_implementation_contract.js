@@ -317,6 +317,10 @@ function checkGeneratedCode(c, assets, root) {
     .filter((b) => !/[/\\]adapters[/\\]/.test(b.path))
     .filter((b) => !/assets\.manifest\.json$/.test(b.path))
     .filter((b) => !/registry\.spec\.js$/.test(b.path))
+    // P1.4 fix: _common/primitives/** 是 runtime 自身 + JSDoc 示例，不能算业务调用点。
+    // 包含在 businessSrc 会让 call-site 检查把 JSDoc 里的 `requestDispatch({...})` 误判为业务调用。
+    .filter((b) => !/[/\\]_common[/\\]primitives[/\\]/.test(b.path))
+    .filter((b) => !/[/\\]mechanics[/\\]/.test(b.path))
     .map((b) => b.text)
     .join("\n");
 
@@ -433,6 +437,8 @@ function checkRuntimePrimitiveImports(c, businessSrc) {
 
   const missingImport = [];
   const missingCall = [];
+  // P1.4 fix: call-site 检查必须忽略注释内的伪调用（JSDoc / 行注释）和 import 语句本身。
+  const codeOnly = stripCommentsAndImports(businessSrc);
   for (const primitive of required) {
     const apis = apisFor(primitive);
     const importedApi = apis.find((api) => importedNames.has(api));
@@ -440,9 +446,9 @@ function checkRuntimePrimitiveImports(c, businessSrc) {
       missingImport.push(`${primitive} (期望 import 至少一个: ${apis.join(" / ")})`);
       continue;
     }
-    // 被 import 的 API 必须至少被调用一次
+    // 被 import 的 API 必须至少被调用一次（排除注释、import 语句）
     const callRe = new RegExp(`\\b${escapeReg(importedApi)}\\s*\\(`);
-    if (!callRe.test(businessSrc)) {
+    if (!callRe.test(codeOnly)) {
       missingCall.push(`${primitive}.${importedApi}`);
     }
   }
@@ -624,6 +630,22 @@ function firstExisting(...paths) {
 
 function escapeReg(s) {
   return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// 去掉所有 /* ... */ 块注释、// 行注释，以及 `import ... from '...';` 语句，
+// 用于对业务代码做 call-site 检查时过滤伪调用（JSDoc 示例 / import 里重复出现的名字）。
+function stripCommentsAndImports(src) {
+  let out = String(src);
+  // 块注释
+  out = out.replace(/\/\*[\s\S]*?\*\//g, "");
+  // 行注释（尾注释 + 独立行）
+  out = out.replace(/(^|[^:\\])\/\/[^\n]*/g, "$1");
+  // ESM import 语句：支持多行 `import {...} from '...'` 或 `import x from '...'`
+  out = out.replace(/^\s*import\s+[^;]+?from\s+['"][^'"]+['"]\s*;?/gms, "");
+  out = out.replace(/^\s*import\s+['"][^'"]+['"]\s*;?/gm, "");
+  // CJS require 赋值（业务代码一般不用，但稳妥起见）
+  out = out.replace(/^\s*(?:const|let|var)\s+\{[^}]+\}\s*=\s*require\([^)]+\)\s*;?/gm, "");
+  return out;
 }
 
 function finish() {

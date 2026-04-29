@@ -497,6 +497,21 @@ function onPigTickIntoSegment(pig) {
 - ❌ 手写 `state.win = true` / `state.lose = true` —— 该语义归 `win-lose-check`，必须
   用 `checkWinLose({state, params})` 返回值驱动。
 - ❌ 手写 `state.score += 10` —— 必须走 `accumulateScore({currentScore, eventPayload, params})`。
+- ❌ 手写 `if (now - state.lastSpawnTime > cooldown)` / `state.nextSpawnTime = now + ...` /
+  `setTimeout(spawn, gap)` 作为生成节流 —— 该语义归 `cooldown-dispatch@v1`，必须用
+  `requestDispatch({now, lastDispatchAt, params, event})` 的返回值决定是否 dispatch，
+  并把 `result.next-state.lastDispatchAt` 回写。任何 `lastSpawnTime` / `nextSpawnTime`
+  类手写字段都会被 P1.4 call-site gate 视为未调用。
+- ❌ 手写 `if (entity.phase === 'x' && event === 'y') entity.phase = 'z'` 管理生命周期
+  状态 —— 该语义归 `entity-lifecycle@v1` (`transitionLifecycle`) 或 `fsm-transition@v1`
+  (`fireTrigger`)，必须透传 transitions 数组。
+- ❌ 手写 `slot.occupied = true` / `pool.push(id)` 管理 slot-pool —— 必须用
+  `bindSlot` / `unbindSlot`。
+- ❌ 手写 `state.activeCount++` / `if (activeCount >= capacity)` 管理 capacity-gate
+  —— 必须用 `requestCapacity` / `releaseCapacity`。
+- ❌ 只 `import { requestDispatch }` 却不在业务代码里调用它 —— P1.4 call-site gate
+  会静态检测（剥注释、剥 import、剥 `_common/primitives/**`），不能用 JSDoc 示例
+  或 import 语句本身通过检查。
 - ❌ 手写 `window.__trace.push({rule: 'xxx'})` —— runtime 内部自动推送；业务代码
   只能消费 `window.__trace`（测试可读），不得写入。
 
