@@ -7,8 +7,12 @@
 # Dependencies
 node_modules/
 
-# Generated case outputs
-cases/
+# Generated case outputs — case working dirs are transient.
+# Exception: cases/anchors/** is the regression baseline, must be tracked.
+# Note: gitignore doesn't recurse into ignored dirs, so we must ignore
+# individual case slugs rather than all of cases/.
+cases/*/
+!cases/anchors/
 
 # Test runner temp scratch dirs
 game_skill/skills/scripts/test/.tmp-*/
