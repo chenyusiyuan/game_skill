@@ -1,7 +1,6 @@
 import { state } from "../state.js";
-import {
-  accumulateScore,
-} from "../_common/primitives/index.mjs";
+// runtime wrapper 由 codegen 在 game/src/mechanics/<node-id>.runtime.mjs 动态生成；
+// import 路径由对应 mechanics node 的 runtime-module 定义。
 
 export class MainScene extends Phaser.Scene {
   constructor() {
@@ -45,13 +44,7 @@ export class MainScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.input.on("pointerdown", () => {
-      state.score = accumulateScore({
-        rule: "score-click",
-        node: "score-click",
-        currentScore: state.score,
-        eventPayload: "input.click",
-        params: { rules: [{ on: "input.click", delta: 1 }] },
-      });
+      // TODO(codegen): 调用本 case 的 mechanics runtime wrapper。
       this.scoreText.setText(`Score: ${state.score}`);
     });
   }

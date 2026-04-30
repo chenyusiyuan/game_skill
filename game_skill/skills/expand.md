@@ -16,7 +16,7 @@ description: "Phase 3: 规格展开（始终必做）。每次 codegen 前都把
 
 **输出**：
 - `specs/scene.yaml`：每个场景的布局、交互热区、UI 元素
-- `specs/mechanics.yaml`：玩法 primitive DAG，作为 rule/event-graph/codegen 的语义基线
+- `specs/mechanics.yaml`：动态 mechanics DAG，作为 rule/event-graph/codegen 的语义基线
 - `specs/rule.yaml`：每条 `@rule` 的展开伪代码
 - `specs/data.yaml`：`@resource` 的 schema + 示例数据
 - `specs/assets.yaml`：资源清单（图片 / 音频 / 字体）
@@ -415,7 +415,7 @@ balance-check:
 
 **可玩性验证段（P2，按 genre 必填）**：
 
-expand 在生成 `data.yaml` 时，**必须**按 genre 填 playability 子字段。board-grid 需要每个关卡附带一条可 replay 的 `solution-path`；checker 只重放显式动作，不做 BFS / 自动求解。reflex / edu-practice 先做轻量 schema 断言，不跑浏览器也不跑 reducer，但不得生成空壳 playability。
+expand 在生成 `data.yaml` 时，**必须**声明可验证的 playability 子字段。每个关卡至少附带一条显式 `solution-path`；checker 只做通用结构校验，不做 BFS / 自动求解，也不依赖固定运行时实现。
 
 ```yaml
 # board-grid：显式解路径 + 反 trivial + 前缀软锁 probe
@@ -433,7 +433,7 @@ solution-path:
       max-steps: 18
       actions:
         # 每个 action 必须是 mechanics.yaml 里声明过的 event；
-        # checker 会按顺序喂给对应 primitive reducer
+        # checker 会按通用结构读取，不依赖固定运行时实现
         - event: dispatch-pig
           payload: { unitId: "pig-red-1", fromSlot: "wait-0" }
           expected-effect: { entity: "pig-red-1", field: "lifecycle", to: "active" }

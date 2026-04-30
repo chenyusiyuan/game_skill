@@ -10,32 +10,10 @@
   <div id="app" class="max-w-xl w-full mx-auto p-6"></div>
 
   <script type="module">
-    // Primitive-backed DOM UI uses local-http because browser ESM imports
-    // ./src/_common/primitives/*.mjs and game/mechanics/*.reducer.mjs.
-    import {
-      accumulateScore,
-      checkWinLose,
-      fireTrigger,
-    } from './src/_common/primitives/index.mjs';
+    // runtime wrapper 由 codegen 在 game/src/mechanics/<node-id>.runtime.mjs 动态生成；
+    // import 路径由对应 mechanics node 的 runtime-module 定义。
 
     // ===== state =====
-    const PHASE_FSM_PARAMS = {
-      initial: "ready",
-      states: ["ready", "playing", "win", "lose"],
-      transitions: [
-        { from: "ready", on: "click-start", to: "playing" },
-        { from: "playing", on: "finish-win", to: "win" },
-        { from: "playing", on: "finish-lose", to: "lose" },
-        { from: "win", on: "retry", to: "ready" },
-        { from: "lose", on: "retry", to: "ready" },
-      ],
-    };
-    const SCORE_PARAMS = { rules: [{ on: "input.score", delta: 1 }] };
-    const WIN_LOSE_PARAMS = {
-      win: [{ kind: "score-reaches", field: "score", threshold: 3 }],
-      lose: [],
-    };
-
     const state = {
       phase: "ready",           // ready | playing | win | lose
       score: 0,
@@ -62,13 +40,7 @@
             </button>
           </div>`;
         document.getElementById("btn-start").onclick = () => {
-          state.phase = fireTrigger({
-            rule: "start-game",
-            node: "phase-fsm",
-            currentState: state.phase,
-            trigger: "click-start",
-            params: PHASE_FSM_PARAMS,
-          });
+          state.phase = "playing";
           render();
         };
       } else if (state.phase === "playing") {
@@ -79,38 +51,13 @@
             <button id="btn-win" class="px-4 py-2 bg-slate-200 rounded">End</button>
           </div>`;
         document.getElementById("btn-score").onclick = () => {
-          state.score = accumulateScore({
-            rule: "score-click",
-            node: "scoring",
-            currentScore: state.score,
-            eventPayload: "input.score",
-            params: SCORE_PARAMS,
-          });
-          const verdict = checkWinLose({
-            rule: "score-click",
-            node: "end-check",
-            state: { fields: { score: state.score } },
-            params: WIN_LOSE_PARAMS,
-          });
-          if (verdict === "win") {
-            state.phase = fireTrigger({
-              rule: "score-click",
-              node: "phase-fsm",
-              currentState: state.phase,
-              trigger: "finish-win",
-              params: PHASE_FSM_PARAMS,
-            });
-          }
+          // TODO(codegen): 调用本 case 的 mechanics runtime wrapper。
+          state.score += 1;
+          if (state.score >= 3) state.phase = "win";
           render();
         };
         document.getElementById("btn-win").onclick = () => {
-          state.phase = fireTrigger({
-            rule: "finish-game",
-            node: "phase-fsm",
-            currentState: state.phase,
-            trigger: "finish-win",
-            params: PHASE_FSM_PARAMS,
-          });
+          state.phase = "win";
           render();
         };
       } else {
@@ -121,13 +68,7 @@
             <button id="btn-retry" class="px-6 py-3 bg-sky-600 text-white rounded-lg">Retry</button>
           </div>`;
         document.getElementById("btn-retry").onclick = () => {
-          state.phase = fireTrigger({
-            rule: "retry-game",
-            node: "phase-fsm",
-            currentState: state.phase,
-            trigger: "retry",
-            params: PHASE_FSM_PARAMS,
-          });
+          state.phase = "ready";
           state.score = 0;
           render();
         };

@@ -26,7 +26,7 @@ description: "DOM + Tailwind v4 引擎规范。适用于规则问答型 / 剧情
 
 ## 最小骨架代码
 
-**primitive-backed 默认 local-http 模式：**
+**local-http 多文件模式：**
 
 ```html
 <!DOCTYPE html>
@@ -40,7 +40,8 @@ description: "DOM + Tailwind v4 引擎规范。适用于规则问答型 / 剧情
 <body class="bg-slate-50 min-h-screen">
   <div id="app" class="max-w-xl mx-auto p-6"></div>
   <script type="module">
-    import { accumulateScore } from './src/_common/primitives/index.mjs';
+    // runtime wrapper 由 codegen 在 game/src/mechanics/<node-id>.runtime.mjs 动态生成；
+    // import 路径由对应 mechanics node 的 runtime-module 定义。
 
     const state = { phase: "ready", score: 0 };
     window.gameState = state;
@@ -55,13 +56,8 @@ description: "DOM + Tailwind v4 引擎规范。适用于规则问答型 / 剧情
         render();
       });
       document.getElementById("btn-score")?.addEventListener("click", () => {
-        state.score = accumulateScore({
-          rule: "score-click",
-          node: "scoring",
-          currentScore: state.score,
-          eventPayload: "input.score",
-          params: { rules: [{ on: "input.score", delta: 1 }] },
-        });
+        // TODO(codegen): 调用本 case 的 mechanics runtime wrapper。
+        state.score += 1;
         render();
       });
     }
@@ -72,7 +68,7 @@ description: "DOM + Tailwind v4 引擎规范。适用于规则问答型 / 剧情
 </html>
 ```
 
-**纯静态展示且没有 runtime-backed mechanics 时，可保留 file 模式：**
+**纯静态展示且没有本地 ESM 时，可保留 file 模式：**
 
 ```html
 <!-- ENGINE: dom-ui | VERSION: tailwind-v4 | RUN: file -->
@@ -86,7 +82,7 @@ description: "DOM + Tailwind v4 引擎规范。适用于规则问答型 / 剧情
 | 写成 React/Vue | 本模板是纯 vanilla JS |
 | 在事件处理里直接拼 DOM 补丁 | 一律走 `mutate(state); render();` |
 | 忘记 `window.gameState` | 必须暴露 |
-| `run-mode=file` 还用本地 module src | primitive runtime 需要 `RUN: local-http`；file 模式只能内联 classic script |
+| `run-mode=file` 还用本地 module src | 本地 ESM 需要 `RUN: local-http`；file 模式只能内联 classic script |
 | 混用 Tailwind v3 的 `@apply` | v4 浏览器 CDN 只用 utility class |
 | 每次 render() 用 innerHTML 全量重建后直接查 DOM | **先绑定事件再操作**（见下方说明） |
 | querySelector 获取元素后 render() 导致引用失效 | **动画期间禁止触发 render()**（见下方说明） |

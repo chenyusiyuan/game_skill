@@ -2,17 +2,15 @@
 /**
  * check_spec_clarifications.js — gate Phase 2.5 output before mechanics.
  *
- * Catches the common failure where spec-clarifications.md invents primitive
- * names or records a balance formula that cannot prove level reachability.
+ * Catches balance formulas that cannot prove level reachability. Mechanics
+ * nodes are now dynamically extracted later, so this gate no longer validates
+ * names against a fixed mechanics catalog.
  */
 
 import { existsSync, readFileSync } from "fs";
-import { dirname, join, resolve } from "path";
-import { fileURLToPath } from "url";
-import yaml from "js-yaml";
+import { join, resolve } from "path";
 import { createLogger, parseLogArg } from "./_logger.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const caseDir = resolve(args[0] ?? ".");
 const log = createLogger(parseLogArg(process.argv));
@@ -27,59 +25,19 @@ console.log(`Spec clarification check: ${caseDir}`);
 
 const docPath = join(caseDir, "docs/spec-clarifications.md");
 const prdPath = join(caseDir, "docs/game-prd.md");
-const catalogPath = resolve(__dirname, "../references/mechanics/_index.yaml");
 
 if (!existsSync(docPath)) fail(`spec-clarifications.md 不存在: ${docPath}`);
 if (!existsSync(prdPath)) fail(`game-prd.md 不存在: ${prdPath}`);
-if (!existsSync(catalogPath)) fail(`mechanics primitive catalog 不存在: ${catalogPath}`);
 if (errors.length) finish(1);
 
 const doc = readFileSync(docPath, "utf-8");
 const prd = readFileSync(prdPath, "utf-8");
-const catalog = yaml.load(readFileSync(catalogPath, "utf-8")) ?? {};
-const known = new Set((catalog.primitives || []).map((p) => `${p.id}@${p.version}`));
-const ids = new Set((catalog.primitives || []).map((p) => p.id));
 
-checkPrimitiveRefs(doc, known, ids);
 checkRayCastContract(doc, prd);
 checkBalanceFormula(doc, prd);
 
-if (errors.length === 0) ok("spec-clarifications.md 可进入 mechanics decomposition");
+if (errors.length === 0) ok("spec-clarifications.md 可进入 dynamic mechanics decomposition");
 finish(errors.length ? 1 : 0);
-
-function checkPrimitiveRefs(text, knownRefs, knownIds) {
-  const refs = [...text.matchAll(/\b[a-z][a-z0-9-]*@v\d+\b/g)].map((m) => m[0]);
-  const unknown = [...new Set(refs.filter((ref) => !knownRefs.has(ref)))];
-  if (unknown.length === 0) {
-    ok(`primitive refs 合法: ${refs.length ? [...new Set(refs)].join(", ") : "<none>"}`);
-    return;
-  }
-  for (const ref of unknown) {
-    const id = ref.replace(/@v\d+$/, "");
-    const suggestion = suggestPrimitive(id, knownIds);
-    fail(`未知 primitive 引用: ${ref}${suggestion ? `；是否应为 ${suggestion}@v1` : ""}`);
-  }
-}
-
-function suggestPrimitive(id, knownIds) {
-  const aliases = {
-    raycast: "ray-cast",
-    "raycast-grid": "ray-cast",
-    "grid-path-follow": "parametric-track",
-    "path-follow": "parametric-track",
-  };
-  if (aliases[id] && knownIds.has(aliases[id])) return aliases[id];
-  let best = null;
-  let bestScore = Infinity;
-  for (const known of knownIds) {
-    const score = levenshtein(id, known);
-    if (score < bestScore) {
-      best = known;
-      bestScore = score;
-    }
-  }
-  return bestScore <= 3 ? best : null;
-}
 
 function checkRayCastContract(text, prdText) {
   if (!/ray-?cast/i.test(prdText)) return;
@@ -116,22 +74,6 @@ function checkBalanceFormula(text, prdText) {
   }
 }
 
-function levenshtein(a, b) {
-  const dp = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
-  for (let i = 0; i <= a.length; i += 1) dp[i][0] = i;
-  for (let j = 0; j <= b.length; j += 1) dp[0][j] = j;
-  for (let i = 1; i <= a.length; i += 1) {
-    for (let j = 1; j <= b.length; j += 1) {
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
-      );
-    }
-  }
-  return dp[a.length][b.length];
-}
-
 function finish(code) {
   log.entry({
     type: "check-run",
@@ -143,4 +85,3 @@ function finish(code) {
   });
   process.exit(code);
 }
-

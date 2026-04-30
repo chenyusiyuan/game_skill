@@ -58,16 +58,17 @@
     },
     "currentPhase": {
       "type": "string",
-      "enum": ["understand", "prd", "spec-clarify", "expand", "codegen", "verify", "done", "failed"]
+      "enum": ["understand", "prd", "spec-clarify", "design-strategy", "expand", "codegen", "verify", "done", "failed"]
     },
     "phases": {
       "type": "object",
-      "required": ["understand", "prd", "spec-clarify", "expand", "codegen", "verify"],
+      "required": ["understand", "prd", "spec-clarify", "design-strategy", "expand", "codegen", "verify"],
       "additionalProperties": false,
       "properties": {
         "understand": { "$ref": "#/definitions/phase" },
         "prd": { "$ref": "#/definitions/phase" },
         "spec-clarify": { "$ref": "#/definitions/phase" },
+        "design-strategy": { "$ref": "#/definitions/phase" },
         "expand": {
           "allOf": [
             { "$ref": "#/definitions/phase" },

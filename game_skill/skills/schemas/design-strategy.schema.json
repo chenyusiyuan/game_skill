@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GameSkillDesignStrategy",
+  "description": "Phase 2.5B 玩法设计策略产物。写入 cases/<slug>/docs/design-strategy.yaml，供 dynamic mechanics、stage roadmap 和 codegen 读取。",
+  "type": "object",
+  "required": [
+    "version",
+    "target-experience",
+    "gameplay-pillars",
+    "core-loop",
+    "decision-points",
+    "resource-loop",
+    "juice-plan",
+    "complexity-budget"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "version": {
+      "type": "integer"
+    },
+    "target-experience": {
+      "type": "object",
+      "required": ["fantasy", "session-length", "difficulty", "emotional-beats"],
+      "additionalProperties": true,
+      "properties": {
+        "fantasy": { "type": "string" },
+        "session-length": { "type": "string" },
+        "difficulty": { "type": "string" },
+        "emotional-beats": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "gameplay-pillars": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "description"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "core-loop": {
+      "type": "object",
+      "required": ["observe", "decide", "act", "feedback", "progress"],
+      "additionalProperties": true,
+      "properties": {
+        "observe": { "type": "string" },
+        "decide": { "type": "string" },
+        "act": { "type": "string" },
+        "feedback": { "type": "string" },
+        "progress": { "type": "string" }
+      }
+    },
+    "decision-points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "options", "observable-via", "frequency"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string" },
+          "options": { "type": "integer" },
+          "observable-via": {
+            "type": "string",
+            "pattern": "^window\\.gameTest\\."
+          },
+          "frequency": { "type": "string" }
+        }
+      }
+    },
+    "resource-loop": {
+      "type": "object",
+      "required": ["resources", "sources", "sinks", "balance-target"],
+      "additionalProperties": true,
+      "properties": {
+        "resources": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "required": ["id"],
+                "additionalProperties": true,
+                "properties": {
+                  "id": { "type": "string" }
+                }
+              }
+            ]
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from"],
+            "additionalProperties": true,
+            "properties": {
+              "from": { "type": "string" }
+            }
+          }
+        },
+        "sinks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["to"],
+            "additionalProperties": true,
+            "properties": {
+              "to": { "type": "string" }
+            }
+          }
+        },
+        "balance-target": {
+          "type": "number"
+        }
+      }
+    },
+    "juice-plan": {
+      "type": "object",
+      "required": ["input-feedback", "success-feedback", "failure-feedback", "progression-feedback"],
+      "additionalProperties": true,
+      "properties": {
+        "input-feedback": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "success-feedback": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "failure-feedback": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "progression-feedback": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "complexity-budget": {
+      "type": "object",
+      "required": [
+        "max-new-systems-per-stage",
+        "max-new-entities-per-stage",
+        "max-new-rules-per-stage"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "max-new-systems-per-stage": { "type": "integer" },
+        "max-new-entities-per-stage": { "type": "integer" },
+        "max-new-rules-per-stage": { "type": "integer" }
+      }
+    }
+  }
+}

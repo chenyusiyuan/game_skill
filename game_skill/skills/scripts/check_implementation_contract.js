@@ -22,15 +22,6 @@ import {
   isValidColorSource,
   VISUAL_PRIMITIVE_ENUM,
 } from "./_visual_primitive_enum.js";
-import {
-  PRIMITIVE_RUNTIME_API,
-  isRuntimeBacked,
-  isEngineEnforced,
-  apisFor,
-  applicablePrimitivesFor,
-  parseEsmImports,
-  isPrimitivesImport,
-} from "./_primitive_runtime_map.js";
 import { ANTI_CHEAT_PATTERNS } from "./_profile_anti_cheat.js";
 import { selectApplicableProbes } from "./_runtime_probes.js";
 
@@ -318,9 +309,8 @@ function checkGeneratedCode(c, assets, root) {
     .filter((b) => !/[/\\]adapters[/\\]/.test(b.path))
     .filter((b) => !/assets\.manifest\.json$/.test(b.path))
     .filter((b) => !/registry\.spec\.js$/.test(b.path))
-    // _common/** 整体是共享框架代码（不是业务产物）：primitives / test-hook / registry.spec /
-    // asset-usage / fx.spec 等 JSDoc 里的 API 示例会把 call-site 与 anti-cheat 检查误触发。
-    // P1.4 首修已排除 _common/primitives/**，本次扩到整个 _common。
+    // _common/** 整体是共享框架代码（不是业务产物）：test-hook / registry.spec /
+    // asset-usage / fx.spec 等 JSDoc 示例会把 call-site 与 anti-cheat 检查误触发。
     .filter((b) => !/[/\\]_common[/\\]/.test(b.path))
     .filter((b) => !/[/\\]mechanics[/\\]/.test(b.path))
     .map((b) => b.text)
@@ -334,10 +324,7 @@ function checkGeneratedCode(c, assets, root) {
   }
   checkTracePushPoints(businessSrc);  // T3
   checkBusinessAntiCheat(businessSrc);  // SB-unified: 业务代码同步跑 profile 反作弊子集
-  checkPrimitiveImplementationCoverage(allSrc); // mechanics -> code 1:1
-  checkRuntimePrimitiveImports(c, businessSrc); // P1.4: enforced engines must import runtime APIs
-  checkPredicateMatchCallShape(businessSrc); // P0-1: canonical predicateMatch({ rule,node,left,right,params.fields })
-  checkWinLoseRuntimeContract(businessSrc); // R2: win-lose-check ctx.fields/elapsedMs/collections contract
+  checkPrimitiveImplementationCoverage(businessSrc, allSrc); // mechanics -> code 1:1
 
   if (engine === "phaser3" || engine === "phaser") {
     if (/\.load\.start\s*\(/.test(businessSrc)) {
@@ -348,46 +335,9 @@ function checkGeneratedCode(c, assets, root) {
   }
 }
 
-function checkPredicateMatchCallShape(businessSrc) {
-  const codeOnly = stripCommentsAndImports(businessSrc);
-  const calls = extractFunctionCalls(codeOnly, "predicateMatch");
-  if (calls.length === 0) return;
-
-  const failures = [];
-  for (let idx = 0; idx < calls.length; idx++) {
-    const call = calls[idx].trim();
-    if (!call.startsWith("{")) {
-      failures.push(`#${idx + 1} 必须直接传 object literal，不能传变量/函数返回值`);
-      continue;
-    }
-    const legacyKeys = ["candidate", "filter"].filter((key) => hasTopLevelObjectProperty(call, key));
-    const missing = ["rule", "node", "left", "right", "params"].filter((key) => !hasTopLevelObjectProperty(call, key));
-    const paramsExpr = findObjectPropertyExpression(call, "params");
-    const fieldsExpr = paramsExpr ? findObjectPropertyExpression(paramsExpr, "fields") : null;
-    if (fieldsExpr === null) missing.push("params.fields");
-    else if (!isNonEmptyStaticStringArray(fieldsExpr)) missing.push("params.fields(non-empty static string array)");
-
-    if (legacyKeys.length > 0) {
-      failures.push(`#${idx + 1} 使用了旧 API 字段 ${legacyKeys.join("+")}；新代码必须使用 left/right/params.fields`);
-    }
-    if (missing.length > 0) {
-      failures.push(`#${idx + 1} 缺少 ${missing.join("/")}`);
-    }
-  }
-
-  if (failures.length > 0) {
-    fail(
-      `[runtime.predicate-match] predicateMatch 调用形态不符合 canonical API：${failures.join("; ")}。` +
-      `应使用 predicateMatch({ rule, node, left, right, params: { fields: ["color"], op: "eq" } })，禁止 candidate/filter 新写法。`,
-    );
-  } else {
-    ok(`[runtime.predicate-match] ${calls.length} 个 predicateMatch 调用均使用 left/right/params.fields canonical API`);
-  }
-}
-
-function checkPrimitiveImplementationCoverage(sourceBlob) {
+function checkPrimitiveImplementationCoverage(businessSrc, sourceBlob) {
   if (!existsSync(mechanicsPath)) {
-    fail("[mechanics] specs/mechanics.yaml 不存在，无法校验 @primitive 代码覆盖率");
+    fail("[mechanics] specs/mechanics.yaml 不存在，无法校验 mechanics 代码覆盖率");
     return;
   }
   let mech;
@@ -402,205 +352,60 @@ function checkPrimitiveImplementationCoverage(sourceBlob) {
     fail("[mechanics] mechanics.yaml 缺少 mechanics[] 节点");
     return;
   }
-  const missing = [];
+  const missingNodeCalls = [];
+  const missingRuntimeModules = [];
+  const missingRuntimeImports = [];
   for (const node of nodes) {
     const id = node.node;
-    const primitive = node.primitive;
-    if (!id || !primitive) {
-      missing.push(`${id || "<missing-node>"}:${primitive || "<missing-primitive>"}`);
+    if (!id) {
+      missingNodeCalls.push("<missing-node>");
       continue;
     }
-    const re = new RegExp(
-      `@primitive\\(\\s*${escapeReg(primitive)}\\s*\\)\\s*:\\s*(?:node-id\\s*=\\s*)?${escapeReg(id)}\\b`,
-    );
-    if (!re.test(sourceBlob)) missing.push(`${id} (${primitive})`);
+    const nodeCallRe = new RegExp(`\\bnode\\s*:\\s*["'\`]${escapeReg(id)}["'\`]`);
+    if (!nodeCallRe.test(businessSrc)) missingNodeCalls.push(id);
+
+    const runtimeModule = node["runtime-module"];
+    if (!runtimeModule) {
+      missingRuntimeModules.push(id);
+      continue;
+    }
+    if (!isRuntimeModuleImported(businessSrc, runtimeModule)) {
+      missingRuntimeImports.push(`${id} -> ${runtimeModule}`);
+    }
   }
-  if (missing.length) {
-    fail(`[mechanics] ${missing.length}/${nodes.length} 个 mechanics node 缺少 @primitive 实现注释: ${missing.slice(0, 8).join(", ")}`);
+  if (missingRuntimeModules.length) {
+    fail(`[mechanics] ${missingRuntimeModules.length}/${nodes.length} 个 mechanics node 缺 runtime-module: ${missingRuntimeModules.slice(0, 8).join(", ")}`);
+  }
+  if (missingRuntimeImports.length) {
+    fail(`[mechanics] ${missingRuntimeImports.length}/${nodes.length} 个 runtime-module 未被业务代码 import: ${missingRuntimeImports.slice(0, 8).join(", ")}`);
+  }
+  if (missingNodeCalls.length) {
+    fail(`[mechanics] ${missingNodeCalls.length}/${nodes.length} 个 mechanics node 缺少业务调用证据 node: "<id>": ${missingNodeCalls.slice(0, 8).join(", ")}`);
+  }
+  if (missingRuntimeModules.length === 0 && missingRuntimeImports.length === 0 && missingNodeCalls.length === 0) {
+    ok(`[mechanics] 所有 ${nodes.length} 个 mechanics node 均有 runtime-module import + node 调用证据`);
+  }
+
+  const mechanicsRuntimeFiles = (sourceBlob.match(/src\/mechanics\/[\w/-]+\.runtime\.mjs/g) ?? []).length;
+  if (mechanicsRuntimeFiles > 0) {
+    ok(`[mechanics] 发现 ${mechanicsRuntimeFiles} 处 src/mechanics/*.runtime.mjs 引用`);
   } else {
-    ok(`[mechanics] 所有 ${nodes.length} 个 mechanics node 均有 @primitive 实现注释`);
+    warn("[mechanics] 未发现 src/mechanics/*.runtime.mjs 字面引用；若使用相对路径 import，请确认上方 node 检查已覆盖");
   }
 }
 
-// P1.4: enrolled engines must import and call applicable primitive runtime APIs.
-// 只校验 mechanics.yaml 中出现、已有 runtime wrapper、且适用于当前 engine 的 primitive。
-function checkRuntimePrimitiveImports(c, businessSrc) {
-  const engine = String(c.runtime?.engine ?? "").toLowerCase();
-  const applicable = applicablePrimitivesFor(engine);
-  if (!isEngineEnforced(engine)) {
-    ok(`[runtime] 引擎=${engine || "<未指定>"} 尚未纳入 runtime primitive contract，跳过 runtime primitive import 校验`);
-    return;
-  }
-  if (!existsSync(mechanicsPath)) {
-    // checkPrimitiveImplementationCoverage 已报错，这里静默
-    return;
-  }
-  let mech;
-  try {
-    mech = yaml.load(readFileSync(mechanicsPath, "utf-8")) ?? {};
-  } catch {
-    return;
-  }
-  const nodes = Array.isArray(mech.mechanics) ? mech.mechanics : [];
-  const required = new Set();
-  const skipped = new Set();
-  for (const node of nodes) {
-    if (!node?.primitive || !isRuntimeBacked(node.primitive)) continue;
-    if (applicable.has(node.primitive)) {
-      required.add(node.primitive);
-    } else {
-      skipped.add(node.primitive);
-    }
-  }
-  if (required.size === 0) {
-    ok(`[runtime] 本 case mechanics 未引用 ${engine} 适用的 runtime-backed primitive，跳过`);
-    return;
-  }
-  if (skipped.size > 0) {
-    ok(`[runtime] engine=${engine} 跳过 ${skipped.size} 个不适用 primitive: ${[...skipped].sort().join(", ")}`);
-  }
-
-  const imports = parseEsmImports(businessSrc).filter((i) =>
-    isPrimitivesImport(i.specifier),
-  );
-  const importedNames = new Set();
-  for (const imp of imports) {
-    for (const n of imp.names) {
-      if (n === "*") {
-        // 命名空间导入：把它视为全量，后续 call-site 校验还会要求调用存在
-        for (const api of Object.values(PRIMITIVE_RUNTIME_API).flat()) {
-          importedNames.add(api);
-        }
-      } else {
-        importedNames.add(n);
-      }
-    }
-  }
-
-  const missingImport = [];
-  const missingCall = [];
-  const missingBoundCall = [];
-  // P1.4 fix: call-site 检查必须忽略注释内的伪调用（JSDoc / 行注释）和 import 语句本身。
-  const codeOnly = stripCommentsAndImports(businessSrc);
-  for (const primitive of required) {
-    const apis = apisFor(primitive);
-    const importedApi = apis.find((api) => importedNames.has(api));
-    if (!importedApi) {
-      missingImport.push(`${primitive} (期望 import 至少一个: ${apis.join(" / ")})`);
-      continue;
-    }
-    // 被 import 的 API 必须至少被调用一次（排除注释、import 语句）
-    const callRe = new RegExp(`\\b${escapeReg(importedApi)}\\s*\\(`);
-    if (!callRe.test(codeOnly)) {
-      missingCall.push(`${primitive}.${importedApi}`);
-    }
-  }
-  for (const node of nodes) {
-    if (!node?.node || !required.has(node.primitive)) continue;
-    const calls = apisFor(node.primitive)
-      .flatMap((api) => extractFunctionCalls(codeOnly, api));
-    const bound = calls.some((call) =>
-      objectCallHasStringProperty(call, "node", node.node) &&
-      objectCallHasAnyStringProperty(call, "rule")
-    );
-    if (!bound) missingBoundCall.push(`${node.node} (${node.primitive})`);
-  }
-
-  if (missingImport.length > 0) {
-    fail(
-      `[runtime] ${missingImport.length}/${required.size} 个 runtime-backed primitive 未 import: ${missingImport.slice(0, 6).join("; ")}`,
-    );
-  }
-  if (missingCall.length > 0) {
-    fail(
-      `[runtime] ${missingCall.length} 个 runtime API 已 import 但未调用: ${missingCall.slice(0, 6).join(", ")}（只有调用才能触发 before/after trace）`,
-    );
-  }
-  if (missingBoundCall.length > 0) {
-    fail(
-      `[runtime] ${missingBoundCall.length} 个 mechanics node 缺少绑定自身 node/rule 的 runtime 调用: ${missingBoundCall.slice(0, 8).join(", ")}。` +
-      `每个 runtime API object literal 必须同时包含 node: "<mechanics-node-id>" 与 rule: "<rule-id>"。`,
-    );
-  }
-  if (missingImport.length === 0 && missingCall.length === 0 && missingBoundCall.length === 0) {
-    ok(`[runtime] runtime primitive import 完整：全部 ${required.size} 个适用 runtime-backed primitive 均已 import + 调用，并绑定 node/rule`);
-  }
-}
-
-function checkWinLoseRuntimeContract(businessSrc) {
-  const req = collectWinLoseCtxRequirements(mechanicsSpec);
-  if (!req) return;
-  const codeOnly = stripCommentsAndImports(businessSrc);
-  const calls = extractFunctionCalls(codeOnly, "checkWinLose");
-  if (calls.length === 0) {
-    // checkRuntimePrimitiveImports already reports the missing runtime API call.
-    return;
-  }
-
-  const failures = [];
-  for (let idx = 0; idx < calls.length; idx++) {
-    const stateExpr = findObjectPropertyExpression(calls[idx], "state");
-    if (!stateExpr) {
-      failures.push(`#${idx + 1} 缺少 state 参数`);
-      continue;
-    }
-    const stateObj = resolveStateObjectExpression(stateExpr, codeOnly);
-    if (!stateObj) {
-      failures.push(`#${idx + 1} state=${shortSnippet(stateExpr)} 不可静态识别；请传入直接对象或返回对象的 helper`);
-      continue;
-    }
-
-    const missing = [];
-    if (req.fields && !hasTopLevelObjectProperty(stateObj, "fields")) missing.push("fields");
-    if (req.elapsedMs && !hasTopLevelObjectProperty(stateObj, "elapsedMs")) missing.push("elapsedMs");
-    if (req.collections && !hasTopLevelObjectProperty(stateObj, "collections")) missing.push("collections");
-    if (missing.length > 0) {
-      failures.push(`#${idx + 1} state 缺 ${missing.join("/")}（需要 ${formatWinLoseReq(req)}）`);
-    }
-  }
-
-  if (failures.length > 0) {
-    fail(
-      `[runtime.win-lose-check] checkWinLose ctx shape 不符合 mechanics 条件：${failures.join("; ")}。` +
-      `win-lose-check reducer 只读取 ctx.fields / ctx.elapsedMs / ctx.collections，禁止传扁平 { misses, timeLeftMs }。`,
-    );
-  } else {
-    ok(`[runtime.win-lose-check] ctx contract 完整：${calls.length} 个 checkWinLose 调用满足 ${formatWinLoseReq(req)}`);
-  }
-}
-
-function collectWinLoseCtxRequirements(mechanics) {
-  const nodes = (mechanics?.mechanics ?? []).filter((n) => n?.primitive === "win-lose-check@v1");
-  if (nodes.length === 0) return null;
-  const req = { fields: false, elapsedMs: false, collections: false, nodes: nodes.length };
-  for (const node of nodes) {
-    const params = node.params ?? {};
-    const clauses = [
-      ...(Array.isArray(params.win) ? params.win : []),
-      ...(Array.isArray(params.lose) ? params.lose : []),
-      ...(Array.isArray(params.settle) ? params.settle : []),
-    ];
-    for (const clause of clauses) {
-      if (!clause || typeof clause !== "object") continue;
-      if (clause.field) req.fields = true;
-      if (clause.collection) req.collections = true;
-      switch (clause.kind) {
-        case "score-reaches":
-        case "out-of-resource":
-          req.fields = true;
-          break;
-        case "time-up":
-          req.elapsedMs = true;
-          break;
-        case "all-cleared":
-        case "count-reaches":
-        case "count-falls-below":
-          req.collections = true;
-          break;
-      }
-    }
-  }
-  return req;
+function isRuntimeModuleImported(source, runtimeModule) {
+  const clean = String(runtimeModule).replace(/^\.?\//, "");
+  const noSrc = clean.replace(/^src\//, "");
+  const base = basename(clean);
+  const patterns = [
+    clean,
+    noSrc,
+    `./${noSrc}`,
+    `../${noSrc}`,
+    base,
+  ].map(escapeReg);
+  return new RegExp(`import[\\s\\S]{0,240}["'][^"']*(?:${patterns.join("|")})["']`).test(source);
 }
 
 // T3: 扫 event-graph.yaml 里声明的每条 rule-id，业务代码必须有对应 push
@@ -626,8 +431,8 @@ function checkTracePushPoints(businessSrc) {
 
   // 反模式检测：业务代码禁止手写 window.__trace.push(...) 或强制覆盖 __trace。
   // 唯一合法初始化是 state.js / template 里的 `window.__trace = window.__trace || []`
-  // （幂等模式，runtime primitive 稍后自动 push）。
-  // 业务层的 __trace.push 会把 "trace = primitive 执行副产品" 的反作弊设计彻底绕开。
+  // （幂等模式，case 内 runtime wrapper 稍后自动 push）。
+  // 业务层的 __trace.push 会把 "trace = wrapper 执行副产品" 的反作弊设计彻底绕开。
   const forbiddenPush = /window\.__trace\.push\s*\(/g;
   const pushHits = [...businessSrc.matchAll(forbiddenPush)].length;
   // 赋值检测：逐行扫，命中 `window.__trace = ...` 且右侧不是合法的 `window.__trace || []` 幂等模式
@@ -642,13 +447,12 @@ function checkTracePushPoints(businessSrc) {
   if (pushHits > 0 || assignHits > 0) {
     fail(
       `[trace] 业务代码禁止手写 window.__trace（${pushHits} 处 push + ${assignHits} 处非幂等赋值）；` +
-      `trace 必须由 _common/primitives/*.runtime.mjs 的 ctx.rule 参数自动推送。` +
-      `见 codegen.md Step 4.0.6 禁止模式清单`,
+      `trace 必须由 game/src/mechanics/*.runtime.mjs 的 wrapper 自动推送。`,
     );
     return;
   }
 
-  // 每条 rule-id 必须有对应 ctx.rule 字面量（来自业务层的 primitive 调用传参）
+  // 每条 rule-id 必须有对应 rule 字面量（来自业务层的 wrapper 调用传参）
   const missing = [];
   for (const id of ruleIds) {
     const pat = new RegExp(`rule\\s*:\\s*["'\`]${escapeReg(id)}["'\`]`);
@@ -657,7 +461,7 @@ function checkTracePushPoints(businessSrc) {
   if (missing.length > 0) {
     const shown = missing.slice(0, 8).join(", ");
     const more = missing.length > 8 ? ` ...+${missing.length - 8}` : "";
-    fail(`[trace] ${missing.length}/${ruleIds.length} 个 @rule 在业务代码中缺少 trace rule 字面量（应通过 primitive ctx.rule 参数体现）: ${shown}${more}`);
+    fail(`[trace] ${missing.length}/${ruleIds.length} 个 @rule 在业务代码中缺少 trace rule 字面量（应通过 runtime wrapper 参数体现）: ${shown}${more}`);
   } else {
     ok(`[trace] 所有 ${ruleIds.length} 个 @rule 都有 trace rule 字面量`);
   }

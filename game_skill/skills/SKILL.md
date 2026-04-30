@@ -1,16 +1,17 @@
 ---
 name: game
-description: 小游戏自然语言生成专用链路。当用户说「做个XX小游戏」「生成一个YY玩法的网页游戏」「用 Phaser/PixiJS/Canvas/DOM/Three.js 做个游戏」时使用。覆盖 5 阶段：Understand → GamePRD → Expand → Codegen → Verify。支持 5 条引擎路径（phaser3/pixijs/canvas/dom-ui/three），默认走 2D（is-3d=false）；仅当用户明确 3D/Three.js/第一人称/3D 模型时 is-3d=true 并走 three。每次只选一条路径，引擎选择在 Phase 1 末尾通过 AskUserQuestion 让用户选择或授权系统默认决策。
+description: 小游戏自然语言生成专用链路。当用户说「做个XX小游戏」「生成一个YY玩法的网页游戏」「用 Phaser/PixiJS/Canvas/DOM/Three.js 做个游戏」时使用。覆盖 5 阶段：Understand → GamePRD → Expand → Codegen → Verify，并在 GamePRD 与 Expand 之间运行 Phase 2.5A User Clarify 与 Phase 2.5B Design Strategy。支持 5 条引擎路径（phaser3/pixijs/canvas/dom-ui/three），默认走 2D（is-3d=false）；仅当用户明确 3D/Three.js/第一人称/3D 模型时 is-3d=true 并走 three。每次只选一条路径，引擎选择在 Phase 1 末尾通过 AskUserQuestion 让用户选择或授权系统默认决策。
 ---
 
 # Game Skill (Claude Code 适配版)
 
-你是**初见·游戏**，小游戏生成专家。覆盖 5 阶段链路，并在 GamePRD 与 Expand 之间增加功能机制澄清 gate：
+你是**初见·游戏**，小游戏生成专家。覆盖 5 阶段链路，并在 GamePRD 与 Expand 之间增加 User Clarify 与 Design Strategy 两个独立 gate：
 
 ```
 Phase 1: Understand        → docs/brief.md（扫描缺口 → 必要时 AskUserQuestion 澄清 → 末尾让用户选引擎或授权默认决策）
 Phase 2: GamePRD           → docs/game-prd.md（必须过 check_game_prd.js）
-Phase 2.5: Spec Clarify    → docs/spec-clarifications.md（功能机制歧义：必要时最多 1-2 问，否则记录默认假设）
+Phase 2.5A: User Clarify   → docs/spec-clarifications.md（功能机制歧义：必要时最多 4 问，否则记录默认假设）
+Phase 2.5B: Design Strategy→ docs/design-strategy.yaml（体验支柱/核心循环/决策点/资源循环/juice/复杂度预算；必要时最多 4 问）
 Phase 3: Expand            → specs/{mechanics,scene,rule,data,assets,event-graph,implementation-contract}.yaml（始终必做）
 Phase 4: Codegen           → game/index.html + src/
 Phase 5: Verify + Deliver  → verify_all.js(check_mechanics + check_game_boots + check_project + check_profile_runner_smoke + check_playthrough + check_runtime_semantics + check_level_solvability + check_skill_compliance) + eval/report.json + docs/delivery.md
@@ -37,7 +38,7 @@ node game_skill/skills/scripts/phase_plan.js --mode full --stop-before codegen
 | mode | 用途 | 允许到达 | E2E |
 |---|---|---|---|
 | `full` | 默认完整生成交付 | deliver | 允许 |
-| `mechanics-only` | 只确认玩法原语、数值和正向终局可达（win 或 settle） | mechanics | 禁止 |
+| `mechanics-only` | 只确认玩法机制、数值和正向终局可达（win 或 settle） | mechanics | 禁止 |
 | `expand-only` | 只产 specs/contract，不写游戏代码 | expand | 禁止 |
 | `codegen-only` | 基于已冻结 specs 只做代码生成和工程自检 | codegen | 禁止 |
 | `verify-layered` | 逐层定位已有 case 问题 | verify 单层脚本 | 禁止统一 E2E 修复循环 |
@@ -115,8 +116,8 @@ cases/{project-slug}/
 
 运行模式规则：
 
-- 轻量 `canvas`、且不需要 runtime primitive import 的纯静态 `dom-ui`：可用 `RUN: file`
-- `phaser3`、`pixijs`、primitive-backed `dom-ui`：默认 `RUN: local-http`
+- 轻量 `canvas`、且不需要本地 ESM 的纯静态 `dom-ui`：可用 `RUN: file`
+- `phaser3`、`pixijs`、`dom-ui`：默认 `RUN: local-http`
 - 复杂 DOM / Canvas 项目也**允许**切到 `RUN: local-http`
 
 约束含义：
@@ -153,7 +154,7 @@ node game_skill/skills/scripts/check_playthrough.js cases/word-match-lite/game/ 
 | 新增引擎手册 | `${SKILL_DIR}/references/engines/_adding-new-engine.md` |
 | 校验脚本 | `${SKILL_DIR}/scripts/*.js` |
 | 断言 profile | `${SKILL_DIR}/scripts/profiles/{case-id}.json` |
-| 阶段 SOP | `${SKILL_DIR}/prd.md`、`clarify.md`、`semantic-clarify.md`、`spec-clarify.md`、`strategy.md`、`expand.md`、`codegen.md`、`verify.md`、`delivery.md` |
+| 阶段 SOP | `${SKILL_DIR}/prd.md`、`clarify.md`、`semantic-clarify.md`、`spec-clarify.md`、`design-strategy.md`、`strategy.md`、`expand.md`、`codegen.md`、`verify.md`、`delivery.md` |
 | 日志工具 | `${SKILL_DIR}/scripts/_logger.js`（NDJSON 格式，所有 check 脚本自动支持 `--log`） |
 
 **发现 SKILL_DIR 的方法**：本文件所在目录。在 CC 环境里，它是 `~/.claude/skills/game/` 的真实路径（可能是符号链接，用 `readlink -f` 解开）。
@@ -200,7 +201,7 @@ import('./game_skill/skills/scripts/_state.js').then(m => {
 - `{ resumable: false, reason: 'previously failed...' }` → 需要人工介入，不自动重试
 
 **schema v1 要求**（详见 `schemas/state.schema.json`）：
-- `phases.spec-clarify` 是正式阶段，禁止手工塞顶层 `spec-clarify` 或绕过 helper 写 state
+- `phases.spec-clarify` 是 Phase 2.5A 正式阶段，`phases.design-strategy` 是 Phase 2.5B 正式阶段；禁止手工塞顶层字段或绕过 helper 写 state
 - `phases.expand` 必须含 `subtasks.{mechanics, scene, rule, data, assets, event-graph, implementation-contract}`，每个子任务独立 status
 - 所有 phase status ∈ `pending | running | completed | failed | skipped`
 - 旧漂移 schema（如 canvas case 的扁平 `projectId`）会被 `readState()` 自动迁移到 v1 内存结构，但**必须重新 `writeState()` 才会持久化**（否则重读仍走 migrate 分支）
@@ -327,11 +328,13 @@ node game_skill/skills/scripts/phase_plan.js --mode ${PHASE_MODE:-full} --projec
 
 ---
 
-## Phase 2.5: Spec Clarify（功能机制澄清）
+## Phase 2.5A: User Clarify（功能机制澄清）
 
 **输出**：`cases/${PROJECT}/docs/spec-clarifications.md`
 
-**时机**：GamePRD 已通过 `check_game_prd.js` 且 guardrails 已生成之后、Phase 3 Expand 之前。
+**时机**：GamePRD 已通过 `check_game_prd.js` 且 guardrails 已生成之后、Phase 2.5B Design Strategy 之前。
+
+Phase 2.5A 与 Phase 2.5B 的提问预算完全独立：2.5A 最多 4 问，2.5B 最多 4 问，合计上限 8 问。每问都让推荐项排在 options[0]，用户只点推荐即可快速过完；不要手动添加“让我决定”，AskUserQuestion 工具会自动提供 Other 入口。
 
 0. 用 helper 标记阶段，禁止手写 state：
    ```bash
@@ -343,16 +346,16 @@ node game_skill/skills/scripts/phase_plan.js --mode ${PHASE_MODE:-full} --projec
    })
    "
    ```
-1. 读 `game_skill/skills/spec-clarify.md`、`cases/${PROJECT}/docs/brief.md`、`cases/${PROJECT}/docs/game-prd.md`、`cases/${PROJECT}/.game/guardrails.md`、`game_skill/skills/references/mechanics/_index.yaml`
+1. 读 `game_skill/skills/spec-clarify.md`、`cases/${PROJECT}/docs/brief.md`、`cases/${PROJECT}/docs/game-prd.md`、`cases/${PROJECT}/.game/guardrails.md`
 2. 检查每条核心 `@rule` / `@constraint` 是否存在功能机制歧义：触发粒度、作用范围、目标选择、资源消耗时点、移动/碰撞粒度、同 tick 结算顺序、回收/生成/销毁时机
-3. 若歧义会改变核心玩法结果 → 用 `AskUserQuestion` 一次性最多问 2 个问题；每个问题必须绑定具体 `@rule(id)` 或 `@constraint(id)`，首选项标注推荐，并包含"让我决定"
+3. 若歧义会改变核心玩法结果 → 用 `AskUserQuestion` 一次性最多问 4 个问题；每个问题必须绑定具体 `@rule(id)` 或 `@constraint(id)`，形态为 1 个推荐默认 + 2 个替代方案；`options[0]` 为推荐项，description 末尾显式标“推荐”，AskUserQuestion 工具自动提供 Other 入口，禁止手动添加“让我决定”
 4. 若歧义不阻塞核心玩法 → 不问用户，选择保守默认，并写入 `Assumptions`
-5. 无论 asked / assumed / skipped，都写 `cases/${PROJECT}/docs/spec-clarifications.md`；该文件是 Phase 3 的必读输入
+5. 无论 asked / assumed / skipped，都写 `cases/${PROJECT}/docs/spec-clarifications.md`；该文件是 Phase 2.5B 和 Phase 3 的必读输入
 6. 写完后必须运行：
    ```bash
    node game_skill/skills/scripts/check_spec_clarifications.js cases/${PROJECT}/ --log ${LOG_FILE}
    ```
-   该检查会阻断两类刚性错误：引用 `_index.yaml` 中不存在的 primitive（例如 `raycast@v1` / `grid-path-follow@v1`），以及用平均消除/除以 2 估算 `balance-check.demand`。
+   该检查会阻断用平均消除/除以 2 估算 `balance-check.demand` 这类不可验证口径。
 7. 通过后标记 completed：
    ```bash
    node -e "
@@ -367,41 +370,116 @@ node game_skill/skills/scripts/phase_plan.js --mode ${PHASE_MODE:-full} --projec
 
 ---
 
+## Phase 2.5B: Design Strategy（玩法设计策略）
+
+**输出**：`cases/${PROJECT}/docs/design-strategy.yaml`
+
+**时机**：Phase 2.5A 已通过 `check_spec_clarifications.js` 之后、Phase 3 Expand 之前。
+
+0. 用 helper 读写 state，并标记 `phases.design-strategy`：
+   ```bash
+   node -e "
+   import('./game_skill/skills/scripts/_state.js').then(m => {
+     let st = m.readState('cases/${PROJECT}/.game/state.json');
+     const now = new Date().toISOString();
+     const prev = st.phases?.['design-strategy'] ?? { status: 'pending' };
+     st = {
+       ...st,
+       currentPhase: 'design-strategy',
+       phases: {
+         ...st.phases,
+         'design-strategy': {
+           ...prev,
+           status: 'running',
+           startedAt: prev.startedAt ?? now,
+           attempts: (prev.attempts ?? 0) + 1
+         }
+       }
+     };
+     m.writeState('cases/${PROJECT}/.game/state.json', st);
+   })
+   "
+   ```
+1. 读 `game_skill/skills/design-strategy.md`、`cases/${PROJECT}/docs/brief.md`、`cases/${PROJECT}/docs/game-prd.md`、`cases/${PROJECT}/docs/spec-clarifications.md`
+2. 自动展开 `target-experience`、`gameplay-pillars`、`core-loop`、`decision-points`、`resource-loop`、`juice-plan`、`complexity-budget`
+3. 若存在会改变核心玩法方向的分叉 → 用 `AskUserQuestion` 一次性最多问 4 个问题；每问形态为 1 个推荐默认 + 2 个替代方案，`options[0]` 为推荐项，description 末尾显式标“推荐”，AskUserQuestion 工具自动提供 Other 入口，禁止手动添加“让我决定”，禁止问速度/频率/时长等数值参数
+4. 若无方向分叉 → 不问用户，采用系统默认，并把默认依据写入 `assumptions`
+5. 写 `cases/${PROJECT}/docs/design-strategy.yaml`，其中 `decision-points[].observable-via` 必须以 `window.gameTest.` 开头，`resource-loop.sources[].from` 和 `resource-loop.sinks[].to` 必须引用 `resources[]`
+6. 写完后必须运行：
+   ```bash
+   node game_skill/skills/scripts/check_design_strategy.js cases/${PROJECT}/ --log ${LOG_FILE}
+   ```
+   该检查失败时不得进入 Phase 3.0。
+7. 通过后标记 completed：
+   ```bash
+   node -e "
+   import('./game_skill/skills/scripts/_state.js').then(m => {
+     let st = m.readState('cases/${PROJECT}/.game/state.json');
+     const now = new Date().toISOString();
+     const prev = st.phases?.['design-strategy'] ?? { status: 'pending' };
+     st = {
+       ...st,
+       currentPhase: 'expand',
+       phases: {
+         ...st.phases,
+         'design-strategy': {
+           ...prev,
+           status: 'completed',
+           finishedAt: now
+         }
+       }
+     };
+     m.writeState('cases/${PROJECT}/.game/state.json', st);
+   })
+   "
+   ```
+8. 本阶段**不得**修改 `brief.md` / `game-prd.md` 的产物结构，不得把设计方向问题塞回 Phase 2.5A
+
+---
+
 ## Phase 3: Expand（始终必做）
 
 **输出**：`cases/${PROJECT}/specs/{mechanics,scene,rule,data,assets,event-graph,implementation-contract}.yaml`
 
 事务语义（升级版）：
 - **Phase 2.5 — Spec Clarify Gate**：先写 `docs/spec-clarifications.md`，把功能机制澄清/默认假设固定下来。
-- **Phase 3.0 — Mechanic Decomposition**：先产 `mechanics.yaml`（玩法原语 DAG），单独提交，作为 Phase 3.x / Phase 4 的语义骨架。
+- **Phase 3.0 — Mechanic Decomposition**：先产 `mechanics.yaml`（动态抽离的实体 / 规则 / 状态 / 触发 / 效果 / invariant / trace-events），单独提交，作为 Phase 3.x / Phase 4 的语义骨架。
 - **Phase 3.x — Expanders**：原有 5 个 expander 并发写 `specs/.pending/*.yaml`，其中 `rule` 和 `event-graph` 可读 `mechanics.yaml` 作为引用源。
-- **Phase 3.5 — Symbolic Check**：`check_mechanics.js` 用原语 reducer 跑 profile 剧本，验证玩法 invariants + 正向终局可达（win 或 settle）。不过则整个 Phase 3 failed，不进 codegen。
+- **Phase 3.5 — Structural Check**：`check_mechanics.js` 校验动态 mechanics DAG 连通性、scenario 声明、invariants、trace-events 与 runtime-module 绑定。不过则整个 Phase 3 failed，不进 codegen。
 - board-grid genre 的 data expander 必须产出 `solution-path` + `playability`；其他 genre 可省略并由 P2 checker 自动 ok-skip。
 
 ---
 
 ### Phase 3.0 — Mechanic Decomposition（玩法语义拆解）
 
-**目的**：把 PRD 的自然语言玩法描述编译成 primitive DAG，避免后续 rule/event-graph 直接写散文伪代码。
+**目的**：把 PRD 的自然语言玩法描述编译成动态 mechanics DAG，避免后续 rule/event-graph 直接写散文伪代码。模型基于 GamePRD、Spec 澄清和 design-strategy.yaml（若已存在）抽离实体 / 规则 / 状态，不再从固定 catalog 选节点。
 
 1. `mkdir -p cases/${PROJECT}/specs/.pending`
 2. 发起一个 Agent 调用（subagent_type: `game-mechanic-decomposer`），prompt：
    ```
    【PRD】cases/${PROJECT}/docs/game-prd.md
    【Spec澄清】cases/${PROJECT}/docs/spec-clarifications.md
+   【Design Strategy】cases/${PROJECT}/docs/design-strategy.yaml（若不存在则按 PRD + Spec澄清补默认设计假设）
    【输出】cases/${PROJECT}/specs/.pending/mechanics.yaml
    【项目】${PROJECT}
    【引擎】${ENGINE}
+   【Mechanics v2 要求】
+     - version: 2
+     - mode: dynamic-generated
+     - entities[] 声明核心状态字段
+     - mechanics[] 每个 node 声明 triggers / effects / state-fields / invariants(name+condition) / trace-events / runtime-module
+     - runtime-module 指向 src/mechanics/<node-id>.runtime.mjs
+     - 至少一条 scenarios[].expected-outcome 为 win 或 settle
    ```
 3. 返回 `{status: "ok"}` → 记录 `markSubtask(st, 'mechanics', 'completed', {...})`
-4. 返回 `{status: "failed"}` → Phase 3 整阶段 failed，原因上报用户（PRD 可能结构性不可行，比如有"瞬移攻击"这类违反 ray-cast 语义的规则，需要 PRD 改或新增原语）
+4. 返回 `{status: "failed"}` → Phase 3 整阶段 failed，原因上报用户（PRD 可能结构性不可行，需要 PRD 改或在动态 mechanics 中重拆规则）
 5. 若 phase plan 的 `hardStop` 是 `after:mechanics`，立即把 `.pending/mechanics.yaml` 提交为 `specs/mechanics.yaml`，只运行 mechanics gate，然后停止：
    ```bash
    mv cases/${PROJECT}/specs/.pending/mechanics.yaml cases/${PROJECT}/specs/mechanics.yaml
    rmdir cases/${PROJECT}/specs/.pending 2>/dev/null || true
    node game_skill/skills/scripts/check_mechanics.js cases/${PROJECT}/ --log ${LOG_FILE}
    ```
-   通过后只标记 `expand.subtasks.mechanics=completed`，不要启动 Phase 3.x expander、不要生成 implementation-contract、不要进入 codegen。汇报 ray-cast / ammo / terminal scenario / balance 证据后等待用户决定是否继续。
+   通过后只标记 `expand.subtasks.mechanics=completed`，不要启动 Phase 3.x expander、不要生成 implementation-contract、不要进入 codegen。汇报 DAG / runtime-module / terminal scenario / balance 证据后等待用户决定是否继续。
 6. Phase 3.x 中的 `rule` 和 `event-graph` expander prompt 必须新增两行：
    `【Spec澄清】cases/${PROJECT}/docs/spec-clarifications.md`
    `【机械基线】cases/${PROJECT}/specs/.pending/mechanics.yaml`（expander 必须引用其中 node id，不得写散文 effect）
@@ -477,7 +555,7 @@ node game_skill/skills/scripts/phase_plan.js --mode ${PHASE_MODE:-full} --projec
    ```bash
    node game_skill/skills/scripts/check_asset_selection.js cases/${PROJECT}/ --log ${LOG_FILE}
    node game_skill/skills/scripts/check_implementation_contract.js cases/${PROJECT}/ --stage expand --log ${LOG_FILE}
-   # Phase 3.5 — Mechanic Symbolic Check（新增，玩法真值前置）
+   # Phase 3.5 — Mechanic Structural Check（动态 mechanics 真值前置）
    node game_skill/skills/scripts/check_mechanics.js cases/${PROJECT}/ --log ${LOG_FILE}
    ```
 9. 任一失败 → 调 `markPhase(st, 'expand', 'failed')`，整阶段 failed，报用户不降级
@@ -509,13 +587,12 @@ node game_skill/skills/scripts/phase_plan.js --mode ${PHASE_MODE:-full} --projec
    【必须保留功能】{must-have-features}
    【PRD】cases/${PROJECT}/docs/game-prd.md
    【Specs】cases/${PROJECT}/specs/*.yaml
-   【Mechanics】cases/${PROJECT}/specs/mechanics.yaml          ← Phase 3.5 已通过的玩法真值
-   【Primitive Catalog】game_skill/skills/references/mechanics/_index.yaml
+   【Mechanics】cases/${PROJECT}/specs/mechanics.yaml          ← Phase 3.5 已通过的动态玩法真值
    【Implementation Contract】cases/${PROJECT}/specs/implementation-contract.yaml
    【目标目录】cases/${PROJECT}/game/
    【硬约束】
      - 所有 @constraint(kind:hard-rule) 必须在代码里有 // @hard-rule(...) 注释
-     - mechanics.yaml 的每个 node 必须对应 game/src/mechanics/<node-id>.js 或等价模块，顶部写 // @primitive(<id>@vN): <node-id> 注释
+     - mechanics.yaml 的每个 node 必须对应 game/src/mechanics/<node-id>.runtime.mjs，并由业务代码 import + 调用；调用参数必须含 rule 与 node
      - 禁止发明 mechanics.yaml 之外的玩法；如确需新玩法，返回失败让主 agent 退回 Phase 3
      - 必须暴露 window.gameState
      - RUN=file 时，禁止依赖本地 ES module / 相对 import

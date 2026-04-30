@@ -23,8 +23,8 @@ description: "Phase 4: 代码生成。读取 GamePRD 的 runtime，经 reference
 - 必须暴露 `window.gameState`（Playwright 验证桥，见 verify-hooks.md）
 - **必须在每条 `@rule` 触发时产出 `window.__trace` 证据**（T3 硬约束）：
   - 初始化时 `window.__trace = window.__trace || [];`
-  - canvas / pixijs / phaser3 的全部 primitive-backed rule，以及 dom-ui 的逻辑/资源/状态/生命周期 primitive，必须把 `rule` / `node` 传给 `_common/primitives/*.runtime.mjs`，由 runtime 自动 push `{ primitive, rule, node, before, after }`
-  - three 过渡期、dom-ui 暂不适用的空间/运动 primitive、以及非 primitive 规则，才允许在执行 effect 后手写：`window.__trace.push({ rule: "<rule-id>", before: {...}, after: {...}, t: Date.now() });`
+  - mechanics.yaml 的每个 node 必须调用 `game/src/mechanics/<node-id>.runtime.mjs` 中的 per-case wrapper，由 wrapper push `{ type, rule, node, before, after }`
+  - 业务代码禁止直接写 `window.__trace.push(...)`；只允许读取 trace 或做幂等初始化
   - `before` / `after` 至少包含 `event-graph.yaml` 里 `rule-traces.<rule-id>.actions` 声明的 `subject.field` 值
   - 目的：`check_playthrough.js` 用 trace 覆盖率（≥80%）判定玩法是否真的跑起来，profile 不再承担 expect
 - **不得静默删除** `must-have-features`
@@ -42,8 +42,8 @@ has been blocked by CORS policy
 
 因此不能把“单文件”当成所有引擎的统一硬规则。当前默认是：
 
-- 简单 `canvas`、且不需要 runtime primitive import 的纯静态 `dom-ui`：`run-mode=file`
-- `phaser3` / `pixijs` / primitive-backed `dom-ui`：`run-mode=local-http`
+- 简单 `canvas`、且不需要本地 ESM 的纯静态 `dom-ui`：`run-mode=file`
+- `phaser3` / `pixijs` / `dom-ui`：`run-mode=local-http`
 - 复杂 DOM / Canvas 项目：也允许升级到 `local-http`
 
 `local-http` 可通过 `python3 -m http.server` 或临时静态服务器解决模块加载问题，同时保留多文件工程结构。
@@ -63,7 +63,7 @@ has been blocked by CORS policy
 ### Step 0：玩法语义闸先于写代码
 
 Codegen 不是第二个玩法设计阶段。进入任何引擎模板前，必须先确认
-`specs/mechanics.yaml` 已经是可执行的 primitive DAG：
+`specs/mechanics.yaml` 已经是动态 mechanics DAG：
 
 ```bash
 node ${SKILL_DIR}/scripts/check_mechanics.js cases/${PROJECT}
@@ -72,10 +72,8 @@ node ${SKILL_DIR}/scripts/check_mechanics.js cases/${PROJECT}
 退出码非 0 时，**不得开始写 game/**，也不得靠代码“修”一个结构性不成立的
 mechanics。正确处理是回到 Phase 3.0 修 `mechanics.yaml`：
 
-- `grid-board + 四周/外圈传送带` 必须是 `parametric-track.shape=rect-loop`，不是 `ring`
-- `ray-cast.coord-system=grid` 必须由上游 agent 提供 `gridPosition`
-- 至少一个 `simulation-scenarios` 能到达正向终局：`expected-outcome: win` 或 `expected-outcome: settle`
-- 每个 hard-rule 都映射到 primitive 字段或 invariant
+- 至少一个 scenario 能到达正向终局：`expected-outcome: win` 或 `expected-outcome: settle`
+- 每个 mechanics node 都有 runtime-module、trace-events 和 invariant 声明
 
 ### Step 1：解析 runtime / run-mode 并加载引擎资源
 
@@ -89,7 +87,7 @@ RUNTIME=$(grep "^runtime:" docs/game-prd.md | head -1 | awk '{print $2}')
 2. `_index.json.default-run-mode`
 3. 兜底默认：
    - `phaser3` / `pixijs` / `three` → `local-http`
-   - `dom-ui` → `local-http`（primitive-backed 模板默认）
+   - `dom-ui` → `local-http`
    - `canvas` → `file`
 
 ### Step 2：multi_read 引擎规范 + template
@@ -120,7 +118,7 @@ RUNTIME=$(grep "^runtime:" docs/game-prd.md | head -1 | awk '{print $2}')
 
 #### 3.0 Implementation Contract 是 codegen 的第一输入
 
-先读取 `specs/mechanics.yaml` 与 `specs/implementation-contract.yaml`。前者是玩法 primitive DAG，后者是素材/启动/生命周期契约；两者共同高于 LLM 对 `assets.yaml`/`scene.yaml` 的自由解释：
+先读取 `specs/mechanics.yaml` 与 `specs/implementation-contract.yaml`。前者是动态玩法 DAG，后者是素材/启动/生命周期契约；两者共同高于 LLM 对 `assets.yaml`/`scene.yaml` 的自由解释：
 
 - `boot` 决定首屏、ready condition、开始动作、场景转场链路
 - `asset-bindings` 决定每个素材绑定到什么 UI/游戏元素、是否文字承载、是否必须真实渲染、是否允许 fallback
@@ -129,7 +127,7 @@ RUNTIME=$(grep "^runtime:" docs/game-prd.md | head -1 | awk '{print $2}')
 
 **禁止**绕过 contract：不得只生成 manifest/registry 后不在业务代码消费 required local-file；不得把 `allow-fallback:false` 的素材静默降级为程序化绘制；不得让 report 自行解释运行时错误。
 
-**禁止**绕过 mechanics：不得无视 `mechanics.yaml` 自写另一套运动/攻击/胜负逻辑；每个 primitive node 都必须在代码里有对应实现点。
+**禁止**绕过 mechanics：不得无视 `mechanics.yaml` 自写另一套运动/攻击/胜负逻辑；每个 mechanics node 都必须通过 case 内 runtime wrapper 落地。
 
 从 GamePRD front-matter 读 `color-scheme` 段（由 Phase 2 从 brief 关键词自动推断）：
 
@@ -205,20 +203,13 @@ RUNTIME=$(grep "^runtime:" docs/game-prd.md | head -1 | awk '{print $2}')
 # ENGINE_TEMPLATE 来自 references/engines/_index.json 当前 runtime 的 template 字段
 cp -R ${SKILL_DIR}/references/${ENGINE_TEMPLATE}/. game/
 
-# 共享层（含 primitives runtime）拷进 game/src/_common/；
-# canvas / pixijs / phaser3 / dom-ui(local-http) 业务代码通过 './_common/...' 或 '../_common/...' import
+# 共享层拷进 game/src/_common/；
+# adapter / fx / registry / test-hook 通过 './_common/...' 或 '../_common/...' import
 mkdir -p game/src/_common
 cp -R ${SKILL_DIR}/references/engines/_common/. game/src/_common/
-
-# primitive runtime 在浏览器中会 import 对应 reducer；
-# 必须同步 reducer 依赖，否则 ESM 会请求 game/mechanics/** 并白屏
-mkdir -p game/mechanics
-cp -R ${SKILL_DIR}/references/mechanics/. game/mechanics/
 ```
 
-说明：`_common/primitives/*.runtime.mjs` + `primitives/index.mjs` 是 §4.0.6 mandatory
-runtime 库的实体；`game/mechanics/**/*.reducer.mjs` 是 runtime 的浏览器依赖；
-`_common/test-hook.js` 是 §4.0.5 第 ③ 步的三分类 hook；
+说明：`_common/test-hook.js` 是 §4.0.5 第 ③ 步的三分类 hook；
 `_common/fx.spec.js` / `registry.spec.js` 是 adapter 依赖。漏掉任意一个文件都会让
 业务代码 `import` 失败。
 
@@ -338,7 +329,7 @@ window.__assetUsage = window.__assetUsage || [];
 
 **codegen 的职责**：
 1. **保留**模板中已有的 `window.__trace` / `window.__assetUsage` 初始化，不要删除
-2. **不手写**适用 primitive 的 `window.__trace.push(...)` —— 由 `_common/primitives/*.runtime.mjs` 自动推送（canvas/pixijs/phaser3 全量；dom-ui 逻辑/资源/状态/生命周期子集）；three 过渡期与 dom-ui 空间/运动 primitive 仍需手写
+2. **不手写** `window.__trace.push(...)` —— 由 `game/src/mechanics/<node-id>.runtime.mjs` 的 per-case wrapper 自动推送
 3. **填充** `window.gameTest.drivers` 的具体方法，映射到真实 UI 操作：
    ```js
    window.gameTest.drivers = {
@@ -409,131 +400,9 @@ window.__assetUsage = window.__assetUsage || [];
 - [ ] `resetWithScenario` 清理了 spawn/cooldown timer 和 pool/gate accounting
 - [ ] `resetWithScenario` 结束前调用 UI/render 刷新
 
-### Step 4.0.6：强制 import primitive runtime（P1-1 新增；canvas + pixijs + phaser3 + dom-ui 子集）
+### Step 4.0.6：per-case runtime wrapper 占位
 
-`specs/mechanics.yaml` 里引用的每个 primitive 都对应一个 **浏览器 runtime 模块**，位于
-`${SKILL_DIR}/references/engines/_common/primitives/` 并由 Step 4 的
-`cp -R _common/. game/src/_common/` 一并同步到 `game/src/_common/primitives/`。
-业务代码（canvas / pixijs / phaser3 全量；dom-ui 适用子集）**必须**从该库 import
-对应 API。canvas / pixijs / phaser3 **禁止**再手写 ray-cast /
-resource-consume / predicate-match / fsm-transition / win-lose-check /
-score-accum / parametric-track / grid-step / grid-board / neighbor-query 的实现。
-dom-ui 只强制纯逻辑层 primitive；空间/运动类 primitive 因 DOM 节点布局没有统一
-positional 语义，暂不纳入强制 runtime。
-
-**runtime 映射表**（`engines/_common/primitives/index.mjs` 聚合导出）：
-
-| mechanics primitive | runtime API | reducer 来源 |
-|---|---|---|
-| `parametric-track@v1` | `tickTrack(ctx)` / `positionAt(ctx)` | `parametric-track.reducer.mjs` |
-| `grid-step@v1` | `gridMove(ctx)` | `grid-step.reducer.mjs` |
-| `ray-cast@v1` | `rayCastGrid(ctx)` / `rayCastGridFirstHit(ctx)` | `ray-cast.reducer.mjs` |
-| `grid-board@v1` | `addCell(ctx)` / `removeCell(ctx)` | `grid-board.reducer.mjs` |
-| `neighbor-query@v1` | `queryNeighbors(ctx)` | `neighbor-query.reducer.mjs` |
-| `predicate-match@v1` | `predicateMatch(ctx)` | `predicate-match.reducer.mjs` |
-| `resource-consume@v1` | `consumeResource(ctx)` | `resource-consume.reducer.mjs` |
-| `fsm-transition@v1` | `fireTrigger(ctx)` | `fsm-transition.reducer.mjs` |
-| `win-lose-check@v1` | `checkWinLose(ctx)` | `win-lose-check.reducer.mjs` |
-| `score-accum@v1` | `accumulateScore(ctx)` | `score-accum.reducer.mjs` |
-| `slot-pool@v1` | `bindSlot(ctx)` / `unbindSlot(ctx)` | `slot-pool.reducer.mjs` |
-| `capacity-gate@v1` | `requestCapacity(ctx)` / `releaseCapacity(ctx)` | `capacity-gate.reducer.mjs` |
-| `entity-lifecycle@v1` | `transitionLifecycle(ctx)` | `entity-lifecycle.reducer.mjs` |
-| `cooldown-dispatch@v1` | `requestDispatch(ctx)` | `cooldown-dispatch.reducer.mjs` |
-
-**engine-aware 适用表**（`check_implementation_contract.js` 从
-`scripts/_primitive_runtime_map.js` 读取，不允许写 if-else 魔数）：
-
-| engine | mandatory primitive runtime |
-|---|---|
-| `canvas` / `pixijs` / `phaser3` | 上表全部 primitive |
-| `dom-ui` | `predicate-match@v1` / `resource-consume@v1` / `fsm-transition@v1` / `win-lose-check@v1` / `score-accum@v1` / `slot-pool@v1` / `capacity-gate@v1` / `entity-lifecycle@v1` / `cooldown-dispatch@v1` |
-| `three` | 过渡期整引擎豁免，Deliverable C 只纳入逻辑层子集 |
-
-**调用约定**：
-
-```js
-// business code 在 game/src/main.js 或 game/src/scenes/*.js 里：
-import {
-  rayCastGridFirstHit, predicateMatch, consumeResource,
-  tickTrack, checkWinLose, accumulateScore,
-} from './_common/primitives/index.mjs';   // 相对 game/src/ 指向 game/src/_common/primitives/
-// 场景文件多一层目录时用：
-// import { ... } from '../_common/primitives/index.mjs';
-
-// 每个调用 ctx 必须传 rule + node，命中 mechanics.yaml 的 node-id/rule-id。
-// runtime 自动 push window.__trace.push({primitive, rule, node, before, after})，
-// 业务代码不得再手写 __trace.push。
-
-function onPigTickIntoSegment(pig) {
-  const hit = rayCastGridFirstHit({
-    rule: 'attack-consume',        // 必填：对应 rule.yaml id
-    node: 'attack-consume',        // 必填：对应 mechanics.yaml node id
-    source: { id: pig.id, row: pig.row, col: pig.col, gridPosition: pig.gridPosition },
-    direction: directionFromSegment(pig.segmentId),
-    targets: state.blocks,
-    params: { 'stop-on': 'first-hit', 'coord-system': 'grid' },
-  });
-  if (!hit) return;
-
-  const match = predicateMatch({
-    rule: 'attack-consume', node: 'attack-consume',
-    left: pig, right: hit,
-    params: { fields: ['color'], op: 'eq' },
-  });
-  if (!match) return;
-
-  const next = consumeResource({
-    rule: 'attack-consume', node: 'attack-consume',
-    agent: pig, target: hit,
-    params: { 'agent-field': 'ammo', 'target-field': 'durability' },
-  });
-  Object.assign(pig, next.agent);
-  Object.assign(hit, next.target);
-}
-```
-
-**禁止模式**（`check_implementation_contract.js` P1.4 会逐条扫描）：
-
-- ❌ 在业务代码里写 `blocks.find(b => b.color === pig.color)` —— 该语义归
-  `ray-cast + predicate-match`，必须走 runtime。
-- ❌ 手写循环沿着 `segmentId` 对整行/整列 `for (let r=0; r<rows; r++)` 扫描 —— 该语义
-  归 `ray-cast.coord-system=grid`。
-- ❌ 手写 `pig.ammo--; block.durability--` —— 该语义归 `resource-consume`，必须透传
-  `agent-field / target-field`。
-- ❌ 手写 FSM：`if (state.phase === 'start' && event === 'click') state.phase = 'playing'`
-  —— 该语义归 `fsm-transition`，必须用 `fireTrigger({currentState, trigger, params})`。
-- ❌ 手写 `state.win = true` / `state.lose = true` —— 该语义归 `win-lose-check`，必须
-  用 `checkWinLose({state, params})` 返回值驱动。
-- ❌ 手写 `state.score += 10` —— 必须走 `accumulateScore({currentScore, eventPayload, params})`。
-- ❌ 手写 `if (now - state.lastSpawnTime > cooldown)` / `state.nextSpawnTime = now + ...` /
-  `setTimeout(spawn, gap)` 作为生成节流 —— 该语义归 `cooldown-dispatch@v1`，必须用
-  `requestDispatch({now, lastDispatchAt, params, event})` 的返回值决定是否 dispatch，
-  并把 `result.next-state.lastDispatchAt` 回写。任何 `lastSpawnTime` / `nextSpawnTime`
-  类手写字段都会被 P1.4 call-site gate 视为未调用。
-- ❌ 手写 `if (entity.phase === 'x' && event === 'y') entity.phase = 'z'` 管理生命周期
-  状态 —— 该语义归 `entity-lifecycle@v1` (`transitionLifecycle`) 或 `fsm-transition@v1`
-  (`fireTrigger`)，必须透传 transitions 数组。
-- ❌ 手写 `slot.occupied = true` / `pool.push(id)` 管理 slot-pool —— 必须用
-  `bindSlot` / `unbindSlot`。
-- ❌ 手写 `state.activeCount++` / `if (activeCount >= capacity)` 管理 capacity-gate
-  —— 必须用 `requestCapacity` / `releaseCapacity`。
-- ❌ 只 `import { requestDispatch }` 却不在业务代码里调用它 —— P1.4 call-site gate
-  会静态检测（剥注释、剥 import、剥 `_common/primitives/**`），不能用 JSDoc 示例
-  或 import 语句本身通过检查。
-- ❌ 手写 `window.__trace.push({rule: 'xxx'})` —— runtime 内部自动推送；业务代码
-  只能消费 `window.__trace`（测试可读），不得写入。
-
-**LLM 职责收窄**：
-- wiring（哪个 event 在哪个 tick 触发哪个 primitive）
-- UI 渲染（asset binding、layout、text）
-- 特殊非 primitive 的 scene/boot 逻辑
-
-**LLM 不再负责**：primitive 内部算法、trace 推送、before/after 快照。
-
-**引擎例外**：three 过渡期允许不 import runtime；Deliverable C 会改成只豁免
-空间几何 primitive。dom-ui 已纳入逻辑层 mandatory runtime，只有
-`parametric-track@v1` / `ray-cast@v1` / `grid-step@v1` / `grid-board@v1` /
-`neighbor-query@v1` 暂不适用。canvas / pixijs / phaser3 无例外。
+固定 runtime 库已移除。codegen 只在本 case 内为 mechanics.yaml 的每个 node 动态生成 `game/src/mechanics/<node-id>.runtime.mjs`，业务代码 import 对应 wrapper 并传入 `{ rule, node, state, action }` 或等价上下文。wrapper 负责执行该 node 的状态变更、生成 `{ type, rule, node, before, after }` trace，并保持函数名/签名由本 case 自定义。具体生成规范在后续 patch-codegen 阶段统一收敛；本批不再要求固定 API 映射。
 
 ### Step 4.1：识别需要的通用系统模块
 
@@ -957,27 +826,24 @@ node game_skill/skills/scripts/check_asset_usage.js   cases/{slug}/
 
 | runtime | 必须做的事 |
 |---|---|
-| dom-ui | 单向 state→render，禁止事件处理直接改 DOM；primitive-backed 模板默认 `run-mode=local-http`；无 runtime import 的纯静态页才可 `file` |
+| dom-ui | 单向 state→render，禁止事件处理直接改 DOM；默认 `run-mode=local-http`；纯静态页才可 `file` |
 | canvas | `update(state, dt)` 与 `draw(ctx, state)` 严格分离；简单项目默认 `run-mode=file` |
 | phaser3 | 默认 `run-mode=local-http`；CDN pin `phaser@3`；`window.game` 暴露；Container 交互必须 `setSize` 或显式 hitArea |
 | pixijs | 默认 `run-mode=local-http`；`await app.init()`；`app.canvas` 非 `app.view` |
 | three | 默认 `run-mode=local-http`；**必须** importmap pin `three@0.160` 且位于 head 中 `<script type="module">` 之前；`window.app = { renderer, camera, active }` 暴露；只能用 ESM `import * as THREE from "three"`，禁 `require("three")` 与 `three@latest`；每帧不要 new 几何体/材质；至少一盏光（HemisphereLight + DirectionalLight）；相机离开原点（如 `camera.position.set(0, 4, 8)`）避免卡在物体里 |
 
-### Step 6.1：玩法原语落地规则
+### Step 6.1：动态 mechanics 落地规则
 
-这些规则来自 mechanics 层，不是可选建议。**canvas / pixijs / phaser3** 上这些规则由
-`_common/primitives/*.runtime.mjs` runtime 库强制实现，业务代码只做 wiring（见 §4.0.6）；
-**dom-ui** 上逻辑/资源/状态/生命周期 primitive 也必须走 runtime，空间/运动 primitive
-仍由业务代码按 DOM 布局手写并保留 trace 证据；three 仍在过渡期。
+这些规则来自 mechanics 层，不是可选建议。业务代码不得无视 `mechanics.yaml` 自写另一套玩法；每个 node 都必须通过本 case 的 `game/src/mechanics/<node-id>.runtime.mjs` wrapper 落地。
 
-- `parametric-track.shape=rect-loop`：画棋盘四周的直角闭环。Canvas 禁用 `ctx.arc()` 画轨道；DOM/Phaser/Pixi 禁用圆形 path 代替外圈。
-- `parametric-track + grid-projection`：每个运动 agent 必须维护 `gridPosition`，并随 `t/segmentId` 更新。canvas/pixijs/phaser3 用 `tickTrack({ agent, dt, params })` 推进。
-- `ray-cast.coord-system=grid`：射线从 `source.gridPosition + direction` 开始逐格扫描；禁止只根据 `segmentId` 从整行/整列固定起点扫。canvas/pixijs/phaser3 必须 `import { rayCastGridFirstHit } from './_common/primitives/index.mjs'`（或 `'../_common/...'`），禁止手写扫描循环。
-- `predicate-match(fields:[color])`：ray-cast 只返回第一个阻挡候选，颜色匹配在 predicate 层做；禁止先全局找同色块再攻击。canvas/pixijs/phaser3/dom-ui 必须用 `predicateMatch({ left, right, params })`。
-- `resource-consume`：扣除 `agent-field` 与 `target-field` 后再发事件，不能只改视觉。canvas/pixijs/phaser3/dom-ui 必须用 `consumeResource({ agent, target, params })`，禁止手写 `agent.ammo--`。
+- 每个 wrapper 负责一个 mechanics node，输入必须能拿到 `rule`、`node`、`before` 状态和触发 action。
+- wrapper 执行后必须写入 `window.__trace.push({ type, rule, node, before, after })`；业务代码本身禁止直接 push trace。
+- wrapper 文件路径必须与 `mechanics.yaml.mechanics[].runtime-module` 一致，并被业务代码 import。
+- 业务代码调用 wrapper 时必须包含 `node: "<mechanics-node-id>"` 字面量，便于静态 gate 绑定。
+- 特殊算法、运动、资源、胜负、状态机等实现由模型按本 case mechanics 自定义，不再从固定 API 表选择。
 - DOM UI：只初始化静态 shell 一次，tick 中做 keyed update；禁止在 `setInterval` / `requestAnimationFrame` 中整页 `innerHTML = ...`，否则会闪烁和丢事件绑定。
 - Phaser/Pixi：首屏必须真实可见，StartScene/入口要有标题或开始按钮，点击后进入 playing；不能只创建空 canvas 等待测试 hook。
-- Phaser：任何 `Container` 绑定 `pointerdown` 前必须 `setSize(w,h)` 或显式 `setInteractive(hitArea, callback)`。禁止对由 `createXxx()` 返回的 Container 在调用方直接 `setInteractive({ useHandCursor: true })`，因为真实点击会出现 hitAreaCallback 错误或无响应。
+- Phaser：任何 `Container` 绑定 `pointerdown` 前必须 `setSize(w,h)` 或显式 `setInteractive(hitArea, callback)`。禁止对由 `createXxx()` 返回的 Container 在调用方直接 `setInteractive({ useHandCursor: true })`。
 
 ### Step 7：hard-rule 落点校验
 
@@ -1040,7 +906,7 @@ node ${SKILL_DIR}/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG
 退出码必须为 0。除原有检查外，引擎项目还会校验：
 - `window.gameTest` 存在（Canvas/Pixi/Phaser/Three）
 - 点击开始按钮后 `phase` 能变为 `playing`（"能开始一局"）
-- boot-smoke 会在实机页面中发现一个真实可交互目标并点击；若已有 `rule-traces`，点击后必须看到 `window.__trace.length` 增长。这是 Phase 4 进入 Phase 5 前的左移验证，红灯时先修 codegen/template 的事件绑定或 runtime primitive 调用。
+- boot-smoke 会在实机页面中发现一个真实可交互目标并点击；若已有 `rule-traces`，点击后必须看到 `window.__trace.length` 增长。这是 Phase 4 进入 Phase 5 前的左移验证，红灯时先修 codegen/template 的事件绑定或 per-case runtime wrapper 调用。
 
 #### 8.3 契约、素材加载与消费校验（由 check_project 覆盖）
 
@@ -1118,7 +984,7 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"fix-applied","phase":"codegen"
 - [ ] JS 文件 `node --check` 全通过
 - [ ] 所有 hard-rule 在代码里有对应注释
 - [ ] 所有 `must-have-features` 有对应实现或显式降级说明
-- [ ] **`check_mechanics.js` 退出 0**（玩法 primitive DAG 可执行，至少一个 win/settle scenario 可达）
+- [ ] **`check_mechanics.js` 退出 0**（动态 mechanics DAG 结构完整，至少一个 win/settle scenario 可达）
 - [ ] **`check_project.js` 退出 0**（含引擎专属静态检查、implementation-contract、asset-selection、asset-usage）
 - [ ] **`check_game_boots.js` 退出 0**（游戏能启动 + 能开始一局）
 - [ ] `state.json` `codegen.status = "completed"`

@@ -1,0 +1,156 @@
+{
+  "case_id": "whack-a-mole-pixijs-min",
+  "description": "打地鼠 PixiJS 最小版 - 真实交互测试 profile",
+  "game_html_relative": "game/index.html",
+  "boot_timeout_ms": 5000,
+  "prd_hash": "307ff8ba5bf51241e2f863ee1214b4b2e756c7ed",
+  "prd_path": "cases/whack-a-mole-pixijs-min/docs/game-prd.md",
+  "assertions": [
+    {
+      "id": "boot-success",
+      "check_id": "boot-success",
+      "kind": "setup",
+      "description": "游戏启动 - 验证 gameState 暴露",
+      "setup": [
+        { "action": "wait", "ms": 500 }
+      ]
+    },
+    {
+      "id": "start-to-play",
+      "check_id": "start-to-play",
+      "kind": "interaction",
+      "description": "开始流程 - 点击开始按钮进入 playing 状态",
+      "setup": [
+        { "action": "click", "selector": "canvas", "options": { "position": { "x": 400, "y": 400 } } },
+        { "action": "wait", "ms": 500 }
+      ]
+    },
+    {
+      "id": "mole-hit-score",
+      "check_id": "mole-hit-score",
+      "kind": "interaction",
+      "description": "命中得分 - 等待地鼠出现并点击，score +1",
+      "setup": [
+        { "action": "click", "selector": "canvas", "options": { "position": { "x": 350, "y": 395 } } },
+        { "action": "wait", "ms": 500 },
+        { "action": "wait", "ms": 2000 },
+        { "action": "click", "selector": "canvas", "options": { "position": { "x": 288, "y": 190 } } },
+        { "action": "wait", "ms": 500 }
+      ]
+    },
+    {
+      "id": "mole-miss-count",
+      "check_id": "mole-miss-count",
+      "kind": "interaction",
+      "description": "失误计数 - 等待地鼠超时未点击，misses +1",
+      "setup": [
+        { "action": "click", "selector": "canvas", "options": { "position": { "x": 450, "y": 405 } } },
+        { "action": "wait", "ms": 500 },
+        { "action": "wait", "ms": 4500 }
+      ]
+    },
+    {
+      "id": "timer-end-gameover",
+      "check_id": "timer-end-gameover",
+      "kind": "interaction",
+      "description": "倒计时结束 - 验证 timer 机制",
+      "setup": [
+        { "action": "click", "selector": "canvas", "options": { "position": { "x": 380, "y": 410 } } },
+        { "action": "wait", "ms": 500 },
+        { "action": "click", "selector": "canvas", "options": { "position": { "x": 100, "y": 100 } } },
+        { "action": "wait", "ms": 300 }
+      ]
+    },
+    {
+      "id": "miss-limit-gameover",
+      "check_id": "miss-limit-gameover",
+      "kind": "interaction",
+      "description": "失误上限结束 - 连续漏掉地鼠直到 5 次失误",
+      "setup": [
+        { "action": "click", "selector": "canvas", "options": { "position": { "x": 420, "y": 390 } } },
+        { "action": "wait", "ms": 500 },
+        { "action": "wait", "ms": 30000 }
+      ]
+    },
+    {
+      "id": "restart-game",
+      "check_id": "restart-game",
+      "kind": "interaction",
+      "description": "重新开始 - 从结算页点击重开并重新开始游戏",
+      "setup": [
+        { "action": "click", "selector": "canvas", "options": { "position": { "x": 390, "y": 402 } } },
+        { "action": "wait", "ms": 500 },
+        { "action": "wait", "ms": 35000 },
+        { "action": "click", "selector": "canvas", "options": { "position": { "x": 400, "y": 380 } } },
+        { "action": "wait", "ms": 300 },
+        { "action": "click", "selector": "canvas", "options": { "position": { "x": 410, "y": 398 } } },
+        { "action": "wait", "ms": 500 }
+      ]
+    }
+  ],
+  "hard_rule_assertions": [
+    {
+      "id": "hard-rule-grid-size",
+      "hard_rule_id": "grid-size",
+      "kind": "hard-rule",
+      "description": "网格尺寸 - 验证 3x3 共 9 格",
+      "setup": [
+        { "action": "wait", "ms": 300 }
+      ]
+    },
+    {
+      "id": "hard-rule-miss-limit-value",
+      "hard_rule_id": "miss-limit-value",
+      "kind": "hard-rule",
+      "description": "失误上限 - 验证 missLimit = 5",
+      "setup": [
+        { "action": "wait", "ms": 300 }
+      ]
+    },
+    {
+      "id": "hard-rule-timer-value",
+      "hard_rule_id": "timer-value",
+      "kind": "hard-rule",
+      "description": "倒计时时长 - 验证 timeLeftMs 初始 60000",
+      "setup": [
+        { "action": "wait", "ms": 300 }
+      ]
+    },
+    {
+      "id": "hard-rule-no-multi-level",
+      "hard_rule_id": "no-multi-level",
+      "kind": "hard-rule",
+      "description": "禁止多关卡 - 代码中无 level/floor 概念",
+      "setup": [
+        { "action": "wait", "ms": 100 }
+      ]
+    },
+    {
+      "id": "hard-rule-no-difficulty-scaling",
+      "hard_rule_id": "no-difficulty-scaling",
+      "kind": "hard-rule",
+      "description": "禁止难度递增 - 无随时间增加难度的代码",
+      "setup": [
+        { "action": "wait", "ms": 100 }
+      ]
+    },
+    {
+      "id": "hard-rule-no-sound",
+      "hard_rule_id": "no-sound",
+      "kind": "hard-rule",
+      "description": "禁止音效 - 无 Audio/Sound 相关代码",
+      "setup": [
+        { "action": "wait", "ms": 100 }
+      ]
+    },
+    {
+      "id": "hard-rule-no-leaderboard",
+      "hard_rule_id": "no-leaderboard",
+      "kind": "hard-rule",
+      "description": "禁止排行榜 - 无排行榜相关代码",
+      "setup": [
+        { "action": "wait", "ms": 100 }
+      ]
+    }
+  ]
+}

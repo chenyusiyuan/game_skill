@@ -54,7 +54,7 @@ Phase 5 必须先区分本轮是“分层诊断”还是“最终回归”：
 
 | 层 | 脚本 | 预算 | 理由 |
 |---|---|---|---|
-| 玩法语义 | `check_mechanics.js` | Phase 3/4 前置 | primitive DAG 可执行，至少一个 win/settle scenario 可达 |
+| 玩法语义 | `check_mechanics.js` | Phase 3/4 前置 | 动态 mechanics DAG 连通，至少一个 win/settle scenario 声明可达 |
 | 冒烟 | `check_game_boots.js` | ≤ 2 轮 | 最低门槛：游戏能起、无 console error、gameState 暴露 |
 | 工程侧 | `check_project.js` | ≤ 3 轮 | 启动错、语法错、资源错，以及 contract / asset-selection / asset-usage gate |
 | profile runner 冒烟 | `check_profile_runner_smoke.js` | ≤ 1 轮 | 用最小 setup 证明 runner 能识别真实 click shape 且 trace 会增长 |
@@ -73,7 +73,7 @@ node ${SKILL_DIR}/scripts/check_mechanics.js cases/${PROJECT}
 
 通过标准：
 
-- `mechanics.yaml` 只使用已登记 primitive
+- `mechanics.yaml` 使用 version: 2 / mode: dynamic-generated
 - `grid-board + grid-projection track` 使用 `rect-loop`，不是 `ring`
 - `ray-cast.coord-system=grid` 的上游 source 有 `gridPosition`
 - hard-rule 全部映射到 invariant/field/nodes
@@ -103,7 +103,7 @@ node ${SKILL_DIR}/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG
 | local-http 模式仍有 net error | 资源路径、import 路径、server root 不对 | 修正相对路径和入口 |
 | body.innerText 为空 | 启动时抛 pageerror 阻塞渲染 | 读 pageerror 定位文件+行号 |
 | gameState undefined | 未暴露 `window.gameState = state` | 在 state 初始化后补上 |
-| BOOT-SMOKE trace 不增长 | UI 目标没绑 click/pointer handler，或 handler 没调用 runtime primitive | 回 Phase 4 修 codegen/template，不要先改 profile |
+| BOOT-SMOKE trace 不增长 | UI 目标没绑 click/pointer handler，或 handler 没调用 per-case runtime wrapper | 回 Phase 4 修 codegen/template，不要先改 profile |
 
 ### Step 2：工程侧校验
 
