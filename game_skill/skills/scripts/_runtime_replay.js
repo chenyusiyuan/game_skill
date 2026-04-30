@@ -79,6 +79,10 @@ function shallowEqualArrays(a, b, keyFn = (x) => x) {
   return a.every((x, i) => keyFn(x) === keyFn(b[i]));
 }
 
+function deepEqual(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 function verifyResourceConsume(ev, reducer, params) {
   const { before, after } = ev;
   const agent = before?.agent;
@@ -110,12 +114,12 @@ function verifyResourceConsume(ev, reducer, params) {
 
 function verifyPredicateMatch(ev, reducer, params) {
   const { before, after } = ev;
-  const candidate = before?.candidate;
-  const filter = before?.filter;
-  if (candidate === undefined) return { ok: null, reason: "缺 before.candidate" };
+  const left = before?.left ?? before?.candidate;
+  const right = before?.right ?? before?.filter;
+  if (left === undefined || right === undefined) return { ok: null, reason: "缺 before.left/right" };
   const result = reducer.step(
-    { candidate, filter },
-    { type: "evaluate" },
+    {},
+    { type: "evaluate", left, right },
     params,
   );
   const expected = Boolean(result.matched ?? result.ok);
@@ -130,10 +134,11 @@ function verifyScoreAccum(ev, reducer, params) {
   const { before, after } = ev;
   const currentScore = Number(before?.score ?? 0);
   const eventPayload = before?.event;
-  if (!eventPayload) return { ok: null, reason: "缺 before.event" };
+  const eventType = before?.eventType ?? (typeof eventPayload === "string" ? eventPayload : eventPayload?.type);
+  if (!eventType) return { ok: null, reason: "缺 before.eventType / before.event.type" };
   const result = reducer.step(
     { score: currentScore },
-    { type: "event", event: eventPayload },
+    { type: "event", event: eventType, payload: eventPayload },
     params,
   );
   const expected = Number.isFinite(result.score) ? result.score : currentScore;
@@ -151,12 +156,12 @@ function verifyFsmTransition(ev, reducer, params) {
     return { ok: null, reason: "缺 before.currentState/trigger" };
   }
   const result = reducer.step(
-    { currentState },
+    { state: currentState },
     { type: "trigger", trigger },
     params,
   );
-  const expected = result.currentState ?? currentState;
-  const actual = after?.currentState;
+  const expected = result.state ?? currentState;
+  const actual = after?.currentState ?? after?.state;
   if (expected !== actual) {
     return { ok: false, reason: `currentState: expected ${expected}, got ${actual}` };
   }
@@ -166,7 +171,7 @@ function verifyFsmTransition(ev, reducer, params) {
 function verifyWinLoseCheck(ev, reducer, params) {
   const { before, after } = ev;
   if (!before) return { ok: null, reason: "缺 before state snapshot" };
-  const result = reducer.step(before, { type: "evaluate" }, params);
+  const result = reducer.step(before, { type: "evaluate", ctx: before }, params);
   const expected = result.verdict ?? result.outcome ?? null;
   const actual = after?.verdict ?? null;
   if (expected !== actual) {
@@ -180,13 +185,15 @@ function verifyCapacityGate(ev, reducer, params) {
   const gate = before?.gate;
   const entityId = before?.entityId;
   if (!gate || !entityId) return { ok: null, reason: "缺 before.gate/entityId" };
+  const actionType = before?.action ?? before?.type ?? (after?.released ? "release" : "request");
   const result = reducer.step(
     { gate },
-    { type: "request", entityId },
+    { type: actionType, entityId },
     params,
   );
   const expectedAdmitted = (result._events ?? []).some((e) => e.type === "capacity.admitted");
   const expectedBlocked = (result._events ?? []).some((e) => e.type === "capacity.blocked");
+  const expectedReleased = (result._events ?? []).some((e) => e.type === "capacity.released");
   if (expectedAdmitted !== Boolean(after?.admitted)) {
     return {
       ok: false,
@@ -197,6 +204,18 @@ function verifyCapacityGate(ev, reducer, params) {
     return {
       ok: false,
       reason: `blocked: expected ${expectedBlocked}, got ${after?.blocked}`,
+    };
+  }
+  if (expectedReleased !== Boolean(after?.released)) {
+    return {
+      ok: false,
+      reason: `released: expected ${expectedReleased}, got ${after?.released}`,
+    };
+  }
+  if (!deepEqual(result.gate, after?.gate)) {
+    return {
+      ok: false,
+      reason: `gate: expected ${JSON.stringify(result.gate)}, got ${JSON.stringify(after?.gate)}`,
     };
   }
   return { ok: true };
@@ -242,21 +261,30 @@ function verifySlotPool(ev, reducer, params) {
   const { before, after } = ev;
   const pool = before?.pool;
   if (!pool) return { ok: null, reason: "缺 before.pool" };
-  // 不做 action 复算（需要 action kind，runtime 会填 after.events[0].type 判断），
-  // 只校 capacity 不变 + occupant 集合差异在合理范围
-  const beforeOccupied = (pool.slots ?? []).filter((s) => s.occupantId).map((s) => s.occupantId);
+  const eventType = after?.events?.[0]?.type;
+  const actionType = before?.action ?? before?.type ?? (eventType === "pool.unbound" ? "unbind" : "bind");
+  const occupantId = before?.occupantId ?? after?.events?.[0]?.occupantId;
+  const slotId = before?.slotId ?? after?.events?.[0]?.slotId;
   const afterPool = after?.pool;
   if (!afterPool) return { ok: null, reason: "缺 after.pool" };
-  if ((afterPool.capacity ?? pool.capacity) !== pool.capacity) {
+  const result = reducer.step(
+    { pool },
+    { type: actionType, occupantId, slotId },
+    params,
+  );
+  if (!deepEqual(result.pool, afterPool)) {
     return {
       ok: false,
-      reason: `capacity 变化: ${pool.capacity} → ${afterPool.capacity}`,
+      reason: `pool: expected ${JSON.stringify(result.pool)}, got ${JSON.stringify(afterPool)}`,
     };
   }
-  const afterOccupied = (afterPool.slots ?? []).filter((s) => s.occupantId).map((s) => s.occupantId);
-  const diff = Math.abs(afterOccupied.length - beforeOccupied.length);
-  if (diff > 1) {
-    return { ok: false, reason: `单次 step 改动 occupant 数 > 1 (${diff})` };
+  const expectedEvents = (result._events ?? []).map((e) => e.type);
+  const actualEvents = (after?.events ?? []).map((e) => e.type);
+  if (!shallowEqualArrays(expectedEvents, actualEvents)) {
+    return {
+      ok: false,
+      reason: `events: expected ${expectedEvents.join(",")}, got ${actualEvents.join(",")}`,
+    };
   }
   return { ok: true };
 }

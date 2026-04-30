@@ -69,9 +69,12 @@ const GATES = {
       "specs/implementation-contract.yaml",
     ],
     checks: [
+      ["check_spec_clarifications.js", caseDir],
       ["check_mechanics.js", caseDir],
       ["check_asset_selection.js", caseDir],
       ["check_implementation_contract.js", caseDir, "--stage", "expand"],
+      ["check_visual_slots.js", caseDir],
+      ["check_level_solvability.js", caseDir],
     ],
   },
 
@@ -84,6 +87,7 @@ const GATES = {
       ["check_project.js", gameDir],
       ["check_game_boots.js", gameDir],
       ["check_implementation_contract.js", caseDir, "--stage", "codegen"],
+      ["check_visual_slots.js", caseDir],
       ["check_runtime_semantics.js", caseDir],
     ],
   },

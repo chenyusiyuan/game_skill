@@ -250,14 +250,18 @@ const registry = await createRegistry(manifest);
 拿资源统一走 `registry.getTexture(id)` / `getSpritesheet(id)` / `getAudio(id)`。
 
 **P1.6 runtime evidence**：每次 `registry.getTexture / getSpritesheet / getAudio` 被业务
-代码调用时，canvas / pixijs adapter 内部自动 `recordAssetUsage(...)` 把一条
-entry push 到 `window.__assetUsage`（带 bindingTo / visualPrimitive / colorSource
-/ 业务传的 `extra`）。check_asset_usage.js 的 runtime 层会读取它，要求每个
-`must-render=true` 的 asset 在 Playwright 实际跑游戏后至少出现一次——比 grep
-静态消费更硬。业务代码对 color-block / color-unit **建议**把当前颜色传进 extra：
+代码调用时，adapter 内部自动 `recordAssetUsage(...)` 记录 `requested`。但
+`must-render=true` 不能停在 requested：真正渲染时必须使用 engine wrapper 或
+`recordAssetRendered/recordAssetVisible` 记录 `rendered/visible`。
+`check_asset_usage.js` 的 runtime 层会读取 `window.__assetUsage`，要求视觉素材至少
+`requested + rendered`，核心视觉素材还要 `visible`。业务代码对 color-block /
+color-unit **建议**把当前颜色传进 extra：
 
 ```js
 registry.getTexture('pig-red', { color: pig.color });
+registry.addSprite(container, 'pig-red', { entityId: pig.id, width: 32, height: 32 });
+registry.addImage('pig-red', x, y, { entityId: pig.id, width: 32, height: 32 });
+registry.addObject(scene, 'hero-model', { entityId: hero.id, width: 1, height: 1 });
 ```
 
 **Phaser 例外**：由于 Phaser Loader 生命周期要求素材在 `preload()` 阶段注册，Phaser 模板**必须**使用两段式 registry（禁止单段式）：

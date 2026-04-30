@@ -80,7 +80,8 @@ if (importMapMatch) {
 // 5. 本地 script 文件存在
 const localScripts = cdnScripts.filter((s) => !/^https?:\/\//.test(s));
 for (const rel of localScripts) {
-  const p = resolve(dirname(htmlPath), rel);
+  const relPath = rel.split(/[?#]/)[0];
+  const p = resolve(dirname(htmlPath), relPath);
   if (!existsSync(p)) fail(`本地脚本不存在: ${rel}`);
   else ok(`本地脚本存在: ${rel}`);
 }

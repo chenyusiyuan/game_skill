@@ -5,8 +5,11 @@
  *   import { checkWinLose } from '../_common/primitives/win-lose-check.runtime.mjs';
  *   const verdict = checkWinLose({
  *     rule: 'check-outcome', node: 'outcome',
- *     state: { aliveBlocks: state.blocks.filter(b => b.alive).length,
- *              pigAmmo: state.pigs.reduce((s,p) => s + p.ammo, 0) },
+ *     state: {
+ *       collections: { blocks: state.blocks, pigs: state.pigs },
+ *       fields: { 'game.score': state.score, 'game.misses': state.misses },
+ *       elapsedMs: Date.now() - state.startedAt,
+ *     },
  *     params: winLoseParams,
  *   });
  *   if (verdict === 'win') ...

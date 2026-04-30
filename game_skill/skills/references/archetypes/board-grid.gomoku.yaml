@@ -1,0 +1,56 @@
+archetype-id: board-grid.gomoku
+description: Turn-based line-forming board preset for gomoku / five-in-a-row variants.
+archetype-plan:
+  genre: board-grid
+  intent: place tokens on empty cells, alternate actors, detect contiguous line terminal states
+mechanics-preset:
+  primitives:
+    - capacity-gate@v1
+    - grid-board@v1
+    - neighbor-query@v1
+    - predicate-match@v1
+    - win-lose-check@v1
+  required-rules:
+    - place-token
+    - alternate-turn
+    - line-detect
+    - terminal-check
+data-schema:
+  required:
+    - grid
+    - actors
+    - solution-path
+  grid:
+    width: 15
+    height: 15
+    cell-fields: [id, row, col, occupant]
+visual-slots-preset:
+  slots:
+    - id: entity.board-cell.primary
+      semantic-slot: board-cell
+      render-zone: board-grid-cell
+    - id: entity.token.primary
+      semantic-slot: color-unit
+      render-zone: board-grid-cell
+      state-driven-fields: [owner]
+runtime-modules:
+  - capacity-gate.runtime.mjs
+  - grid-board.runtime.mjs
+  - neighbor-query.runtime.mjs
+  - predicate-match.runtime.mjs
+  - win-lose-check.runtime.mjs
+semantic-probes:
+  - occupied-cell-rejected
+  - five-line-terminal
+profile-skeleton:
+  drivers: [clickStartButton, clickBoardCell]
+  observers: [getSnapshot, getTrace, getAssetUsage]
+  steps:
+    - click-start
+    - click-empty-cell
+    - assert-token-placed
+gate-policy:
+  must-pass:
+    - check_level_solvability.js
+    - check_playthrough.js
+    - check_runtime_semantics.js

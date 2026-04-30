@@ -1,0 +1,55 @@
+archetype-id: board-grid.memory-match
+description: Card flip and pair-matching board preset with reveal, compare, consume, and completion checks.
+archetype-plan:
+  genre: board-grid
+  intent: reveal two hidden cards, match by semantic value, keep matched pairs, hide mismatches
+mechanics-preset:
+  primitives:
+    - capacity-gate@v1
+    - entity-lifecycle@v1
+    - predicate-match@v1
+    - slot-pool@v1
+    - win-lose-check@v1
+  required-rules:
+    - reveal-card
+    - compare-open-pair
+    - settle-pair
+    - terminal-check
+data-schema:
+  required:
+    - cards
+    - solution-path
+  collections:
+    cards:
+      fields: [id, row, col, pairId, lifecycle]
+visual-slots-preset:
+  slots:
+    - id: entity.card.front
+      semantic-slot: card-face
+      render-zone: board-grid-cell
+      state-driven-fields: [pairId]
+    - id: entity.card.back
+      semantic-slot: card-back
+      render-zone: board-grid-cell
+runtime-modules:
+  - capacity-gate.runtime.mjs
+  - entity-lifecycle.runtime.mjs
+  - predicate-match.runtime.mjs
+  - slot-pool.runtime.mjs
+  - win-lose-check.runtime.mjs
+semantic-probes:
+  - third-card-blocked
+  - mismatch-hides-pair
+profile-skeleton:
+  drivers: [clickStartButton, clickCard]
+  observers: [getSnapshot, getTrace, getAssetUsage]
+  steps:
+    - click-start
+    - click-first-card
+    - click-second-card
+    - assert-pair-state
+gate-policy:
+  must-pass:
+    - check_level_solvability.js
+    - check_playthrough.js
+    - check_runtime_semantics.js

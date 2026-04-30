@@ -9,6 +9,8 @@
  * Entry shape:
  *   {
  *     id:            string                    // registry id
+ *     assetId:       string                    // alias of id
+ *     phase:         'requested'|'rendered'|'visible'
  *     section:       'images'|'spritesheets'|'audio'
  *     kind:          'texture'|'spritesheet'|'audio'
  *     bindingTo:     string | null             // 来自 manifest 的 binding-to（可选）
@@ -41,18 +43,33 @@ function getSink() {
 
 export function recordAssetUsage({
   id,
+  assetId = null,
+  phase = "requested",
   section,
   kind = null,
   manifestItem = null,
   bindingTo = null,
   visualPrimitive = null,
   colorSource = null,
+  slotId = null,
+  entityId = null,
+  semanticSlot = null,
+  renderZone = null,
+  x = null,
+  y = null,
+  width = null,
+  height = null,
+  visible = null,
+  source = null,
   extra = null,
 } = {}) {
   const sink = getSink();
-  if (!sink || !id) return;
+  const resolvedId = id ?? assetId;
+  if (!sink || !resolvedId) return;
   const entry = {
-    id,
+    id: resolvedId,
+    assetId: resolvedId,
+    phase,
     section: section ?? null,
     kind,
     bindingTo: bindingTo ?? manifestItem?.["binding-to"] ?? manifestItem?.bindingTo ?? null,
@@ -60,10 +77,68 @@ export function recordAssetUsage({
       visualPrimitive ?? manifestItem?.["visual-primitive"] ?? manifestItem?.visualPrimitive ?? null,
     colorSource:
       colorSource ?? manifestItem?.["color-source"] ?? manifestItem?.colorSource ?? null,
+    slotId,
+    entityId,
+    semanticSlot,
+    renderZone,
+    x,
+    y,
+    width,
+    height,
+    visible,
+    source,
     at: resolveNow(),
     extra,
   };
   sink.push(entry);
+}
+
+export function recordAssetRendered(opts = {}) {
+  recordAssetUsage({ ...opts, phase: "rendered" });
+}
+
+export function recordAssetVisible(opts = {}) {
+  recordAssetUsage({ ...opts, phase: "visible", visible: opts.visible ?? true });
+}
+
+export function hasVisibleArea({ width = null, height = null, visible = true } = {}) {
+  return visible !== false && Number(width) > 0 && Number(height) > 0;
+}
+
+export function recordAssetRenderEvidence(opts = {}) {
+  const {
+    id,
+    assetId = id,
+    section = "images",
+    kind = "rendered-asset",
+    width = null,
+    height = null,
+    visible = true,
+  } = opts;
+  recordAssetRendered({ ...opts, id: assetId, section, kind, visible });
+  if (hasVisibleArea({ width, height, visible })) {
+    recordAssetVisible({ ...opts, id: assetId, section, kind, visible: true });
+  }
+}
+
+/**
+ * Minimal cross-engine render evidence helper. Business code may wrap a real
+ * draw/DOM insertion call so checker can distinguish request from render.
+ */
+export function renderSlot(opts = {}) {
+  const {
+    id,
+    assetId = id,
+    draw,
+    section = "images",
+    kind = "render-slot",
+    width,
+    height,
+    visible = true,
+  } = opts;
+  recordAssetUsage({ ...opts, id: assetId, section, kind, phase: "requested" });
+  if (typeof draw === "function") draw();
+  recordAssetRenderEvidence({ ...opts, id: assetId, section, kind, width, height, visible });
 }
 
 /**

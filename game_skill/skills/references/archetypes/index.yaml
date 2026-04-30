@@ -1,0 +1,10 @@
+archetype-index-version: 1
+presets:
+  - id: quiz-rule
+    path: quiz-rule.yaml
+  - id: board-grid.2048
+    path: board-grid.2048.yaml
+  - id: board-grid.gomoku
+    path: board-grid.gomoku.yaml
+  - id: board-grid.memory-match
+    path: board-grid.memory-match.yaml

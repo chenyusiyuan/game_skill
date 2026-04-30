@@ -15,7 +15,7 @@
  */
 
 import * as THREE from "three";
-import { resolveFxParams } from "../../../_common/fx.spec.js";
+import { resolveFxParams } from "../_common/fx.spec.js";
 
 export function createFx({ scene, camera, renderer } = {}) {
   if (!scene || !camera || !renderer) {

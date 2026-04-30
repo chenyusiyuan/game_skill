@@ -6,8 +6,8 @@
  * getTexture(id) 拿到 Image，直接 ctx.drawImage(img, x, y) 使用。
  */
 
-import { validateManifest, buildStats } from "../../../_common/registry.spec.js";
-import { recordAssetUsage } from "../../../_common/asset-usage.js";
+import { validateManifest, buildStats } from "../_common/registry.spec.js";
+import { recordAssetUsage } from "../_common/asset-usage.js";
 
 export async function createRegistry(manifest) {
   const { ok, errors } = validateManifest(manifest);

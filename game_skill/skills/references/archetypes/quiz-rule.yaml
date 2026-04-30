@@ -1,0 +1,47 @@
+archetype-id: quiz-rule
+description: Rule-driven quiz / edu-practice preset for question, answer, feedback, and terminal checks.
+archetype-plan:
+  genre: edu-practice
+  intent: map questions to validated answer attempts and feedback events
+mechanics-preset:
+  primitives:
+    - predicate-match@v1
+    - score-accum@v1
+    - win-lose-check@v1
+  required-rules:
+    - answer-submit
+    - answer-evaluate
+    - terminal-check
+data-schema:
+  required:
+    - questions
+    - answerKey
+  collections:
+    questions:
+      fields: [id, prompt, options, correctAnswer]
+visual-slots-preset:
+  slots:
+    - id: entity.question-card.primary
+      semantic-slot: card-surface
+      render-zone: playfield
+    - id: entity.answer-option.primary
+      semantic-slot: button
+      render-zone: ui
+runtime-modules:
+  - predicate-match.runtime.mjs
+  - score-accum.runtime.mjs
+  - win-lose-check.runtime.mjs
+semantic-probes:
+  - answer-match
+profile-skeleton:
+  drivers: [clickStartButton, clickAnswerOption]
+  observers: [getSnapshot, getTrace, getAssetUsage]
+  steps:
+    - click-start
+    - click-correct-answer
+    - assert-score-increased
+gate-policy:
+  must-pass:
+    - check_level_solvability.js
+    - check_playthrough.js
+    - check_runtime_semantics.js

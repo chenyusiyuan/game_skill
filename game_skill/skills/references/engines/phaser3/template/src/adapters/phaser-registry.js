@@ -17,7 +17,7 @@
  */
 
 import { validateManifest, buildStats } from "../_common/registry.spec.js";
-import { recordAssetUsage } from "../_common/asset-usage.js";
+import { recordAssetUsage, recordAssetRenderEvidence } from "../_common/asset-usage.js";
 
 export function preloadRegistryAssets(manifest, { scene } = {}) {
   const { ok, errors } = validateManifest(manifest);
@@ -91,8 +91,51 @@ export function createRegistry(manifest, { scene } = {}) {
     }
   }
 
-  return {
-    getTexture(id, extra = null) {
+  function recordPhaserGameObject(id, gameObject, opts = {}) {
+    const manifestItem = opts.section === "spritesheets"
+      ? manifestSheetById.get(id)
+      : manifestImageById.get(id);
+    const width = Number(opts.width ?? gameObject?.displayWidth ?? gameObject?.width ?? 0);
+    const height = Number(opts.height ?? gameObject?.displayHeight ?? gameObject?.height ?? 0);
+    const visible = opts.visible ?? (
+      gameObject?.visible !== false &&
+      Number(gameObject?.alpha ?? 1) > 0
+    );
+    recordAssetRenderEvidence({
+      id,
+      section: opts.section ?? "images",
+      kind: opts.kind ?? "phaser-game-object",
+      manifestItem,
+      slotId: opts.slotId ?? null,
+      entityId: opts.entityId ?? null,
+      semanticSlot: opts.semanticSlot ?? null,
+      renderZone: opts.renderZone ?? null,
+      x: opts.x ?? gameObject?.x ?? null,
+      y: opts.y ?? gameObject?.y ?? null,
+      width,
+      height,
+      visible,
+      source: opts.source ?? "phaser-registry.recordGameObject",
+      extra: opts.extra ?? null,
+    });
+  }
+
+  function applyGameObjectOptions(gameObject, opts = {}) {
+    if (!gameObject) return gameObject;
+    if (Number.isFinite(Number(opts.width)) && Number.isFinite(Number(opts.height)) &&
+        typeof gameObject.setDisplaySize === "function") {
+      gameObject.setDisplaySize(Number(opts.width), Number(opts.height));
+    }
+    if (Number.isFinite(Number(opts.alpha)) && typeof gameObject.setAlpha === "function") {
+      gameObject.setAlpha(Number(opts.alpha));
+    }
+    if (typeof opts.visible === "boolean" && typeof gameObject.setVisible === "function") {
+      gameObject.setVisible(opts.visible);
+    }
+    return gameObject;
+  }
+
+  function getTexture(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
       if (e.loaded && !e.error && scene.textures.exists(id)) {
@@ -106,8 +149,9 @@ export function createRegistry(manifest, { scene } = {}) {
         return scene.textures.get(id);
       }
       return null;
-    },
-    getSpritesheet(id, extra = null) {
+  }
+
+  function getSpritesheet(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
       if (e.loaded && !e.error && scene.textures.exists(id)) {
@@ -121,8 +165,9 @@ export function createRegistry(manifest, { scene } = {}) {
         return scene.textures.get(id);
       }
       return null;
-    },
-    getAudio(id, extra = null) {
+  }
+
+  function getAudio(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
       if (e.loaded && !e.error && scene.cache.audio.exists(id)) {
@@ -136,6 +181,37 @@ export function createRegistry(manifest, { scene } = {}) {
         return scene.sound.add(id);
       }
       return null;
+  }
+
+  return {
+    getTexture,
+    getSpritesheet,
+    getAudio,
+    addImage(id, x = 0, y = 0, opts = {}) {
+      if (!getTexture(id, opts.extra ?? null)) return null;
+      const image = applyGameObjectOptions(scene.add.image(x, y, id), opts);
+      recordPhaserGameObject(id, image, {
+        ...opts,
+        x,
+        y,
+        source: opts.source ?? "phaser-registry.addImage",
+      });
+      return image;
+    },
+    addSprite(id, x = 0, y = 0, opts = {}) {
+      if (!getTexture(id, opts.extra ?? null)) return null;
+      const sprite = applyGameObjectOptions(scene.add.sprite(x, y, id), opts);
+      recordPhaserGameObject(id, sprite, {
+        ...opts,
+        x,
+        y,
+        source: opts.source ?? "phaser-registry.addSprite",
+      });
+      return sprite;
+    },
+    recordGameObject(id, gameObject, opts = {}) {
+      recordPhaserGameObject(id, gameObject, opts);
+      return gameObject;
     },
     has(id) {
       const e = entries.get(id);

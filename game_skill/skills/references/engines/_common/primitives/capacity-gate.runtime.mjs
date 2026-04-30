@@ -17,7 +17,7 @@ import { pushTraceEvent, snapshot } from "./_trace.mjs";
 
 function runStep(ctx, type) {
   const { rule, node = null, gate, entityId, params = {} } = ctx;
-  const before = { gate: snapshot(gate), entityId };
+  const before = { gate: snapshot(gate), entityId, action: type };
   const next = gateStep({ gate }, { type, entityId }, params);
   const events = next._events ?? [];
   const admitted = events.some((e) => e.type === "capacity.admitted");

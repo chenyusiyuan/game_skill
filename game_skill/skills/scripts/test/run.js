@@ -7,7 +7,7 @@
  */
 
 import { execSync, spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, readdirSync, statSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
@@ -82,6 +82,88 @@ console.log("\n[phase-plan] staged execution boundaries");
       blocked = /phase boundary/.test(e.message);
     }
     assert(blocked, "mechanics-only 应阻止 scene/rule/data/assets 等完整 expand subtask");
+  });
+}
+
+// =============================
+// Phase gate wiring
+// =============================
+console.log("\n[phase-gate] expand gate wiring");
+test("run_phase_gate expand includes clarification and solvability gates", () => {
+  const src = readFileSync(join(scriptsDir, "run_phase_gate.js"), "utf-8");
+  const expandBlock = src.match(/expand:\s*\{[\s\S]*?\n\s*\},\n\s*codegen:/)?.[0] ?? "";
+  const codegenBlock = src.match(/codegen:\s*\{[\s\S]*?\n\s*\},\n\s*verify:/)?.[0] ?? "";
+  assert(/check_spec_clarifications\.js/.test(expandBlock), "expand gate 应跑 check_spec_clarifications.js");
+  assert(/check_level_solvability\.js/.test(expandBlock), "expand gate 应提前跑 check_level_solvability.js");
+  assert(/check_visual_slots\.js/.test(expandBlock), "expand gate 应跑 check_visual_slots.js");
+  assert(/check_visual_slots\.js/.test(codegenBlock), "codegen gate 应跑 check_visual_slots.js");
+});
+
+test("check_project accepts local module src with cache-busting query", () => {
+  const gameDir = join(tmp, "project-query-script", "game");
+  mkdirSync(join(gameDir, "src"), { recursive: true });
+  writeFileSync(join(gameDir, "index.html"), [
+    "<!-- ENGINE: canvas | VERSION: test | RUN: file -->",
+    "<script src=\"./src/main.js?v=123\"></script>",
+  ].join("\n"));
+  writeFileSync(join(gameDir, "src/main.js"), [
+    "window.gameState = { ready: true };",
+    "window.gameTest = { observers: {}, drivers: {}, probes: {} };",
+  ].join("\n"));
+  const r = run([join(scriptsDir, "check_project.js"), gameDir]);
+  assert(r.status === 0, `query string 本地脚本应通过，exit=${r.status}\n${r.stdout}\n${r.stderr}`);
+});
+
+test("check_archetype_presets: 高频 archetype preset 骨架合法", () => {
+  const r = run([join(scriptsDir, "check_archetype_presets.js")]);
+  assert(r.status === 0, `archetype preset 校验应通过，exit=${r.status}\n${r.stdout}\n${r.stderr}`);
+});
+
+// =============================
+// Engine templates: _common import paths resolve after codegen copy
+// =============================
+console.log("\n[engine-template] _common import path resolver");
+{
+  const repoRoot = resolve(here, "../../../..");
+  const enginesRoot = join(repoRoot, "game_skill/skills/references/engines");
+  const commonRoot = join(enginesRoot, "_common");
+
+  function walkFiles(dir) {
+    const out = [];
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      const st = statSync(p);
+      if (st.isDirectory()) out.push(...walkFiles(p));
+      else if (/\.(js|mjs)$/.test(name)) out.push(p);
+    }
+    return out;
+  }
+
+  test("template local _common imports resolve to game/src/_common", () => {
+    const engines = ["canvas", "dom", "phaser3", "pixijs", "three"];
+    const bad = [];
+    for (const engine of engines) {
+      const templateRoot = join(enginesRoot, engine, "template");
+      if (!existsSync(templateRoot)) continue;
+      for (const file of walkFiles(templateRoot)) {
+        const src = readFileSync(file, "utf-8");
+        const relFile = file.slice(templateRoot.length + 1);
+        const outputFile = join("game", relFile);
+        for (const m of src.matchAll(/from\s+["']([^"']*_common[^"']*)["']/g)) {
+          const spec = m[1];
+          const resolvedInGame = join(dirname(outputFile), spec);
+          const relCommon = resolvedInGame.split("game/src/_common/")[1];
+          if (!relCommon) {
+            bad.push(`${engine}:${relFile} -> ${spec} resolves ${resolvedInGame}`);
+            continue;
+          }
+          if (!existsSync(join(commonRoot, relCommon))) {
+            bad.push(`${engine}:${relFile} -> ${spec} missing _common/${relCommon}`);
+          }
+        }
+      }
+    }
+    assert(bad.length === 0, `template _common imports should resolve:\n${bad.join("\n")}`);
   });
 }
 
@@ -586,6 +668,7 @@ function writeGeneratedUsageCase(caseDir, withDrawCall) {
     "  - id: pig-shape",
     "    section: images",
     "    type: graphics-generated",
+    "    binding-to: pig",
     "    must-render: true",
   ].join("\n"));
   mkdirSync(join(caseDir, "game"), { recursive: true });
@@ -597,8 +680,10 @@ function writeGeneratedUsageCase(caseDir, withDrawCall) {
     "const assetId = 'pig-shape';",
     "const ctx = document.getElementById('game').getContext('2d');",
     "function renderGeneratedPrimitive(id) {",
-    "  window.__assetUsage.push({ id, section: 'images', kind: 'generated' });",
+    "  window.__assetUsage.push({ id, section: 'images', kind: 'generated', phase: 'requested' });",
     "  ctx.fillRect(0, 0, 12, 12);",
+    "  window.__assetUsage.push({ id, section: 'images', kind: 'generated', phase: 'rendered', width: 12, height: 12, visible: true });",
+    "  window.__assetUsage.push({ id, section: 'images', kind: 'generated', phase: 'visible', width: 12, height: 12, visible: true });",
     "}",
     withDrawCall ? "renderGeneratedPrimitive('pig-shape');" : "console.log(assetId);",
     "</script>",
@@ -616,6 +701,141 @@ test("generated-only 的 required generated 核心视觉必须有绘制证据", 
   const badRun = run([join(scriptsDir, "check_asset_usage.js"), bad]);
   assert(badRun.status !== 0, "没有绘制调用应失败");
   assert(/required asset/.test(badRun.stdout), `应报 required asset，实际:\n${badRun.stdout}`);
+});
+
+test("runtime asset usage: requested-only 不能替代 rendered/visible", () => {
+  const caseDir = join(tmp, "asset-requested-only");
+  writeGeneratedUsageCase(caseDir, true);
+  const html = readFileSync(join(caseDir, "game/index.html"), "utf-8")
+    .replace(/ctx\.fillRect\(0, 0, 12, 12\);\n\s*window\.__assetUsage\.push\(\{ id, section: 'images', kind: 'generated', phase: 'rendered'[\s\S]*?phase: 'visible'[\s\S]*?\}\);/m,
+      "ctx.fillRect(0, 0, 12, 12);");
+  writeFileSync(join(caseDir, "game/index.html"), html);
+  const r = run([join(scriptsDir, "check_asset_usage.js"), caseDir]);
+  assert(r.status !== 0, `requested-only 应失败，exit=${r.status}\n${r.stdout}`);
+  assert(/pig-shape\(rendered\+visible\)/.test(r.stdout), `应缺 rendered+visible，实际:\n${r.stdout}`);
+});
+
+test("runtime asset usage: Phaser/Pixi/Three 视觉 must-render 也要求 rendered/visible", () => {
+  for (const engine of ["phaser3", "pixijs", "three"]) {
+    const caseDir = join(tmp, `asset-requested-only-${engine}`);
+    writeGeneratedUsageCase(caseDir, true);
+    let html = readFileSync(join(caseDir, "game/index.html"), "utf-8")
+      .replace("ENGINE: canvas", `ENGINE: ${engine}`)
+      .replace(/ctx\.fillRect\(0, 0, 12, 12\);\n\s*window\.__assetUsage\.push\(\{ id, section: 'images', kind: 'generated', phase: 'rendered'[\s\S]*?phase: 'visible'[\s\S]*?\}\);/m,
+        "ctx.fillRect(0, 0, 12, 12);");
+    writeFileSync(join(caseDir, "game/index.html"), html);
+    const r = run([join(scriptsDir, "check_asset_usage.js"), caseDir]);
+    assert(r.status !== 0, `${engine} requested-only 应失败，exit=${r.status}\n${r.stdout}`);
+    assert(/pig-shape\(rendered\+visible\)/.test(r.stdout), `${engine} 应缺 rendered+visible，实际:\n${r.stdout}`);
+  }
+});
+
+// =============================
+// P1 follow-up: visual-slots generator + checker
+// =============================
+console.log("\n[P1 follow-up] visual-slots: generator + strict checker");
+
+function writeVisualSlotCase(caseDir) {
+  writeCasePrd(caseDir, [
+    "  mode: library-first",
+    `  rationale: "${"核心实体 pig 的主视觉必须绑定到明确 visual slot，避免素材请求和实际语义槽错位。".repeat(2)}"`,
+    "  visual-core-entities: [pig]",
+    "  visual-peripheral: []",
+    "  style-coherence: { level: flexible }",
+  ].join("\n"));
+  mkdirSync(join(caseDir, "specs"), { recursive: true });
+  writeFileSync(join(caseDir, "specs/assets.yaml"), [
+    "images:",
+    "  - id: pig-body",
+    "    source: assets/library_2d/sprites/pig.png",
+    "    type: local-file",
+    "    binding-to: pig",
+    "    visual-primitive: color-unit",
+    "    color-source: entity.color",
+    "    fulfills-slot: entity.pig.primary",
+    "audio: []",
+    "spritesheets: []",
+  ].join("\n"));
+  writeFileSync(join(caseDir, "specs/implementation-contract.yaml"), [
+    "asset-bindings:",
+    "  - id: pig-body",
+    "    section: images",
+    "    role: core-visual",
+    "    asset-kind: sprite",
+    "    type: local-file",
+    "    source: assets/library_2d/sprites/pig.png",
+    "    binding-to: pig",
+    "    visual-primitive: color-unit",
+    "    color-source: entity.color",
+    "    visual-slot: entity.pig.primary",
+    "    render-as: texture",
+    "    text-bearing: false",
+    "    must-render: true",
+    "    allow-fallback: false",
+  ].join("\n"));
+}
+
+test("generate_visual_slots + check_visual_slots: 核心 asset slot 对齐应通过", () => {
+  const caseDir = join(tmp, "visual-slots-good");
+  writeVisualSlotCase(caseDir);
+  const gen = run([join(scriptsDir, "generate_visual_slots.js"), caseDir]);
+  assert(gen.status === 0, `generate_visual_slots 应通过，exit=${gen.status}\n${gen.stdout}\n${gen.stderr}`);
+  const body = readFileSync(join(caseDir, "specs/visual-slots.yaml"), "utf-8");
+  assert(/entity\.pig\.primary/.test(body), `应生成 pig primary slot，实际:\n${body}`);
+  const check = run([join(scriptsDir, "check_visual_slots.js"), caseDir]);
+  assert(check.status === 0, `check_visual_slots 应通过，exit=${check.status}\n${check.stdout}\n${check.stderr}`);
+});
+
+test("check_visual_slots: slot.allowed-visual-primitives 不匹配应 fail", () => {
+  const caseDir = join(tmp, "visual-slots-bad-vp");
+  writeVisualSlotCase(caseDir);
+  const gen = run([join(scriptsDir, "generate_visual_slots.js"), caseDir]);
+  assert(gen.status === 0, `生成 visual-slots 失败:\n${gen.stdout}\n${gen.stderr}`);
+  const path = join(caseDir, "specs/visual-slots.yaml");
+  const body = readFileSync(path, "utf-8").replace("color-unit", "ui-button");
+  writeFileSync(path, body);
+  const check = run([join(scriptsDir, "check_visual_slots.js"), caseDir]);
+  assert(check.status !== 0, `visual primitive mismatch 应失败，exit=${check.status}\n${check.stdout}`);
+  assert(/不在 slot\.allowed-visual-primitives/.test(check.stdout), `应报 allowed mismatch，实际:\n${check.stdout}`);
+});
+
+// =============================
+// P1 follow-up: pipeline pattern structured ledger
+// =============================
+console.log("\n[P1 follow-up] pipeline patterns: structured ledger + threshold gate");
+
+test("record_pipeline_pattern: 第三次同类 pattern 触发抽象升级 gate", () => {
+  const caseDir = join(tmp, "pipeline-patterns");
+  mkdirSync(caseDir, { recursive: true });
+  for (let i = 0; i < 3; i++) {
+    const r = run([
+      join(scriptsDir, "record_pipeline_pattern.js"),
+      caseDir,
+      "--pattern", "asset-requested-not-rendered",
+      "--origin", "Codegen / engine template",
+      "--example", `case-${i + 1}`,
+      "--next", "add engine render wrapper evidence",
+    ]);
+    assert(r.status === 0, `record pattern 应成功，exit=${r.status}\n${r.stdout}\n${r.stderr}`);
+  }
+  const body = readFileSync(join(caseDir, ".pipeline_patterns.md"), "utf-8");
+  assert(/count:\s*3/.test(body), `count 应累计到 3，实际:\n${body}`);
+  const check = run([join(scriptsDir, "check_pipeline_patterns.js"), caseDir]);
+  assert(check.status !== 0, `count>=3 且 open 应 fail，exit=${check.status}\n${check.stdout}`);
+  assert(/必须抽象升级/.test(check.stdout), `应提示抽象升级，实际:\n${check.stdout}`);
+
+  const close = run([
+    join(scriptsDir, "record_pipeline_pattern.js"),
+    caseDir,
+    "--pattern", "asset-requested-not-rendered",
+    "--origin", "Codegen / engine template",
+    "--example", "case-4",
+    "--next", "add engine render wrapper evidence",
+    "--status", "abstracted",
+  ]);
+  assert(close.status === 0, `标记 abstracted 应成功:\n${close.stdout}\n${close.stderr}`);
+  const checkClosed = run([join(scriptsDir, "check_pipeline_patterns.js"), caseDir]);
+  assert(checkClosed.status === 0, `abstracted 后应通过，exit=${checkClosed.status}\n${checkClosed.stdout}`);
 });
 
 // =============================
@@ -877,6 +1097,49 @@ console.log("\n[P0.1] _profile_anti_cheat: detectAntiCheatHits");
       `应 >= 7 条规则，实际 ${ANTI_CHEAT_PATTERNS?.length}`);
   });
 }
+
+test("check_playthrough: 3 条 inert interaction click 应 exit non-zero", () => {
+  const caseDir = join(tmp, "playthrough-click-hits-nothing");
+  const gameDir = join(caseDir, "game");
+  mkdirSync(gameDir, { recursive: true });
+  mkdirSync(join(caseDir, ".game"), { recursive: true });
+  writeFileSync(join(gameDir, "index.html"), [
+    "<!-- ENGINE: canvas | VERSION: test | RUN: file -->",
+    "<button id=\"start\" style=\"width:200px;height:100px\">start</button>",
+    "<script>",
+    "window.gameState = { score: 0, phase: 'ready' };",
+    "window.__trace = [];",
+    "</script>",
+  ].join("\n"));
+  const profilePath = join(tmp, "playthrough-click-hits-nothing-profile.json");
+  const profile = {
+    assertions: [1, 2, 3].map((n) => ({
+      id: `inert-${n}`,
+      kind: "interaction",
+      description: `inert click ${n}`,
+      setup: [{ action: "click", x: 10 + n, y: 10 + n }],
+    })),
+  };
+  const profileText = JSON.stringify(profile, null, 2) + "\n";
+  writeFileSync(profilePath, profileText);
+  writeFileSync(join(caseDir, ".game/state.json"), JSON.stringify({
+    phases: {
+      verify: {
+        profileSha: createHash("sha256").update(profileText).digest("hex"),
+        profilePath,
+      },
+    },
+  }, null, 2) + "\n");
+  const r = run([
+    join(scriptsDir, "check_playthrough.js"),
+    gameDir,
+    "--profile",
+    profilePath.replace(/\.json$/, ""),
+    "--skip-coverage",
+  ]);
+  assert(r.status !== 0, `inert click 应失败，exit=${r.status}\n${r.stdout}\n${r.stderr}`);
+  assert(/click-hits-nothing/.test(r.stdout), `应输出 click-hits-nothing，实际:\n${r.stdout}`);
+});
 
 // =============================
 // P0.4: _visual_primitive_enum — slot 枚举 + color-source 校验
@@ -1556,6 +1819,49 @@ test("check_runtime_semantics: trace 缺 before/after 不能再 soft-skip", () =
   assert(/复算缺证据|缺 before\/after/.test(r.stdout), `应报 trace 证据不足，实际:\n${r.stdout}`);
 });
 
+test("check_runtime_semantics: nonMutation 实体字段变化应 fail", () => {
+  const caseDir = join(tmp, "runtime-semantics-nonmutation");
+  writeRuntimeSemanticsCase(caseDir, [
+    "window.__trace = [];",
+    "let currentState = {};",
+    "window.gameTest = {",
+    "  observers: { getSnapshot: () => JSON.parse(JSON.stringify(currentState)) },",
+    "  probes: {",
+    "    resetWithScenario(state) { currentState = JSON.parse(JSON.stringify(state)); },",
+    "    resetPig(_name, pigPatch) { currentState.pig = { ...currentState.pig, ...pigPatch }; }",
+    "  },",
+    "  drivers: {",
+    "    dispatchPig() {",
+    "      const hit = (currentState.blocks || [])[0];",
+    "      window.__trace.push({",
+    "        primitive: 'ray-cast@v1', node: 'attack', rule: 'attack',",
+    "        before: { source: currentState.pig, targetsSnapshot: currentState.blocks, resolvedDirection: { dx: 0, dy: 1 } },",
+    "        after: { returnedHits: hit ? [hit] : [] }",
+    "      });",
+    "      const far = (currentState.blocks || []).find((b) => b.id === 'b-1-2');",
+    "      if (far) far.durability = 0;",
+    "    }",
+    "  }",
+    "};",
+  ]);
+  writeFileSync(join(caseDir, "specs/mechanics.yaml"), [
+    "mechanics:",
+    "  - node: move",
+    "    primitive: parametric-track@v1",
+    "  - node: attack",
+    "    primitive: ray-cast@v1",
+    "    params:",
+    "      stop-on: first-hit",
+    "  - node: match-color",
+    "    primitive: predicate-match@v1",
+    "    params:",
+    "      fields: [color]",
+  ].join("\n"));
+  const r = run([join(scriptsDir, "check_runtime_semantics.js"), caseDir]);
+  assert(r.status !== 0, `nonMutation 变化应失败，实际 exit=${r.status}\n${r.stdout}\n${r.stderr}`);
+  assert(/nonMutation entity id=b-1-2 字段变化/.test(r.stdout), `应报 nonMutation 字段变化，实际:\n${r.stdout}`);
+});
+
 // =============================
 // P1.1 (spike): ray-cast.runtime.mjs
 // =============================
@@ -2114,6 +2420,26 @@ console.log("\n[P1.4] check_implementation_contract: canvas 正确 import 应通
       `应报 runtime 段 ok\n${output}`,
     );
   });
+
+  writeFileSync(join(caseDir, "game/src/main.js"), [
+    "// @primitive(ray-cast@v1): node-id=attack-consume",
+    "import { rayCastGridFirstHit } from './_common/primitives/index.mjs';",
+    "export function handleAttack(pig, blocks) {",
+    "  return rayCastGridFirstHit({",
+    "    rule: 'attack-consume',",
+    "    source: pig, direction: { dx: 0, dy: 1 }, targets: blocks,",
+    "    params: { 'stop-on': 'first-hit', 'coord-system': 'grid' },",
+    "  });",
+    "}",
+  ].join("\n"));
+  const bad = spawnSync("node", [checker, caseDir, "--stage", "codegen"], {
+    encoding: "utf-8",
+  });
+  const badOutput = (bad.stdout || "") + (bad.stderr || "");
+  test("runtime API 调用缺 node 绑定 → fail", () => {
+    assert(bad.status !== 0, `缺 node 应 fail，exit=${bad.status}\n${badOutput}`);
+    assert(/缺少绑定自身 node\/rule/.test(badOutput), `应报 node/rule 绑定缺失\n${badOutput}`);
+  });
 }
 
 console.log("\n[P1.4] check_implementation_contract: import 存在但业务代码未调用（仅 JSDoc 示例 / import 语句） → 应 fail");
@@ -2555,7 +2881,7 @@ console.log("\n[P1.6] asset-usage: recordAssetUsage + observers.getAssetUsage �
 
 {
   const repoRoot = resolve(here, "../../../..");
-  const { recordAssetUsage, getAssetUsageSnapshot, resetAssetUsage } = await import(
+  const { recordAssetUsage, recordAssetRendered, recordAssetVisible, recordAssetRenderEvidence, renderSlot, getAssetUsageSnapshot, resetAssetUsage } = await import(
     `file://${repoRoot}/game_skill/skills/references/engines/_common/asset-usage.js`
   );
   const { exposeTestHooks } = await import(
@@ -2592,6 +2918,8 @@ console.log("\n[P1.6] asset-usage: recordAssetUsage + observers.getAssetUsage �
       });
       const entry = fakeWindow.__assetUsage[0];
       assert(entry.id === "pig-red");
+      assert(entry.assetId === "pig-red");
+      assert(entry.phase === "requested");
       assert(entry.bindingTo === "pig");
       assert(entry.visualPrimitive === "color-unit");
       assert(entry.colorSource === "entity.color");
@@ -2627,6 +2955,58 @@ console.log("\n[P1.6] asset-usage: recordAssetUsage + observers.getAssetUsage �
       assert(globalThis.window.__assetUsage.length === 1);
       resetAssetUsage();
       assert(globalThis.window.__assetUsage.length === 0);
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
+  test("renderSlot: 记录 requested/rendered/visible 三层证据", () => {
+    const saved = globalThis.window;
+    try {
+      globalThis.window = {};
+      let drew = false;
+      renderSlot({
+        assetId: "pig-shape",
+        slotId: "actor.pig.body",
+        entityId: "pig-1",
+        semanticSlot: "color-unit",
+        width: 16,
+        height: 12,
+        draw: () => { drew = true; },
+      });
+      assert(drew, "renderSlot 应执行 draw 回调");
+      const phases = globalThis.window.__assetUsage.map((e) => e.phase);
+      assert(phases.includes("requested"), `应有 requested，实际 ${phases}`);
+      assert(phases.includes("rendered"), `应有 rendered，实际 ${phases}`);
+      assert(phases.includes("visible"), `应有 visible，实际 ${phases}`);
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
+  test("recordAssetRendered / recordAssetVisible: 可单独写入 phase", () => {
+    const saved = globalThis.window;
+    try {
+      globalThis.window = {};
+      recordAssetRendered({ assetId: "a", section: "images" });
+      recordAssetVisible({ assetId: "a", section: "images" });
+      const phases = globalThis.window.__assetUsage.map((e) => e.phase);
+      assert(phases.join(",") === "rendered,visible", `phase 应精确记录，实际 ${phases}`);
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  });
+
+  test("recordAssetRenderEvidence: 有面积且 visible 时补 visible phase", () => {
+    const saved = globalThis.window;
+    try {
+      globalThis.window = {};
+      recordAssetRenderEvidence({ assetId: "a", section: "images", width: 8, height: 8 });
+      const phases = globalThis.window.__assetUsage.map((e) => e.phase);
+      assert(phases.join(",") === "rendered,visible", `应记录 rendered+visible，实际 ${phases}`);
     } finally {
       if (saved === undefined) delete globalThis.window;
       else globalThis.window = saved;
@@ -2773,6 +3153,114 @@ console.log("\n[P1.5] _runtime_replay: 每个 runtime primitive 的 replay 正�
     };
     const r = await replayEvent(ev, { mechNodesByNode: idx.byNode, mechByPrimitive: idx.byPrimitive });
     assert(r.ok === null);
+  });
+
+  const runtimeIdx = indexMechanics({
+    mechanics: [
+      { node: "match-color", primitive: "predicate-match@v1", params: { fields: ["color"], op: "eq" } },
+      { node: "phase", primitive: "fsm-transition@v1", params: { initial: "ready", states: ["ready", "playing"], transitions: [{ from: "ready", on: "start", to: "playing" }] } },
+      { node: "outcome", primitive: "win-lose-check@v1", params: { settle: [{ kind: "time-up", threshold: 1000 }] } },
+      { node: "cap", primitive: "capacity-gate@v1", params: { capacity: 2 } },
+      { node: "pool", primitive: "slot-pool@v1", params: { capacity: 2, "slot-ids": ["s1", "s2"] } },
+    ],
+  });
+  const repoRoot = resolve(here, "../../../..");
+  const {
+    predicateMatch,
+    fireTrigger,
+    checkWinLose,
+    requestCapacity,
+    releaseCapacity,
+    bindSlot,
+    unbindSlot,
+  } = await import(`file://${repoRoot}/game_skill/skills/references/engines/_common/primitives/index.mjs`);
+
+  function captureTrace(fn) {
+    const saved = globalThis.window;
+    globalThis.window = { __trace: [] };
+    try {
+      fn();
+      return globalThis.window.__trace.at(-1);
+    } finally {
+      if (saved === undefined) delete globalThis.window;
+      else globalThis.window = saved;
+    }
+  }
+
+  const predicateTrace = captureTrace(() => predicateMatch({
+    rule: "match-rule",
+    node: "match-color",
+    left: { id: "p", color: "red" },
+    right: { id: "b", color: "red" },
+    params: { fields: ["color"], op: "eq" },
+  }));
+  const predicateReplay = await replayEvent(predicateTrace, {
+    mechNodesByNode: runtimeIdx.byNode,
+    mechByPrimitive: runtimeIdx.byPrimitive,
+  });
+  test("replayEvent: runtime predicate-match trace schema → ok:true", () => {
+    assert(predicateReplay.ok === true, `应通过，实际 ${JSON.stringify(predicateReplay)} trace=${JSON.stringify(predicateTrace)}`);
+  });
+
+  const fsmTrace = captureTrace(() => fireTrigger({
+    rule: "start-rule",
+    node: "phase",
+    currentState: "ready",
+    trigger: "start",
+    params: { initial: "ready", states: ["ready", "playing"], transitions: [{ from: "ready", on: "start", to: "playing" }] },
+  }));
+  const fsmReplay = await replayEvent(fsmTrace, {
+    mechNodesByNode: runtimeIdx.byNode,
+    mechByPrimitive: runtimeIdx.byPrimitive,
+  });
+  test("replayEvent: runtime fsm-transition trace schema → ok:true", () => {
+    assert(fsmReplay.ok === true, `应通过，实际 ${JSON.stringify(fsmReplay)} trace=${JSON.stringify(fsmTrace)}`);
+  });
+
+  const winLoseTrace = captureTrace(() => checkWinLose({
+    rule: "timer-rule",
+    node: "outcome",
+    state: { fields: {}, elapsedMs: 1000 },
+    params: { settle: [{ kind: "time-up", threshold: 1000 }] },
+  }));
+  const winLoseReplay = await replayEvent(winLoseTrace, {
+    mechNodesByNode: runtimeIdx.byNode,
+    mechByPrimitive: runtimeIdx.byPrimitive,
+  });
+  test("replayEvent: runtime win-lose-check trace schema → ok:true", () => {
+    assert(winLoseReplay.ok === true, `应通过，实际 ${JSON.stringify(winLoseReplay)}`);
+  });
+
+  const capTrace = captureTrace(() => releaseCapacity({
+    rule: "release-rule",
+    node: "cap",
+    gate: { capacity: 2, active: ["p1"] },
+    entityId: "p1",
+    params: { capacity: 2 },
+  }));
+  const capWrong = { ...capTrace, after: { ...capTrace.after, gate: { capacity: 2, active: ["p1"] } } };
+  const capReplay = await replayEvent(capWrong, {
+    mechNodesByNode: runtimeIdx.byNode,
+    mechByPrimitive: runtimeIdx.byPrimitive,
+  });
+  test("replayEvent: capacity-gate 错误 after.gate → ok:false", () => {
+    assert(capReplay.ok === false && /gate:/.test(capReplay.reason), `应识别 gate 错误，实际 ${JSON.stringify(capReplay)}`);
+  });
+
+  const poolTrace = captureTrace(() => unbindSlot({
+    rule: "unbind-rule",
+    node: "pool",
+    pool: { capacity: 2, slots: [{ id: "s1", occupantId: "p1" }, { id: "s2", occupantId: null }] },
+    occupantId: "p1",
+    params: { capacity: 2, "slot-ids": ["s1", "s2"] },
+  }));
+  const poolWrong = { ...poolTrace, after: { ...poolTrace.after, pool: { capacity: 2, slots: [{ id: "s1", occupantId: "p1" }, { id: "s2", occupantId: null }] } } };
+  const poolReplay = await replayEvent(poolWrong, {
+    mechNodesByNode: runtimeIdx.byNode,
+    mechByPrimitive: runtimeIdx.byPrimitive,
+  });
+  test("replayEvent: slot-pool 错误 after.pool → ok:false", () => {
+    assert(poolReplay.ok === false && /pool:/.test(poolReplay.reason), `应识别 pool 错误，实际 ${JSON.stringify(poolReplay)}`);
   });
 }
 

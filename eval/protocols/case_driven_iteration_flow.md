@@ -216,17 +216,20 @@ node game_skill/skills/scripts/run_phase_gate.js cases/$CASE --phase expand
 
 改一个 case 不是终点。同类错误第 2 次、第 3 次出现时，必须停止补丁，升级抽象。
 
-### 维护 `.pipeline_patterns.md`（每次失败追加一行）
+### 维护 `.pipeline_patterns.md`（每次失败结构化登记）
 
-```markdown
-# Pipeline Failure Patterns
-
-| 日期 | case | 起源层 | 症状 | 根因 | 修了哪里 | 重复计数 |
-|---|---|---|---|---|---|---|
-| 2026-04-28 | word-match-lite | contract | check_game_boots 报 TEST-TRI 缺 observers | implementation-contract 没给 edu genre 强制 observers.getSnapshot | generate_implementation_contract.js 加 genre-aware defaults | 1 |
-| 2026-04-29 | pixel-flow-mini | primitive runtime | check_runtime_semantics 报 ray-cast hit 目标错 | grid-board removeCell 不认 cellId 别名 | grid-board.runtime.mjs | 1 |
-| ...等 3 次再出现... |
+```bash
+node game_skill/skills/scripts/record_pipeline_pattern.js cases/$CASE \
+  --pattern asset-requested-not-rendered \
+  --origin "Codegen / engine template" \
+  --example "$CASE" \
+  --next "add engine render wrapper evidence"
 ```
+
+脚本会更新 `cases/$CASE/.pipeline_patterns.md` 中的结构化 YAML block，字段包括
+`pattern-id / first-seen / last-seen / count / origin-layer / examples /
+next-abstraction / status`。`check_pipeline_patterns.js` 会在 `count >= 3` 且
+`status` 仍非 `abstracted|fixed|closed` 时 fail，阻止继续 case-local 补丁。
 
 ### 升级触发规则
 

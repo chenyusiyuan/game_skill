@@ -16,8 +16,9 @@ import { pushTraceEvent } from "./_trace.mjs";
 
 export function accumulateScore(ctx) {
   const { rule, node = null, currentScore = 0, eventPayload, params = {} } = ctx;
-  const before = { score: currentScore, event: eventPayload };
-  const result = scStep({ score: currentScore }, { type: "event", event: eventPayload }, params);
+  const eventType = typeof eventPayload === "string" ? eventPayload : eventPayload?.type;
+  const before = { score: currentScore, event: eventPayload, eventType };
+  const result = scStep({ score: currentScore }, { type: "event", event: eventType, payload: eventPayload }, params);
   const nextScore = Number.isFinite(result.score) ? result.score : currentScore;
   pushTraceEvent({
     primitive: "score-accum@v1",

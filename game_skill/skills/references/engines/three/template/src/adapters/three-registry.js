@@ -17,7 +17,8 @@
 
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { validateManifest, buildStats } from "../../../_common/registry.spec.js";
+import { validateManifest, buildStats } from "../_common/registry.spec.js";
+import { recordAssetUsage, recordAssetRenderEvidence } from "../_common/asset-usage.js";
 
 export async function createRegistry(manifest) {
   const check = validateManifest(manifest);
@@ -30,6 +31,9 @@ export async function createRegistry(manifest) {
   const gltfLoader = new GLTFLoader();
   const audioLoader = new THREE.AudioLoader();
   const basePath = manifest.basePath.replace(/\/$/, "");
+  const manifestImageById = new Map((manifest.images ?? []).map((it) => [it.id, it]));
+  const manifestSheetById = new Map((manifest.spritesheets ?? []).map((it) => [it.id, it]));
+  const manifestAudioById = new Map((manifest.audio ?? []).map((it) => [it.id, it]));
 
   const jobs = [];
 
@@ -112,25 +116,125 @@ export async function createRegistry(manifest) {
 
   await Promise.all(jobs);
 
-  return {
-    getTexture(id) {
+  function recordThreeObject(id, object, opts = {}) {
+    const manifestItem = opts.section === "spritesheets"
+      ? manifestSheetById.get(id)
+      : manifestImageById.get(id);
+    const width = Number(opts.width ?? Math.abs(object?.scale?.x ?? 1));
+    const height = Number(opts.height ?? Math.abs(object?.scale?.y ?? 1));
+    const visible = opts.visible ?? object?.visible !== false;
+    recordAssetRenderEvidence({
+      id,
+      section: opts.section ?? "images",
+      kind: opts.kind ?? "three-object3d",
+      manifestItem,
+      slotId: opts.slotId ?? null,
+      entityId: opts.entityId ?? null,
+      semanticSlot: opts.semanticSlot ?? null,
+      renderZone: opts.renderZone ?? null,
+      x: opts.x ?? object?.position?.x ?? null,
+      y: opts.y ?? object?.position?.y ?? null,
+      width,
+      height,
+      visible,
+      source: opts.source ?? "three-registry.recordObject",
+      extra: opts.extra ?? null,
+    });
+  }
+
+  function applyObjectOptions(object, opts = {}) {
+    if (!object) return object;
+    if (object.position) {
+      if (Number.isFinite(Number(opts.x))) object.position.x = Number(opts.x);
+      if (Number.isFinite(Number(opts.y))) object.position.y = Number(opts.y);
+      if (Number.isFinite(Number(opts.z))) object.position.z = Number(opts.z);
+    }
+    if (object.scale) {
+      if (Number.isFinite(Number(opts.width))) object.scale.x = Number(opts.width);
+      if (Number.isFinite(Number(opts.height))) object.scale.y = Number(opts.height);
+      if (Number.isFinite(Number(opts.depth))) object.scale.z = Number(opts.depth);
+    }
+    if (typeof opts.visible === "boolean") object.visible = opts.visible;
+    return object;
+  }
+
+  function objectForValue(value, opts = {}) {
+    if (!value) return null;
+    if (typeof value.clone === "function" && value.isObject3D) return value.clone(true);
+    if (value.isTexture) {
+      if (opts.as === "mesh") {
+        return new THREE.Mesh(
+          new THREE.PlaneGeometry(1, 1),
+          new THREE.MeshBasicMaterial({ map: value, transparent: true }),
+        );
+      }
+      return new THREE.Sprite(new THREE.SpriteMaterial({ map: value, transparent: true }));
+    }
+    if (value.isObject3D) return value;
+    return null;
+  }
+
+  function getTexture(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[three-registry] missing id: ${id}`); return null; }
+      recordAssetUsage({
+        id,
+        section: "images",
+        kind: e.kind === "model" ? "model" : "texture",
+        manifestItem: manifestImageById.get(id),
+        extra,
+      });
       if (e.kind === "factory") return e.value(); // 每次取占位都 new 一个 Mesh
       return e.value;
-    },
-    getSpritesheet(id) {
+  }
+
+  function getSpritesheet(id, extra = null) {
       const e = entries.get(id);
       if (!e || e.kind !== "spritesheet") {
         console.warn(`[three-registry] not a spritesheet: ${id}`);
         return null;
       }
+      recordAssetUsage({
+        id,
+        section: "spritesheets",
+        kind: "spritesheet",
+        manifestItem: manifestSheetById.get(id),
+        extra,
+      });
       return e.value && { texture: e.value, ...e.meta };
-    },
-    getAudio(id) {
+  }
+
+  function getAudio(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[three-registry] missing audio: ${id}`); return null; }
+      recordAssetUsage({
+        id,
+        section: "audio",
+        kind: "audio",
+        manifestItem: manifestAudioById.get(id),
+        extra,
+      });
       return e.value;
+  }
+
+  return {
+    getTexture,
+    getSpritesheet,
+    getAudio,
+    addObject(scene, id, opts = {}) {
+      const value = getTexture(id, opts.extra ?? null);
+      const object = applyObjectOptions(objectForValue(value, opts), opts);
+      if (!object) return null;
+      if (scene && typeof scene.add === "function") scene.add(object);
+      recordThreeObject(id, object, {
+        ...opts,
+        source: opts.source ?? "three-registry.addObject",
+      });
+      return object;
+    },
+    recordObject(id, object, opts = {}) {
+      recordThreeObject(id, object, opts);
+      return object;
     },
     has(id) { return entries.has(id); },
     stats() { return buildStats(entries); },

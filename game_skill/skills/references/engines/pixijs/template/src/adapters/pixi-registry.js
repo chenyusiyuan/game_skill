@@ -9,8 +9,8 @@
  *   const sprite = new Sprite(tex);
  */
 
-import { validateManifest, buildStats } from "../../../_common/registry.spec.js";
-import { recordAssetUsage } from "../../../_common/asset-usage.js";
+import { validateManifest, buildStats } from "../_common/registry.spec.js";
+import { recordAssetUsage, recordAssetRenderEvidence } from "../_common/asset-usage.js";
 
 export async function createRegistry(manifest) {
   const { ok, errors } = validateManifest(manifest);
@@ -24,7 +24,7 @@ export async function createRegistry(manifest) {
 
   // pixi.js 由业务代码在入口 import，adapter 运行时按需拿
   const pixi = await import("pixi.js");
-  const { Assets, Texture } = pixi;
+  const { Assets, Texture, Sprite } = pixi;
 
   function resolveUrl(src) {
     return base.replace(/\/$/, "") + "/" + src.replace(/^\//, "");
@@ -81,8 +81,48 @@ export async function createRegistry(manifest) {
 
   await Promise.all(loadTasks);
 
-  return {
-    getTexture(id, extra = null) {
+  function recordPixiDisplayObject(id, displayObject, opts = {}) {
+    const manifestItem = opts.section === "spritesheets"
+      ? manifestSheetById.get(id)
+      : manifestImageById.get(id);
+    const width = Number(opts.width ?? displayObject?.width ?? displayObject?.texture?.width ?? 0);
+    const height = Number(opts.height ?? displayObject?.height ?? displayObject?.texture?.height ?? 0);
+    const visible = opts.visible ?? (
+      displayObject?.visible !== false &&
+      displayObject?.renderable !== false &&
+      Number(displayObject?.alpha ?? displayObject?.worldAlpha ?? 1) > 0
+    );
+    recordAssetRenderEvidence({
+      id,
+      section: opts.section ?? "images",
+      kind: opts.kind ?? "pixi-display-object",
+      manifestItem,
+      slotId: opts.slotId ?? null,
+      entityId: opts.entityId ?? null,
+      semanticSlot: opts.semanticSlot ?? null,
+      renderZone: opts.renderZone ?? null,
+      x: opts.x ?? displayObject?.x ?? null,
+      y: opts.y ?? displayObject?.y ?? null,
+      width,
+      height,
+      visible,
+      source: opts.source ?? "pixi-registry.recordPixiDisplayObject",
+      extra: opts.extra ?? null,
+    });
+  }
+
+  function applyDisplayObjectOptions(displayObject, opts = {}) {
+    if (!displayObject) return displayObject;
+    if (Number.isFinite(Number(opts.x))) displayObject.x = Number(opts.x);
+    if (Number.isFinite(Number(opts.y))) displayObject.y = Number(opts.y);
+    if (Number.isFinite(Number(opts.width))) displayObject.width = Number(opts.width);
+    if (Number.isFinite(Number(opts.height))) displayObject.height = Number(opts.height);
+    if (Number.isFinite(Number(opts.alpha))) displayObject.alpha = Number(opts.alpha);
+    if (typeof opts.visible === "boolean") displayObject.visible = opts.visible;
+    return displayObject;
+  }
+
+  function getTexture(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
       if (e.kind === "image" && e.loaded) {
@@ -96,8 +136,9 @@ export async function createRegistry(manifest) {
         return Texture.from(id);
       }
       return null;
-    },
-    getSpritesheet(id, extra = null) {
+  }
+
+  function getSpritesheet(id, extra = null) {
       const e = entries.get(id);
       if (!e || !e.loaded) return null;
       recordAssetUsage({
@@ -108,8 +149,9 @@ export async function createRegistry(manifest) {
         extra,
       });
       return { texture: Texture.from(id), frameWidth: e.frameWidth, frameHeight: e.frameHeight };
-    },
-    getAudio(id, extra = null) {
+  }
+
+  function getAudio(id, extra = null) {
       const e = entries.get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
       if (e.kind === "audio") {
@@ -133,6 +175,40 @@ export async function createRegistry(manifest) {
         return { synthParams: e.value };
       }
       return null;
+  }
+
+  return {
+    getTexture,
+    getSpritesheet,
+    getAudio,
+    createSprite(id, opts = {}) {
+      const texture = getTexture(id, opts.extra ?? null);
+      if (!texture) return null;
+      const sprite = applyDisplayObjectOptions(new Sprite(texture), opts);
+      if (opts.record === true) {
+        recordPixiDisplayObject(id, sprite, {
+          ...opts,
+          source: opts.source ?? "pixi-registry.createSprite",
+        });
+      }
+      return sprite;
+    },
+    addSprite(container, id, opts = {}) {
+      const texture = getTexture(id, opts.extra ?? null);
+      if (!texture) return null;
+      const sprite = applyDisplayObjectOptions(new Sprite(texture), opts);
+      if (container && typeof container.addChild === "function") {
+        container.addChild(sprite);
+      }
+      recordPixiDisplayObject(id, sprite, {
+        ...opts,
+        source: opts.source ?? "pixi-registry.addSprite",
+      });
+      return sprite;
+    },
+    recordDisplayObject(id, displayObject, opts = {}) {
+      recordPixiDisplayObject(id, displayObject, opts);
+      return displayObject;
     },
     has(id) {
       const e = entries.get(id);

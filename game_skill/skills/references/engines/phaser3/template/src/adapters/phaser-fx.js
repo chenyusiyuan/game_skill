@@ -8,7 +8,7 @@
  *   fx.playEffect('particle-burst', { x, y, color: 0xffff00, count: 12 });
  */
 
-import { resolveFxParams } from "../../../_common/fx.spec.js";
+import { resolveFxParams } from "../_common/fx.spec.js";
 
 export function createFx({ scene } = {}) {
   if (!scene) throw new Error("phaser-fx: scene is required");

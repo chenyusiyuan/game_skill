@@ -17,7 +17,7 @@ import { pushTraceEvent, snapshot } from "./_trace.mjs";
 
 function runStep(ctx, type) {
   const { rule, node = null, pool, occupantId, slotId, params = {} } = ctx;
-  const before = { pool: snapshot(pool) };
+  const before = { pool: snapshot(pool), action: type, occupantId, slotId: slotId ?? null };
   const next = slotStep(
     { pool },
     { type, occupantId, slotId },

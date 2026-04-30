@@ -22,6 +22,7 @@ description: "Phase 3: 规格展开（始终必做）。每次 codegen 前都把
 - `specs/assets.yaml`：资源清单（图片 / 音频 / 字体）
 - `specs/event-graph.yaml`：模块间的事件连接蓝图（inputEvent → outputEvent 映射）
 - `specs/implementation-contract.yaml`：Expand → Codegen 的增强契约层，绑定 UI 语义、素材消费、引擎生命周期和验证证据
+- `specs/visual-slots.yaml`：轻量视觉槽位索引；由 `generate_visual_slots.js` 从 assets/contract 派生，绑定核心 asset 到 semantic slot / render-zone
 
 ---
 
@@ -102,6 +103,8 @@ task_new({
 ```bash
 node ${SKILL_DIR}/scripts/generate_implementation_contract.js cases/${PROJECT}/ \
   --out specs/.pending/implementation-contract.yaml
+node ${SKILL_DIR}/scripts/generate_visual_slots.js cases/${PROJECT}/ \
+  --out specs/.pending/visual-slots.yaml
 ```
 
 `implementation-contract.yaml` 不是给 LLM 自由发挥的新文档，而是把前序 specs 收束成 codegen 必须遵守的机器契约：
@@ -717,7 +720,7 @@ test-hooks:
 
 ## 输出清单
 
-- [ ] 7 份 yaml 均存在且语法合法（含 mechanics.yaml 与 implementation-contract.yaml）
+- [ ] 8 份 yaml 均存在且语法合法（含 mechanics.yaml、implementation-contract.yaml 与 visual-slots.yaml）
 - [ ] 每条 rule 有 trigger+condition+effect（effect 拆分为 logic + visual）
 - [ ] 每个 scene 有 zones + ui-slots + enter-transition + enter-sequence
 - [ ] scene.yaml 包含 boot-contract 段（entry-scene + ready-condition + start-action + scene-transitions）
@@ -728,6 +731,7 @@ test-hooks:
 - [ ] assets.yaml 包含 selection-report 段（candidate-packs + local-file-ratio + fallback-reasons）
 - [ ] assets.yaml 中 genre 是 catalog.yaml 顶部 genres 登记的合法 id
 - [ ] implementation-contract.yaml 通过 `check_implementation_contract.js --stage expand`
+- [ ] visual-slots.yaml 通过 `check_visual_slots.js`
 - [ ] `state.json` `expand.status = "completed"`
 
 ---

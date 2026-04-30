@@ -94,6 +94,7 @@ try {
 // T9: 从 contract 读 must-render 清单；没有 contract 就 fallback 到 assets.yaml 的 local-file 全量
 // required = 必须被业务代码消费的 asset id 子集；其它 asset 存在但不强制消费
 let requiredAssetIds = null;
+let requiredAssetBindings = null;
 const contractPath = join(caseDir, "specs/implementation-contract.yaml");
 if (existsSync(contractPath)) {
   try {
@@ -104,6 +105,7 @@ if (existsSync(contractPath)) {
       ["images", "spritesheets", "audio"].includes(b.section)
     );
     requiredAssetIds = new Set(mustRender.map((b) => String(b.id)));
+    requiredAssetBindings = new Map(mustRender.map((b) => [String(b.id), b]));
   } catch {}
 }
 
@@ -115,12 +117,13 @@ for (const sec of ["images", "audio", "spritesheets"]) {
     if (!item) continue;
     const type = normalizeAssetType(item, sec);
     if (!["local-file", "graphics-generated", "inline-svg", "synthesized"].includes(type)) continue;
-    assetItems.push({
-      section: sec,
-      id: item.id ?? basename(item.source ?? "unknown"),
-      source: item.source ?? "",
-      type,
-    });
+      assetItems.push({
+        section: sec,
+        id: item.id ?? basename(item.source ?? "unknown"),
+        source: item.source ?? "",
+        type,
+        binding: requiredAssetBindings?.get(String(item.id ?? basename(item.source ?? "unknown"))) ?? null,
+      });
   }
 }
 
@@ -206,11 +209,11 @@ const engineConsumerPatterns = {
   canvas:  [/\.drawImage\s*\(/, /<img\s+[^>]*src\s*=/i],
   "dom-ui": [/<img\s+[^>]*src\s*=/i, /background-image\s*:\s*url\(/i, /getTextureUrl\s*\(/],
   dom:     [/<img\s+[^>]*src\s*=/i, /background-image\s*:\s*url\(/i, /getTextureUrl\s*\(/],
-  phaser3: [/\.add\.image\s*\(/, /\.add\.sprite\s*\(/, /\.sound\.add\s*\(/, /\.sound\.play\s*\(/, /this\.load\.image\s*\(/, /this\.load\.audio\s*\(/],
-  phaser:  [/\.add\.image\s*\(/, /\.add\.sprite\s*\(/, /\.sound\.add\s*\(/, /\.sound\.play\s*\(/, /this\.load\.image\s*\(/, /this\.load\.audio\s*\(/],
-  pixijs:  [/new\s+Sprite\s*\(/, /Sprite\.from\s*\(/, /PIXI\.Sprite\s*\(/],
-  pixi:    [/new\s+Sprite\s*\(/, /Sprite\.from\s*\(/, /PIXI\.Sprite\s*\(/],
-  three:   [/TextureLoader\s*\(/, /GLTFLoader\s*\(/, /AudioLoader\s*\(/, /new\s+THREE\.Sprite\s*\(/, /SpriteMaterial\s*\(/, /MeshBasicMaterial\s*\(\s*{[^}]*map\s*:/],
+  phaser3: [/\.add\.image\s*\(/, /\.add\.sprite\s*\(/, /\.sound\.add\s*\(/, /\.sound\.play\s*\(/, /this\.load\.image\s*\(/, /this\.load\.audio\s*\(/, /\.addImage\s*\(/, /\.recordGameObject\s*\(/],
+  phaser:  [/\.add\.image\s*\(/, /\.add\.sprite\s*\(/, /\.sound\.add\s*\(/, /\.sound\.play\s*\(/, /this\.load\.image\s*\(/, /this\.load\.audio\s*\(/, /\.addImage\s*\(/, /\.recordGameObject\s*\(/],
+  pixijs:  [/new\s+Sprite\s*\(/, /Sprite\.from\s*\(/, /PIXI\.Sprite\s*\(/, /\.addSprite\s*\(/, /\.recordDisplayObject\s*\(/],
+  pixi:    [/new\s+Sprite\s*\(/, /Sprite\.from\s*\(/, /PIXI\.Sprite\s*\(/, /\.addSprite\s*\(/, /\.recordDisplayObject\s*\(/],
+  three:   [/TextureLoader\s*\(/, /GLTFLoader\s*\(/, /AudioLoader\s*\(/, /new\s+THREE\.Sprite\s*\(/, /SpriteMaterial\s*\(/, /MeshBasicMaterial\s*\(\s*{[^}]*map\s*:/, /\.addObject\s*\(/, /\.recordObject\s*\(/],
 };
 
 const hasRequiredLocal = requiredAssets.some((a) => a.type === "local-file");
@@ -267,18 +270,29 @@ function consumerPatternsForAsset(asset) {
   const source = asset.source ? escapeReg(asset.source) : "";
   const renderSlot = new RegExp(`renderSlot\\s*\\(\\s*\\{[\\s\\S]{0,500}assetId\\s*:\\s*${quotedId}`, "m");
   const recordUsage = new RegExp(`recordAssetUsage\\s*\\(\\s*\\{[\\s\\S]{0,300}id\\s*:\\s*${quotedId}`, "m");
+  const recordRendered = new RegExp(`recordAssetRendered\\s*\\(\\s*\\{[\\s\\S]{0,300}(?:id|assetId)\\s*:\\s*${quotedId}`, "m");
+  const recordVisible = new RegExp(`recordAssetVisible\\s*\\(\\s*\\{[\\s\\S]{0,300}(?:id|assetId)\\s*:\\s*${quotedId}`, "m");
   const genericDrawAsset = new RegExp(`drawAsset\\s*\\([\\s\\S]{0,160}${quotedId}`, "m");
+  const addSpriteIdFirst = new RegExp(`\\.addSprite\\s*\\(\\s*${quotedId}`, "m");
+  const addSpriteIdSecond = new RegExp(`\\.addSprite\\s*\\([\\s\\S]{0,120},\\s*${quotedId}`, "m");
+  const addImageIdFirst = new RegExp(`\\.addImage\\s*\\(\\s*${quotedId}`, "m");
+  const addObjectIdSecond = new RegExp(`\\.addObject\\s*\\([\\s\\S]{0,120},\\s*${quotedId}`, "m");
+  const recordRenderedObject = new RegExp(`\\.(?:recordDisplayObject|recordGameObject|recordObject)\\s*\\(\\s*${quotedId}`, "m");
 
   if (asset.section === "audio") {
     if (asset.type === "synthesized") {
       return [
         recordUsage,
+        recordRendered,
+        recordVisible,
         new RegExp(`playTone\\s*\\([\\s\\S]{0,120}${quotedId}`, "m"),
         new RegExp(`beep\\s*\\([\\s\\S]{0,120}${quotedId}`, "m"),
       ];
     }
     return [
       recordUsage,
+      recordRendered,
+      recordVisible,
       new RegExp(`getAudio\\s*\\(\\s*${quotedId}`),
       new RegExp(`playSound\\s*\\(\\s*${quotedId}`),
       new RegExp(`sound\\.add\\s*\\(\\s*${quotedId}`),
@@ -288,7 +302,14 @@ function consumerPatternsForAsset(asset) {
   if (asset.type === "graphics-generated" || asset.type === "inline-svg") {
     return [
       recordUsage,
+      recordRendered,
+      recordVisible,
       renderSlot,
+      addSpriteIdFirst,
+      addSpriteIdSecond,
+      addImageIdFirst,
+      addObjectIdSecond,
+      recordRenderedObject,
       new RegExp(`renderGeneratedPrimitive\\s*\\(\\s*${quotedId}`),
       new RegExp(`drawGeneratedAsset\\s*\\([\\s\\S]{0,120}${quotedId}`, "m"),
       new RegExp(`getTexture\\s*\\(\\s*${quotedId}`),
@@ -297,8 +318,15 @@ function consumerPatternsForAsset(asset) {
   }
   const out = [
     recordUsage,
+    recordRendered,
+    recordVisible,
     renderSlot,
     genericDrawAsset,
+    addSpriteIdFirst,
+    addSpriteIdSecond,
+    addImageIdFirst,
+    addObjectIdSecond,
+    recordRenderedObject,
     new RegExp(`getTexture\\s*\\(\\s*${quotedId}`),
     new RegExp(`getTextureUrl\\s*\\(\\s*${quotedId}`),
     new RegExp(`\\.add\\.image\\s*\\([\\s\\S]{0,200}${quotedId}`, "m"),
@@ -410,10 +438,44 @@ async function tryStartGame(page) {
 
 function missingRuntimeUsage(required, usage) {
   if (!Array.isArray(usage)) return required.map((a) => a.id);
-  const usedIds = new Set(usage.map((e) => String(e?.id ?? e?.assetId ?? "")));
-  return required
-    .map((a) => String(a.id))
-    .filter((id) => !usedIds.has(id));
+  const byId = new Map();
+  for (const e of usage) {
+    const id = String(e?.id ?? e?.assetId ?? "");
+    if (!id) continue;
+    if (!byId.has(id)) byId.set(id, new Set());
+    const phases = byId.get(id);
+    const phase = e?.phase ? String(e.phase) : "requested";
+    if (phase === "visible") {
+      phases.add("rendered");
+      phases.add("visible");
+    } else {
+      phases.add(phase);
+      if (phase === "rendered" && e?.visible === true) phases.add("visible");
+    }
+  }
+  const coreEntityIds = new Set(strategy["visual-core-entities"] ?? []);
+  const missing = [];
+  for (const asset of required) {
+    const id = String(asset.id);
+    const phases = byId.get(id) ?? new Set();
+    const requiredPhases = requiredRuntimePhases(asset, coreEntityIds);
+    const absent = requiredPhases.filter((phase) => !phases.has(phase));
+    if (absent.length > 0) missing.push(`${id}(${absent.join("+")})`);
+  }
+  return missing;
+}
+
+function requiredRuntimePhases(asset, coreEntityIds) {
+  if (asset.section === "audio") return ["requested"];
+  const phaseAwareEngines = new Set(["canvas", "dom-ui", "dom", "phaser3", "phaser", "pixijs", "pixi", "three"]);
+  if (!phaseAwareEngines.has(engineId)) return ["requested"];
+  const phases = ["requested", "rendered"];
+  const bindingTo = asset.binding?.["binding-to"] ?? asset.binding?.bindingTo ?? null;
+  const isCoreVisual = ["images", "spritesheets"].includes(asset.section) &&
+    bindingTo &&
+    coreEntityIds.has(String(bindingTo));
+  if (isCoreVisual) phases.push("visible");
+  return phases;
 }
 
 finish();

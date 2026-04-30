@@ -6,7 +6,7 @@
  *   fx.playEffect('screen-shake', { intensity: 3, duration: 150 });
  */
 
-import { resolveFxParams } from "../../../_common/fx.spec.js";
+import { resolveFxParams } from "../_common/fx.spec.js";
 
 export function createFx({ app, stage } = {}) {
   if (!app || !stage) throw new Error("pixi-fx: app and stage are required");

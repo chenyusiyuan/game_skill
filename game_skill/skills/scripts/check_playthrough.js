@@ -394,6 +394,7 @@ let stateFails = 0;
 let hardFails = 0;
 const results = [];
 const aggregateTrace = [];
+const profileRuntimeErrors = [];
 
 async function collectTraceSnapshot() {
   const trace = await page.evaluate(() => Array.isArray(window.__trace) ? window.__trace : null).catch(() => null);
@@ -478,9 +479,9 @@ const interactionInertAssertions = (() => {
   return out;
 })();
 if (interactionInertAssertions.length >= 3) {
-  profileShapeErrors.push(
-    `[PROFILE] click-hits-nothing：${interactionInertAssertions.length} 条 interaction assertion 的全部 click 前后 gameState 无变化: ${interactionInertAssertions.slice(0, 6).join(", ")}${interactionInertAssertions.length > 6 ? " ..." : ""}。坐标可能没命中 UI、或业务 handler 未绑、或 profile 用 drivers.* 在 click 外推进业务。请用 observers 读到真实 UI 坐标再点，或用 selector 命中实际元素。`,
-  );
+  const msg = `[PROFILE] click-hits-nothing：${interactionInertAssertions.length} 条 interaction assertion 的全部 click 前后 gameState 无变化: ${interactionInertAssertions.slice(0, 6).join(", ")}${interactionInertAssertions.length > 6 ? " ..." : ""}。坐标可能没命中 UI、或业务 handler 未绑、或 profile 用 drivers.* 在 click 外推进业务。请用 observers 读到真实 UI 坐标再点，或用 selector 命中实际元素。`;
+  profileRuntimeErrors.push(msg);
+  console.log(`  ✗ ${msg}`);
 } else if (interactionInertAssertions.length > 0) {
   console.log(`  ⚠ [click-hits-nothing] ${interactionInertAssertions.length} 条 interaction assertion click 无 state 变化（阈值 3 未触发 fail，持续观察）: ${interactionInertAssertions.join(", ")}`);
 }
@@ -490,6 +491,7 @@ const trace = aggregateTrace.length > 0 ? aggregateTrace : null;
 
 let traceCoverage = null;
 const traceErrors = [];
+traceErrors.push(...profileRuntimeErrors);
 if (!hasTraceBaseline) {
   traceErrors.push(`[TRACE] specs/event-graph.yaml 缺少 rule-traces 段；新链路必须先跑 extract_game_prd.js --emit-rule-traces`);
 } else if (trace === null) {

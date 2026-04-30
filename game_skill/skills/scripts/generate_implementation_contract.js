@@ -188,6 +188,7 @@ function collectAssetBindings(spec, strategy) {
         "binding-to": bindingTo,
         ...(visualPrimitive ? { "visual-primitive": visualPrimitive } : {}),
         ...(colorSource ? { "color-source": colorSource } : {}),
+        ...(item["fulfills-slot"] ? { "visual-slot": item["fulfills-slot"] } : {}),
         "render-as": inferRenderAs(section, type, role),
         "text-bearing": isTextBearing(role),
         "must-render": mustRender,

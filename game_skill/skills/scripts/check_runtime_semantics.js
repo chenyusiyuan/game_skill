@@ -122,6 +122,7 @@ try {
       fail(`[${probe.id}] resetWithScenario 抛错: ${e.message}`);
       continue;
     }
+    const baselineSnapshot = await readRuntimeSnapshot(page);
 
     for (const act of probe.actions ?? []) {
       if (act.driver === "__probe") {
@@ -195,6 +196,17 @@ try {
       }
     }
 
+    for (const assertion of probe.expect?.traceNotContains ?? []) {
+      const hit = trace.some((ev) => traceEventMatches(ev, assertion));
+      if (hit) {
+        fail(`[${probe.id}] traceNotContains 被命中: ${JSON.stringify(assertion)}`);
+      } else {
+        ok(`[${probe.id}] traceNotContains 未命中: ${JSON.stringify(assertion)}`);
+      }
+    }
+
+    await checkProbeStateExpectations(probe, baselineSnapshot, page);
+
     if (violationCount === 0) ok(`[${probe.id}] ${trace.length} events, reducer 复算 ${replayedCount} 条全部通过（skipped=${skippedCount}）`);
   }
 } finally {
@@ -209,6 +221,93 @@ finish(errors.length === 0 ? 0 : 1, "done");
 function ok(msg) { oks.push(msg); console.log(`  ✓ ${msg}`); }
 function warn(msg) { warnings.push(msg); console.log(`  ⚠ ${msg}`); }
 function fail(msg) { errors.push(msg); console.log(`  ✗ ${msg}`); }
+
+async function readRuntimeSnapshot(page) {
+  return page.evaluate(() => {
+    try {
+      const obs = window?.gameTest?.observers?.getSnapshot;
+      if (typeof obs === "function") return obs();
+      if (window?.gameState !== undefined) return JSON.parse(JSON.stringify(window.gameState));
+    } catch {}
+    return null;
+  }).catch(() => null);
+}
+
+async function checkProbeStateExpectations(probe, baselineSnapshot, page) {
+  const ids = probe.expect?.nonMutation ?? [];
+  if (!Array.isArray(ids) || ids.length === 0) return;
+  if (!baselineSnapshot) {
+    fail(`[${probe.id}] nonMutation 需要 gameTest.observers.getSnapshot() 或 window.gameState snapshot`);
+    return;
+  }
+  const afterSnapshot = await readRuntimeSnapshot(page);
+  if (!afterSnapshot) {
+    fail(`[${probe.id}] nonMutation 无法读取 actions 后 snapshot`);
+    return;
+  }
+  for (const id of ids) {
+    const beforeEntity = findEntityById(baselineSnapshot, id);
+    const afterEntity = findEntityById(afterSnapshot, id);
+    if (!beforeEntity) {
+      fail(`[${probe.id}] nonMutation baseline 找不到 entity id=${id}`);
+      continue;
+    }
+    if (!afterEntity) {
+      fail(`[${probe.id}] nonMutation entity id=${id} 在 actions 后消失`);
+      continue;
+    }
+    const changed = changedSemanticFields(beforeEntity, afterEntity);
+    if (changed.length > 0) {
+      fail(`[${probe.id}] nonMutation entity id=${id} 字段变化: ${changed.join(", ")}`);
+    } else {
+      ok(`[${probe.id}] nonMutation entity id=${id} 核心字段未变`);
+    }
+  }
+}
+
+function findEntityById(value, id, seen = new Set()) {
+  if (!value || typeof value !== "object") return null;
+  if (seen.has(value)) return null;
+  seen.add(value);
+  if (String(value.id ?? "") === String(id)) return value;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findEntityById(item, id, seen);
+      if (found) return found;
+    }
+    return null;
+  }
+  for (const item of Object.values(value)) {
+    const found = findEntityById(item, id, seen);
+    if (found) return found;
+  }
+  return null;
+}
+
+function changedSemanticFields(before, after) {
+  const fields = [
+    "alive",
+    "durability",
+    "hp",
+    "health",
+    "ammo",
+    "lifecycle",
+    "state",
+    "phase",
+    "row",
+    "col",
+    "gridPosition",
+    "position",
+  ];
+  const changed = [];
+  for (const f of fields) {
+    if (before[f] === undefined && after[f] === undefined) continue;
+    if (JSON.stringify(before[f]) !== JSON.stringify(after[f])) {
+      changed.push(`${f}: ${JSON.stringify(before[f])} -> ${JSON.stringify(after[f])}`);
+    }
+  }
+  return changed;
+}
 
 function finish(code, tag) {
   const summary = errors.length === 0

@@ -336,6 +336,7 @@ function checkGeneratedCode(c, assets, root) {
   checkBusinessAntiCheat(businessSrc);  // SB-unified: 业务代码同步跑 profile 反作弊子集
   checkPrimitiveImplementationCoverage(allSrc); // mechanics -> code 1:1
   checkRuntimePrimitiveImports(c, businessSrc); // P1.4: enforced engines must import runtime APIs
+  checkWinLoseRuntimeContract(businessSrc); // R2: win-lose-check ctx.fields/elapsedMs/collections contract
 
   if (engine === "phaser3" || engine === "phaser") {
     if (/\.load\.start\s*\(/.test(businessSrc)) {
@@ -440,6 +441,7 @@ function checkRuntimePrimitiveImports(c, businessSrc) {
 
   const missingImport = [];
   const missingCall = [];
+  const missingBoundCall = [];
   // P1.4 fix: call-site 检查必须忽略注释内的伪调用（JSDoc / 行注释）和 import 语句本身。
   const codeOnly = stripCommentsAndImports(businessSrc);
   for (const primitive of required) {
@@ -455,6 +457,16 @@ function checkRuntimePrimitiveImports(c, businessSrc) {
       missingCall.push(`${primitive}.${importedApi}`);
     }
   }
+  for (const node of nodes) {
+    if (!node?.node || !required.has(node.primitive)) continue;
+    const calls = apisFor(node.primitive)
+      .flatMap((api) => extractFunctionCalls(codeOnly, api));
+    const bound = calls.some((call) =>
+      objectCallHasStringProperty(call, "node", node.node) &&
+      objectCallHasAnyStringProperty(call, "rule")
+    );
+    if (!bound) missingBoundCall.push(`${node.node} (${node.primitive})`);
+  }
 
   if (missingImport.length > 0) {
     fail(
@@ -466,9 +478,91 @@ function checkRuntimePrimitiveImports(c, businessSrc) {
       `[runtime] ${missingCall.length} 个 runtime API 已 import 但未调用: ${missingCall.slice(0, 6).join(", ")}（只有调用才能触发 before/after trace）`,
     );
   }
-  if (missingImport.length === 0 && missingCall.length === 0) {
-    ok(`[runtime] runtime primitive import 完整：全部 ${required.size} 个适用 runtime-backed primitive 均已 import + 调用`);
+  if (missingBoundCall.length > 0) {
+    fail(
+      `[runtime] ${missingBoundCall.length} 个 mechanics node 缺少绑定自身 node/rule 的 runtime 调用: ${missingBoundCall.slice(0, 8).join(", ")}。` +
+      `每个 runtime API object literal 必须同时包含 node: "<mechanics-node-id>" 与 rule: "<rule-id>"。`,
+    );
   }
+  if (missingImport.length === 0 && missingCall.length === 0 && missingBoundCall.length === 0) {
+    ok(`[runtime] runtime primitive import 完整：全部 ${required.size} 个适用 runtime-backed primitive 均已 import + 调用，并绑定 node/rule`);
+  }
+}
+
+function checkWinLoseRuntimeContract(businessSrc) {
+  const req = collectWinLoseCtxRequirements(mechanicsSpec);
+  if (!req) return;
+  const codeOnly = stripCommentsAndImports(businessSrc);
+  const calls = extractFunctionCalls(codeOnly, "checkWinLose");
+  if (calls.length === 0) {
+    // checkRuntimePrimitiveImports already reports the missing runtime API call.
+    return;
+  }
+
+  const failures = [];
+  for (let idx = 0; idx < calls.length; idx++) {
+    const stateExpr = findObjectPropertyExpression(calls[idx], "state");
+    if (!stateExpr) {
+      failures.push(`#${idx + 1} 缺少 state 参数`);
+      continue;
+    }
+    const stateObj = resolveStateObjectExpression(stateExpr, codeOnly);
+    if (!stateObj) {
+      failures.push(`#${idx + 1} state=${shortSnippet(stateExpr)} 不可静态识别；请传入直接对象或返回对象的 helper`);
+      continue;
+    }
+
+    const missing = [];
+    if (req.fields && !hasTopLevelObjectProperty(stateObj, "fields")) missing.push("fields");
+    if (req.elapsedMs && !hasTopLevelObjectProperty(stateObj, "elapsedMs")) missing.push("elapsedMs");
+    if (req.collections && !hasTopLevelObjectProperty(stateObj, "collections")) missing.push("collections");
+    if (missing.length > 0) {
+      failures.push(`#${idx + 1} state 缺 ${missing.join("/")}（需要 ${formatWinLoseReq(req)}）`);
+    }
+  }
+
+  if (failures.length > 0) {
+    fail(
+      `[runtime.win-lose-check] checkWinLose ctx shape 不符合 mechanics 条件：${failures.join("; ")}。` +
+      `win-lose-check reducer 只读取 ctx.fields / ctx.elapsedMs / ctx.collections，禁止传扁平 { misses, timeLeftMs }。`,
+    );
+  } else {
+    ok(`[runtime.win-lose-check] ctx contract 完整：${calls.length} 个 checkWinLose 调用满足 ${formatWinLoseReq(req)}`);
+  }
+}
+
+function collectWinLoseCtxRequirements(mechanics) {
+  const nodes = (mechanics?.mechanics ?? []).filter((n) => n?.primitive === "win-lose-check@v1");
+  if (nodes.length === 0) return null;
+  const req = { fields: false, elapsedMs: false, collections: false, nodes: nodes.length };
+  for (const node of nodes) {
+    const params = node.params ?? {};
+    const clauses = [
+      ...(Array.isArray(params.win) ? params.win : []),
+      ...(Array.isArray(params.lose) ? params.lose : []),
+      ...(Array.isArray(params.settle) ? params.settle : []),
+    ];
+    for (const clause of clauses) {
+      if (!clause || typeof clause !== "object") continue;
+      if (clause.field) req.fields = true;
+      if (clause.collection) req.collections = true;
+      switch (clause.kind) {
+        case "score-reaches":
+        case "out-of-resource":
+          req.fields = true;
+          break;
+        case "time-up":
+          req.elapsedMs = true;
+          break;
+        case "all-cleared":
+        case "count-reaches":
+        case "count-falls-below":
+          req.collections = true;
+          break;
+      }
+    }
+  }
+  return req;
 }
 
 // T3: 扫 event-graph.yaml 里声明的每条 rule-id，业务代码必须有对应 push
@@ -627,7 +721,7 @@ function consumerPatternFor(binding) {
   if (binding.type === "graphics-generated" || binding.type === "inline-svg") {
     return /fillRect\s*\(|strokeRect\s*\(|roundRect\s*\(|arc\s*\(|beginPath\s*\(|ctx\.fill\s*\(|ctx\.stroke\s*\(|new\s+Graphics\s*\(|\.add\.graphics\s*\(|\.fillRect\s*\(|\.fillCircle\s*\(|\.rect\s*\(|\.circle\s*\(|\.fill\s*\(|\.stroke\s*\(|<svg\b|createElementNS\s*\([^)]*svg/;
   }
-  return /getTexture\s*\(|new\s+Sprite\s*\(|\.add\.image\s*\(|\.add\.sprite\s*\(|drawImage\s*\(|Sprite\.from\s*\(/;
+  return /getTexture\s*\(|new\s+Sprite\s*\(|\.add\.image\s*\(|\.add\.sprite\s*\(|drawImage\s*\(|Sprite\.from\s*\(|\.addImage\s*\(|\.addSprite\s*\(|\.addObject\s*\(|\.recordDisplayObject\s*\(|\.recordGameObject\s*\(|\.recordObject\s*\(/;
 }
 
 function collectAssets(spec) {
@@ -698,6 +792,215 @@ function stripCommentsAndImports(src) {
   // CJS require 赋值（业务代码一般不用，但稳妥起见）
   out = out.replace(/^\s*(?:const|let|var)\s+\{[^}]+\}\s*=\s*require\([^)]+\)\s*;?/gm, "");
   return out;
+}
+
+function extractFunctionCalls(src, name) {
+  const out = [];
+  const re = new RegExp(`\\b${escapeReg(name)}\\s*\\(`, "g");
+  let m;
+  while ((m = re.exec(src))) {
+    const open = src.indexOf("(", m.index);
+    const close = findBalancedEnd(src, open, "(", ")");
+    if (close < 0) continue;
+    out.push(src.slice(open + 1, close));
+    re.lastIndex = close + 1;
+  }
+  return out;
+}
+
+function findObjectPropertyExpression(objectExpr, prop) {
+  const s = String(objectExpr ?? "").trim();
+  if (!s.startsWith("{")) return null;
+  const outerEnd = findBalancedEnd(s, 0, "{", "}");
+  if (outerEnd < 0) return null;
+  let i = 1;
+  while (i < outerEnd) {
+    i = skipWsAndCommas(s, i);
+    const key = readObjectKey(s, i);
+    if (!key) { i++; continue; }
+    i = skipWs(s, key.end);
+    if (s[i] !== ":") continue;
+    i = skipWs(s, i + 1);
+    const end = findTopLevelExpressionEnd(s, i, outerEnd);
+    if (key.name === prop) return s.slice(i, end).trim();
+    i = end + 1;
+  }
+  return null;
+}
+
+function resolveStateObjectExpression(expr, source) {
+  const s = String(expr ?? "").trim();
+  if (s.startsWith("{")) return s;
+
+  let m = s.match(/^([A-Za-z_$][\w$]*)\s*\(\s*\)$/);
+  if (m) {
+    const obj = findFunctionReturnObject(source, m[1]);
+    if (obj) return obj;
+  }
+
+  m = s.match(/^([A-Za-z_$][\w$]*)$/);
+  if (m) {
+    const obj = findVariableObject(source, m[1]);
+    if (obj) return obj;
+  }
+  return null;
+}
+
+function findFunctionReturnObject(source, name) {
+  const funcRe = new RegExp(`\\bfunction\\s+${escapeReg(name)}\\s*\\([^)]*\\)\\s*\\{`, "g");
+  let m = funcRe.exec(source);
+  if (m) {
+    const open = source.indexOf("{", m.index);
+    const close = findBalancedEnd(source, open, "{", "}");
+    if (close >= 0) {
+      const body = source.slice(open + 1, close);
+      const obj = findReturnObject(body);
+      if (obj) return obj;
+    }
+  }
+
+  const arrowRe = new RegExp(`\\b(?:const|let|var)\\s+${escapeReg(name)}\\s*=\\s*(?:\\([^)]*\\)|[A-Za-z_$][\\w$]*)\\s*=>\\s*`, "g");
+  m = arrowRe.exec(source);
+  if (!m) return null;
+  let i = skipWs(source, arrowRe.lastIndex);
+  if (source[i] === "(") {
+    const openObj = skipWs(source, i + 1);
+    if (source[openObj] === "{") {
+      const closeObj = findBalancedEnd(source, openObj, "{", "}");
+      return closeObj >= 0 ? source.slice(openObj, closeObj + 1) : null;
+    }
+  }
+  if (source[i] === "{") {
+    const close = findBalancedEnd(source, i, "{", "}");
+    if (close >= 0) return findReturnObject(source.slice(i + 1, close));
+  }
+  return null;
+}
+
+function findReturnObject(body) {
+  const re = /\breturn\s*\{/g;
+  const m = re.exec(body);
+  if (!m) return null;
+  const open = body.indexOf("{", m.index);
+  const close = findBalancedEnd(body, open, "{", "}");
+  return close >= 0 ? body.slice(open, close + 1) : null;
+}
+
+function findVariableObject(source, name) {
+  const re = new RegExp(`\\b(?:const|let|var)\\s+${escapeReg(name)}\\s*=\\s*\\{`, "g");
+  const m = re.exec(source);
+  if (!m) return null;
+  const open = source.indexOf("{", m.index);
+  const close = findBalancedEnd(source, open, "{", "}");
+  return close >= 0 ? source.slice(open, close + 1) : null;
+}
+
+function hasTopLevelObjectProperty(objectExpr, prop) {
+  return findObjectPropertyExpression(objectExpr, prop) !== null;
+}
+
+function objectCallHasStringProperty(callExpr, prop, expected) {
+  const value = findObjectPropertyExpression(callExpr, prop);
+  return stringLiteralValue(value) === String(expected);
+}
+
+function objectCallHasAnyStringProperty(callExpr, prop) {
+  return stringLiteralValue(findObjectPropertyExpression(callExpr, prop)) !== null;
+}
+
+function stringLiteralValue(expr) {
+  const s = String(expr ?? "").trim();
+  if (s.length < 2) return null;
+  const quote = s[0];
+  if (!["'", '"', "`"].includes(quote) || s.at(-1) !== quote) return null;
+  return s.slice(1, -1);
+}
+
+function formatWinLoseReq(req) {
+  const parts = [];
+  if (req.fields) parts.push("fields");
+  if (req.elapsedMs) parts.push("elapsedMs");
+  if (req.collections) parts.push("collections");
+  return parts.length ? parts.join("+") : "ctx";
+}
+
+function shortSnippet(s) {
+  return String(s).replace(/\s+/g, " ").slice(0, 80);
+}
+
+function skipWs(s, i) {
+  while (i < s.length && /\s/.test(s[i])) i++;
+  return i;
+}
+
+function skipWsAndCommas(s, i) {
+  while (i < s.length && (/[\s,]/.test(s[i]))) i++;
+  return i;
+}
+
+function readObjectKey(s, i) {
+  const ch = s[i];
+  if (ch === "'" || ch === '"') {
+    const end = findStringEnd(s, i, ch);
+    if (end < 0) return null;
+    return { name: s.slice(i + 1, end), end: end + 1 };
+  }
+  const m = s.slice(i).match(/^([A-Za-z_$][\w$-]*)/);
+  if (!m) return null;
+  return { name: m[1], end: i + m[1].length };
+}
+
+function findTopLevelExpressionEnd(s, start, limit) {
+  let depthParen = 0;
+  let depthBrace = 0;
+  let depthBracket = 0;
+  for (let i = start; i < limit; i++) {
+    const ch = s[i];
+    if (ch === "'" || ch === '"' || ch === "`") {
+      const end = findStringEnd(s, i, ch);
+      if (end < 0) return limit;
+      i = end;
+      continue;
+    }
+    if (ch === "(") depthParen++;
+    else if (ch === ")") depthParen = Math.max(0, depthParen - 1);
+    else if (ch === "{") depthBrace++;
+    else if (ch === "}") depthBrace = Math.max(0, depthBrace - 1);
+    else if (ch === "[") depthBracket++;
+    else if (ch === "]") depthBracket = Math.max(0, depthBracket - 1);
+    else if (ch === "," && depthParen === 0 && depthBrace === 0 && depthBracket === 0) {
+      return i;
+    }
+  }
+  return limit;
+}
+
+function findBalancedEnd(s, openIdx, openCh, closeCh) {
+  if (openIdx < 0 || s[openIdx] !== openCh) return -1;
+  let depth = 0;
+  for (let i = openIdx; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === "'" || ch === '"' || ch === "`") {
+      const end = findStringEnd(s, i, ch);
+      if (end < 0) return -1;
+      i = end;
+      continue;
+    }
+    if (ch === openCh) depth++;
+    else if (ch === closeCh) {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+function findStringEnd(s, start, quote) {
+  for (let i = start + 1; i < s.length; i++) {
+    if (s[i] === "\\") { i++; continue; }
+    if (s[i] === quote) return i;
+  }
+  return -1;
 }
 
 function finish() {

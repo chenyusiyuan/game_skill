@@ -11,7 +11,7 @@
  * 每帧 draw 循环里调 `fx.render(ctx)`。
  */
 
-import { FX_VERBS, resolveFxParams } from "../../../_common/fx.spec.js";
+import { FX_VERBS, resolveFxParams } from "../_common/fx.spec.js";
 
 export function createFx({ canvas, ctx } = {}) {
   const particles = [];
