@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GameSkillPreserveLock",
+  "description": "cases/<slug>/.game/preserve.lock.yaml 的 schema。Stage 1 结束后生成，Stage 2-5 和支路只读。",
+  "type": "object",
+  "required": ["version", "generated-at-stage", "core-entities", "win-lose-conditions", "input-model", "core-ui-zones", "scenarios"],
+  "additionalProperties": true,
+  "properties": {
+    "version": {
+      "type": "integer"
+    },
+    "generated-at-stage": {
+      "type": "string",
+      "pattern": "^(1|pivot-[0-9]+)$"
+    },
+    "core-entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "fields"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "fields": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "win-lose-conditions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "params"],
+        "additionalProperties": true,
+        "properties": {
+          "kind": { "type": "string" },
+          "params": { "type": "object" }
+        }
+      }
+    },
+    "input-model": {
+      "type": "string",
+      "enum": ["click", "drag", "keyboard", "pointer", "touch", "mouse", "mixed", "unknown"]
+    },
+    "core-ui-zones": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "max-ticks", "expected-outcome", "setup"],
+        "additionalProperties": true,
+        "properties": {
+          "name": { "type": "string" },
+          "max-ticks": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expected-outcome": {
+            "type": "string",
+            "enum": ["win", "lose", "settle"]
+          },
+          "setup": {}
+        }
+      }
+    }
+  }
+}

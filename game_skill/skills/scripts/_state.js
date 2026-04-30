@@ -26,7 +26,9 @@ import { dirname } from "path";
 
 export const STATE_SCHEMA_VERSION = 1;
 
-const PHASE_NAMES = ["understand", "prd", "spec-clarify", "expand", "codegen", "verify"];
+const CORE_PHASE_NAMES = ["understand", "prd", "spec-clarify", "design-strategy", "expand", "codegen", "verify"];
+const STAGE_PHASE_NAMES = ["stage-1", "stage-2", "stage-3", "stage-4", "stage-5"];
+const PHASE_NAMES = [...CORE_PHASE_NAMES, ...STAGE_PHASE_NAMES];
 // mechanics 是 Phase 3.0 产物（primitive DAG），排在其余 expanders 之前。
 // 它与 rule/event-graph 的关系：rule 和 event-graph 必须引用 mechanics.yaml 的 node id。
 const EXPAND_SUBTASKS = ["mechanics", "scene", "rule", "data", "assets", "event-graph", "implementation-contract"];
@@ -75,12 +77,18 @@ export function initState({ project, runtime, visualStyle, deliveryTarget }) {
       understand: { status: "pending" },
       prd: { status: "pending" },
       "spec-clarify": { status: "pending" },
+      "design-strategy": { status: "pending" },
       expand: {
         status: "pending",
         subtasks: Object.fromEntries(EXPAND_SUBTASKS.map(k => [k, { status: "pending" }])),
       },
       codegen: { status: "pending" },
       verify: { status: "pending" },
+      "stage-1": { status: "pending" },
+      "stage-2": { status: "pending" },
+      "stage-3": { status: "pending" },
+      "stage-4": { status: "pending" },
+      "stage-5": { status: "pending" },
     },
   };
   if (runtime) st.runtime = runtime;
@@ -182,7 +190,7 @@ export function isResumable(state) {
   if (state.currentPhase === "done") return { resumable: false, reason: "already done" };
   if (state.currentPhase === "failed") return { resumable: false, reason: "previously failed, needs manual intervention" };
 
-  for (const p of PHASE_NAMES) {
+  for (const p of resumablePhaseOrder(state)) {
     const status = state.phases?.[p]?.status;
     if (status === "running" || status === "pending") {
       const info = { resumable: true, resumeFrom: p };
@@ -201,15 +209,19 @@ export function isResumable(state) {
 // ---------- internal ----------
 
 function nextPhaseAfter(name) {
-  const idx = PHASE_NAMES.indexOf(name);
-  if (idx < 0 || idx >= PHASE_NAMES.length - 1) return null;
-  return PHASE_NAMES[idx + 1];
+  if (STAGE_PHASE_NAMES.includes(name)) {
+    const idx = STAGE_PHASE_NAMES.indexOf(name);
+    return idx >= 0 && idx < STAGE_PHASE_NAMES.length - 1 ? STAGE_PHASE_NAMES[idx + 1] : null;
+  }
+  const idx = CORE_PHASE_NAMES.indexOf(name);
+  if (idx < 0 || idx >= CORE_PHASE_NAMES.length - 1) return null;
+  return CORE_PHASE_NAMES[idx + 1];
 }
 
 function normalizeV1(raw) {
   const phases = { ...(raw.phases ?? {}) };
   for (const p of PHASE_NAMES) {
-    phases[p] = phases[p] ?? { status: "pending" };
+    phases[p] = phases[p] ?? defaultPhaseForMissing(raw, p);
   }
   const expand = { ...(phases.expand ?? { status: "pending" }) };
   const subtasks = { ...(expand.subtasks ?? {}) };
@@ -221,12 +233,31 @@ function normalizeV1(raw) {
   return { ...raw, phases };
 }
 
+function defaultPhaseForMissing(raw, phaseName) {
+  if (phaseName === "design-strategy") {
+    const downstreamStarted = ["expand", "codegen", "verify"].some((p) =>
+      ["running", "completed", "failed"].includes(raw.phases?.[p]?.status)
+    );
+    if (downstreamStarted) return { status: "skipped", reason: "missing in older state; downstream phase already started" };
+  }
+  return { status: "pending" };
+}
+
+function resumablePhaseOrder(state) {
+  const stagePlanActive = Array.isArray(state?.phasePlan?.allowedStages) &&
+    state.phasePlan.allowedStages.length > 0;
+  const stageCurrent = /^stage-\d$/.test(String(state?.currentPhase ?? ""));
+  return (stagePlanActive || stageCurrent) ? PHASE_NAMES : CORE_PHASE_NAMES;
+}
+
 function assertPhaseAllowedByPlan(state, phaseName, status) {
   if (status !== "running" && status !== "completed") return;
   const plan = state?.phasePlan;
   if (!plan?.plannedPhases) return;
   const planned = new Set(plan.plannedPhases);
   if (planned.has(phaseName)) return;
+  const stageMatch = String(phaseName).match(/^stage-(\d)$/);
+  if (stageMatch && Array.isArray(plan.allowedStages) && plan.allowedStages.includes(Number(stageMatch[1]))) return;
   if (phaseName === "expand" && planned.has("mechanics") && status === "running") return;
   throw new Error(`phase boundary: mode=${plan.mode || "<unknown>"} does not allow phase '${phaseName}' status=${status}; hardStop=${plan.hardStop || "<none>"}`);
 }
@@ -250,7 +281,7 @@ function migrateLegacy(raw) {
   const createdAt = raw.createdAt ?? raw.startedAt ?? new Date().toISOString();
   const phases = {};
   for (const p of PHASE_NAMES) {
-    const src = raw.phases?.[p] ?? raw[p] ?? { status: "pending" };
+    const src = raw.phases?.[p] ?? raw[p] ?? defaultPhaseForMissing(raw, p);
     phases[p] = {
       status: src.status ?? "pending",
       ...(src.startedAt ? { startedAt: src.startedAt } : {}),

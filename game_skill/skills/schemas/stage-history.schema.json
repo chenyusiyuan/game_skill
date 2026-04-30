@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GameSkillStageHistory",
+  "description": "cases/<slug>/.game/stage-history.yaml 的 schema。记录主干 stage、支路 iteration 和 extension-stage。",
+  "type": "object",
+  "required": ["version", "entries"],
+  "additionalProperties": true,
+  "properties": {
+    "version": {
+      "type": "integer"
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/stageEntry" },
+          { "$ref": "#/definitions/iterationEntry" },
+          { "$ref": "#/definitions/extensionStageEntry" }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "stageEntry": {
+      "type": "object",
+      "required": ["kind", "n", "type", "status", "preserve-updated", "triggered-by", "ended-at"],
+      "additionalProperties": true,
+      "properties": {
+        "kind": { "const": "stage" },
+        "n": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "type": { "type": "string", "enum": ["vertical-slice", "content", "variety", "progression", "polish"] },
+        "status": { "type": "string" },
+        "preserve-updated": { "type": "boolean" },
+        "triggered-by": { "type": "string" },
+        "ended-at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "iterationEntry": {
+      "type": "object",
+      "required": ["kind", "after-stage", "category", "user-feedback", "status", "replay-status"],
+      "additionalProperties": true,
+      "properties": {
+        "kind": { "const": "iteration" },
+        "after-stage": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "category": {
+          "type": "string",
+          "enum": ["code-bug", "tuning", "art-change", "scope-change", "rework", "extension", "pivot", "ambiguous"]
+        },
+        "user-feedback": { "type": "string" },
+        "target-stage": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "status": { "type": "string" },
+        "replay-status": { "type": "string" }
+      }
+    },
+    "extensionStageEntry": {
+      "type": "object",
+      "required": ["kind", "n", "goal", "user-feedback", "status", "ended-at"],
+      "additionalProperties": true,
+      "properties": {
+        "kind": { "const": "extension-stage" },
+        "n": { "type": "integer", "minimum": 1 },
+        "goal": { "type": "string" },
+        "user-feedback": { "type": "string" },
+        "status": { "type": "string" },
+        "ended-at": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

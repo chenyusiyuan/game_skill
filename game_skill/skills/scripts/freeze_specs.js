@@ -27,6 +27,8 @@ const freezeFile = join(caseDir, ".game/freeze.json");
 // 受冻结的路径（相对 caseDir）
 const FROZEN_PATHS = [
   "docs/game-prd.md",
+  "docs/design-strategy.yaml",
+  ".game/preserve.lock.yaml",
   "specs",                 // 整个目录递归
   "profile.json",          // 若有 profiles/<slug>.json 也要纳入，下面处理
 ];
@@ -61,12 +63,42 @@ function walk(root, out = {}) {
 
 function buildFingerprint() {
   const fp = {};
-  for (const rel of FROZEN_PATHS) {
+  for (const rel of frozenPathsForCurrentStage()) {
     walk(join(caseDir, rel), fp);
   }
   // 额外加 profiles/<slug>.json（如存在）—— 从仓库根推算
   // 这里不强制；主 agent 如需冻结可显式指定
   return fp;
+}
+
+function frozenPathsForCurrentStage() {
+  const out = [...FROZEN_PATHS];
+  const stage = readCurrentStage();
+  if (stage) out.push(`specs/stage-contract-${stage}.yaml`);
+  return [...new Set(out)];
+}
+
+function readCurrentStage() {
+  const statePath = join(caseDir, ".game/state.json");
+  if (!existsSync(statePath)) return null;
+  try {
+    const state = JSON.parse(readFileSync(statePath, "utf8"));
+    const candidates = [
+      state.currentStage,
+      state["current-stage"],
+      state.phasePlan?.currentStage,
+      state.phasePlan?.["current-stage"],
+      Array.isArray(state.phasePlan?.allowedStages) ? state.phasePlan.allowedStages[0] : null,
+      String(state.currentPhase ?? "").match(/^stage-(\d)$/)?.[1],
+    ];
+    for (const candidate of candidates) {
+      const n = Number(candidate);
+      if (Number.isInteger(n) && n >= 1 && n <= 5) return n;
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 if (!verify) {

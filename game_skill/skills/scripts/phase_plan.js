@@ -71,11 +71,66 @@ const MODE_PRESETS = {
     layeredVerify: false,
     description: "从 .game/state.json 决定恢复点；默认不自动进入 E2E。",
   },
+  "stage-1-vertical-slice": {
+    startAt: "understand",
+    stopAfter: "deliver",
+    allowE2E: true,
+    layeredVerify: false,
+    allowedPhases: [...PHASES],
+    allowedStages: [1],
+    stageType: "vertical-slice",
+    userConfirmationRequired: true,
+    description: "Stage 1 Vertical Slice：生成最小完整玩法闭环，结束后生成 preserve.lock 并等待用户确认。",
+  },
+  "stage-2-content": {
+    startAt: "mechanics",
+    stopAfter: "deliver",
+    allowE2E: true,
+    layeredVerify: false,
+    allowedPhases: ["mechanics", "expand", "codegen", "verify", "deliver"],
+    allowedStages: [2],
+    stageType: "content",
+    userConfirmationRequired: true,
+    description: "Stage 2 Content：在 preserve.lock 不变的前提下扩展内容规模，结束后建议用户确认。",
+  },
+  "stage-3-variety": {
+    startAt: "mechanics",
+    stopAfter: "deliver",
+    allowE2E: true,
+    layeredVerify: false,
+    allowedPhases: ["mechanics", "expand", "codegen", "verify", "deliver"],
+    allowedStages: [3],
+    stageType: "variety",
+    userConfirmationRequired: false,
+    description: "Stage 3 Variety：增加局内变化，默认自动推进但可被用户反馈打断。",
+  },
+  "stage-4-progression": {
+    startAt: "mechanics",
+    stopAfter: "deliver",
+    allowE2E: true,
+    layeredVerify: false,
+    allowedPhases: ["mechanics", "expand", "codegen", "verify", "deliver"],
+    allowedStages: [4],
+    stageType: "progression",
+    userConfirmationRequired: false,
+    description: "Stage 4 Progression：补齐资源循环、升级和推进系统，默认自动推进。",
+  },
+  "stage-5-polish": {
+    startAt: "mechanics",
+    stopAfter: "deliver",
+    allowE2E: true,
+    layeredVerify: false,
+    allowedPhases: ["mechanics", "expand", "codegen", "verify", "deliver"],
+    allowedStages: [5],
+    stageType: "polish",
+    userConfirmationRequired: false,
+    description: "Stage 5 Polish：只做平衡、表现和交付收敛，默认自动完成交付。",
+  },
 };
 
 function usage() {
   return [
-    "Usage: node phase_plan.js [--mode full|mechanics-only|expand-only|codegen-only|verify-layered|verify-e2e|resume]",
+    `Usage: node phase_plan.js [--mode ${Object.keys(MODE_PRESETS).join("|")}]`,
     "                          [--project PROJECT] [--stop-before PHASE] [--stop-after PHASE] [--write-state]",
     "",
     "Examples:",
@@ -207,6 +262,12 @@ function buildPlan(options) {
   if (preset.layeredVerify) {
     instructions.push("Run verification layers one by one and stop on the first failing layer.");
   }
+  if (Array.isArray(preset.allowedStages) && preset.allowedStages.length > 0) {
+    instructions.push(`Operate only stage(s): ${preset.allowedStages.join(", ")} (${preset.stageType}).`);
+  }
+  if (preset.userConfirmationRequired) {
+    instructions.push("Stop for user confirmation after the stage acceptance checks pass.");
+  }
   if (hardStop !== "none") {
     instructions.push(`Stop at ${hardStop} and report evidence before continuing.`);
   }
@@ -237,6 +298,10 @@ function buildPlan(options) {
     stopAfter,
     hardStop,
     plannedPhases,
+    allowedPhases: preset.allowedPhases ?? plannedPhases,
+    allowedStages: preset.allowedStages ?? [],
+    stageType: preset.stageType ?? null,
+    userConfirmationRequired: Boolean(preset.userConfirmationRequired),
     allowE2E,
     layeredVerify: Boolean(preset.layeredVerify),
     instructions,
@@ -260,6 +325,11 @@ try {
         hardStop: plan.hardStop,
         stopBefore: plan.stopBefore,
         stopAfter: plan.stopAfter,
+        allowedPhases: plan.allowedPhases,
+        allowedStages: plan.allowedStages,
+        stageType: plan.stageType,
+        currentStage: plan.allowedStages?.[0] ?? null,
+        userConfirmationRequired: plan.userConfirmationRequired,
         allowE2E: plan.allowE2E,
         layeredVerify: plan.layeredVerify,
         createdAt: new Date().toISOString(),

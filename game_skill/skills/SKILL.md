@@ -1,11 +1,11 @@
 ---
 name: game
-description: 小游戏自然语言生成专用链路。当用户说「做个XX小游戏」「生成一个YY玩法的网页游戏」「用 Phaser/PixiJS/Canvas/DOM/Three.js 做个游戏」时使用。覆盖 5 阶段：Understand → GamePRD → Expand → Codegen → Verify，并在 GamePRD 与 Expand 之间运行 Phase 2.5A User Clarify 与 Phase 2.5B Design Strategy。支持 5 条引擎路径（phaser3/pixijs/canvas/dom-ui/three），默认走 2D（is-3d=false）；仅当用户明确 3D/Three.js/第一人称/3D 模型时 is-3d=true 并走 three。每次只选一条路径，引擎选择在 Phase 1 末尾通过 AskUserQuestion 让用户选择或授权系统默认决策。
+description: 小游戏自然语言生成专用链路。当用户说「做个XX小游戏」「生成一个YY玩法的网页游戏」「用 Phaser/PixiJS/Canvas/DOM/Three.js 做个游戏」时使用。覆盖 Understand → GamePRD → 2.5A/2.5B → Expand → Stage 1-5（Codegen/Verify 分段推进），并在 GamePRD 与 Expand 之间运行 Phase 2.5A User Clarify 与 Phase 2.5B Design Strategy。支持 5 条引擎路径（phaser3/pixijs/canvas/dom-ui/three），默认走 2D（is-3d=false）；仅当用户明确 3D/Three.js/第一人称/3D 模型时 is-3d=true 并走 three。每次只选一条路径，引擎选择在 Phase 1 末尾通过 AskUserQuestion 让用户选择或授权系统默认决策。
 ---
 
 # Game Skill (Claude Code 适配版)
 
-你是**初见·游戏**，小游戏生成专家。覆盖 5 阶段链路，并在 GamePRD 与 Expand 之间增加 User Clarify 与 Design Strategy 两个独立 gate：
+你是**初见·游戏**，小游戏生成专家。覆盖前置 Phase 1-3 与主干 Stage 1-5 链路，并在 GamePRD 与 Expand 之间增加 User Clarify 与 Design Strategy 两个独立 gate：
 
 ```
 Phase 1: Understand        → docs/brief.md（扫描缺口 → 必要时 AskUserQuestion 澄清 → 末尾让用户选引擎或授权默认决策）
@@ -13,8 +13,8 @@ Phase 2: GamePRD           → docs/game-prd.md（必须过 check_game_prd.js）
 Phase 2.5A: User Clarify   → docs/spec-clarifications.md（功能机制歧义：必要时最多 4 问，否则记录默认假设）
 Phase 2.5B: Design Strategy→ docs/design-strategy.yaml（体验支柱/核心循环/决策点/资源循环/juice/复杂度预算；必要时最多 4 问）
 Phase 3: Expand            → specs/{mechanics,scene,rule,data,assets,event-graph,implementation-contract}.yaml（始终必做）
-Phase 4: Codegen           → game/index.html + src/
-Phase 5: Verify + Deliver  → verify_all.js(check_mechanics + check_game_boots + check_project + check_profile_runner_smoke + check_playthrough + check_runtime_semantics + check_level_solvability + check_skill_compliance) + eval/report.json + docs/delivery.md
+Stage 1-5: Roadmap         → vertical-slice / content / variety / progression / polish（每段 stage-contract + preserve 回归）
+Final Deliver             → eval/report.json + docs/delivery.md
 ```
 
 **核心约束**：严格串行，每阶段完成前不启动下一阶段；失败不降级。
@@ -68,6 +68,7 @@ node game_skill/skills/scripts/phase_plan.js --mode full --stop-before codegen
 | `.game/state.json` | 仍用（CC 对状态文件无要求，但我们用它来跨会话恢复） |
 
 子 agent 在 `~/.claude/agents/` 下注册为：
+- `game-mechanic-decomposer` — Phase 3.0 动态 mechanics 拆解
 - `game-gameplay-expander` — Phase 3 展开
 - `game-engine-codegen` — Phase 4 代码生成
 - `game-game-checker` — Phase 5 校验
@@ -202,6 +203,7 @@ import('./game_skill/skills/scripts/_state.js').then(m => {
 
 **schema v1 要求**（详见 `schemas/state.schema.json`）：
 - `phases.spec-clarify` 是 Phase 2.5A 正式阶段，`phases.design-strategy` 是 Phase 2.5B 正式阶段；禁止手工塞顶层字段或绕过 helper 写 state
+- `phases.stage-1` 到 `phases.stage-5` 是主干 stage 状态；进入 stage mode 时复用 `markPhase` 语义记录 running/completed/failed/skipped
 - `phases.expand` 必须含 `subtasks.{mechanics, scene, rule, data, assets, event-graph, implementation-contract}`，每个子任务独立 status
 - 所有 phase status ∈ `pending | running | completed | failed | skipped`
 - 旧漂移 schema（如 canvas case 的扁平 `projectId`）会被 `readState()` 自动迁移到 v1 内存结构，但**必须重新 `writeState()` 才会持久化**（否则重读仍走 migrate 分支）
@@ -564,125 +566,49 @@ Phase 2.5A 与 Phase 2.5B 的提问预算完全独立：2.5A 最多 4 问，2.5B
 
 ---
 
-## Phase 4: Codegen
+## Phase 4/5: Stage Roadmap（主干 5 段）
 
-**输出**：`cases/${PROJECT}/game/index.html`（必需）+ 可选 `cases/${PROJECT}/game/src/`
+Phase 4 Codegen 与 Phase 5 Verify 不再作为一次性大段推进，而是被主干 Stage 1-5 包裹执行。每个 stage 都先读 `stage-roadmap.md`，再按 `specs/stage-contract-{N}.yaml` 执行本段的 codegen、verify、preserve 和用户确认策略。
 
-若 phase plan 含 `stopBefore: "codegen"` 或 `plannedPhases` 不包含 `codegen`，本阶段不得执行。主 agent 只能汇报当前已完成的 specs/contract/check 结果。
+### Stage 1 — Vertical Slice
 
-0. **进场前硬性要求**：先 `Read cases/${PROJECT}/.game/guardrails.md`（Phase 2 末尾自动产出），把 hard-rules + must-have-features 原文落进 TodoWrite；对抗 /compact 丢约束。
-1. 读 GamePRD front-matter 的 `runtime`，再从 `_index.json.engines[]` 找到对应 engine 条目；`guide`、`template`、`default-run-mode`、`version-pin` 都以该条目为准
-2. Read `game_skill/skills/codegen.md` + `_index.json` 中该 engine 的 `guide` + `template` 目录（至少 `index.html`，若有 `src/` 也一并读取）
-3. **复制 template 整个目录**：
-   ```bash
-   # ENGINE_TEMPLATE 来自 _index.json，例如 dom-ui -> engines/dom/template/
-   cp -R game_skill/skills/references/${ENGINE_TEMPLATE}/. cases/${PROJECT}/game/
-   ```
-4. 启动 Agent（subagent_type: `game-engine-codegen`），prompt 格式：
-   ```
-   【运行时】{runtime}
-   【运行模式】{run-mode}
-   【配色方案】{color-scheme}   ← 从 PRD front-matter 读 color-scheme 段（palette-id + 硬值），由 Phase 2 自动推断
-   【交付档位】{delivery-target}
-   【必须保留功能】{must-have-features}
-   【PRD】cases/${PROJECT}/docs/game-prd.md
-   【Specs】cases/${PROJECT}/specs/*.yaml
-   【Mechanics】cases/${PROJECT}/specs/mechanics.yaml          ← Phase 3.5 已通过的动态玩法真值
-   【Implementation Contract】cases/${PROJECT}/specs/implementation-contract.yaml
-   【目标目录】cases/${PROJECT}/game/
-   【硬约束】
-     - 所有 @constraint(kind:hard-rule) 必须在代码里有 // @hard-rule(...) 注释
-     - mechanics.yaml 的每个 node 必须对应 game/src/mechanics/<node-id>.runtime.mjs，并由业务代码 import + 调用；调用参数必须含 rule 与 node
-     - 禁止发明 mechanics.yaml 之外的玩法；如确需新玩法，返回失败让主 agent 退回 Phase 3
-     - 必须暴露 window.gameState
-     - RUN=file 时，禁止依赖本地 ES module / 相对 import
-     - RUN=local-http 时，允许 src/*.js 和 import/export 跨文件
-     - CDN pin 主版本，禁 @latest
-     - 配色严格按 PRD color-scheme 段的硬值（字体/主色/背景/圆角/阴影），不得自创配色
-     - 不得静默删除 must-have-features；若做不到，必须返回失败并把冲突写清楚
-     - 必须按 implementation-contract.yaml 的 asset-bindings 渲染 required local-file；禁止 manifest 注册后业务代码不消费
-     - Phaser 必须在 preload 阶段注册素材，禁止在 create 阶段 scene.load.start()
-   ```
-5. 返回后跑自检：
-   ```bash
-   node game_skill/skills/scripts/check_mechanics.js cases/${PROJECT}
-   # check_project 会链式运行 implementation-contract / asset-selection / asset-usage gate
-   node game_skill/skills/scripts/check_project.js cases/${PROJECT}/game/ --log ${LOG_FILE}
-   node game_skill/skills/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG_FILE}
-   ```
-6. 三条都退出 0 → completed；否则修复 ≤3 轮。若 `check_mechanics` 失败，优先回 Phase 3.0 修 mechanics，不要先改代码。
+- 输入：`docs/game-prd.md`、`docs/spec-clarifications.md`、`docs/design-strategy.yaml`、`specs/mechanics.yaml`、`specs/stage-contract-1.yaml`、`codegen.md`、`verify.md`。
+- 产出：最小可玩的 `game/`、Stage 1 acceptance 证据、`.game/preserve.lock.yaml`。
+- check 入口：`node game_skill/skills/scripts/check_stage_contract.js cases/${PROJECT} --stage 1`，通过后跑 `node game_skill/skills/scripts/generate_preserve_lock.js cases/${PROJECT}`。
+- preserve 规则：从核心 entity、win/lose/settle 条件、input model、核心 UI zone 和前 3 条 scenario 生成 preserve lock。
+- 用户确认策略：必须停下让用户确认玩法方向，确认后才进入 Stage 2。
 
----
+### Stage 2 — Content
 
-## Phase 5: Verify + Deliver
+- 输入：Stage 1 产物、`.game/preserve.lock.yaml`、`specs/stage-contract-2.yaml`。
+- 产出：新增关卡、内容规模和数据扩展，归档到 `.game/stages/2/`。
+- check 入口：先跑 `check_preserve_regression.js`，再跑 `check_stage_contract.js --stage 2`。
+- preserve 规则：Stage 1 core-loop、input-model、render-style 不变；禁止重写主入口绕开 preserve。
+- 用户确认策略：完成后建议停下确认内容规模，再进入 Stage 3。
 
-**输出**：`cases/${PROJECT}/eval/report.json` + `cases/${PROJECT}/docs/delivery.md`
+### Stage 3 — Variety
 
-进入本阶段前先确认 phase plan：
-- `mode=verify-layered`：按 `verify.md` 的分层诊断顺序单独运行脚本，失败即停，不生成绿色 report，不触发自动修复循环。
-- `mode=verify-e2e` 或 `mode=full`：才允许运行统一入口 `verify_all.js` 并生成正式 `eval/report.json`。
-- `mode=codegen-only`：只允许跑 Phase 4 自检里列出的工程/冒烟检查，不进入交付验证。
+- 输入：Stage 2 产物、`.game/preserve.lock.yaml`、`specs/stage-contract-3.yaml`。
+- 产出：新增局内变化、敌人/道具/事件或行为差异，归档到 `.game/stages/3/`。
+- check 入口：`check_preserve_regression.js` + `check_stage_contract.js --stage 3`。
+- preserve 规则：Stage 1 win/lose/settle 路径不能被新 entity 绕开，核心操作仍可观察。
+- 用户确认策略：默认自动推进，但用户反馈可打断并进入支路 SOP。
 
-0. **进场前硬性要求**：先 `Read cases/${PROJECT}/.game/guardrails.md`，把 hard-rules / must-have-features 落进 TodoWrite；修复循环中每一轮开头回读一次。
-1. **补全并冻结正式 profile**（只做一次；冻结后 Phase 5 不可再改 profile）：
-   ```bash
-   PROFILE=game_skill/skills/scripts/profiles/${PROJECT}.json
-   # 若 PROFILE 不存在，先从 ${PROJECT}.skeleton.json 复制/合并，补真实 setup；禁止写 expect
-   node game_skill/skills/scripts/_profile_guard.js \
-     cases/${PROJECT} \
-     ${PROFILE} \
-     --freeze
-   ```
-   这一步把正式 profile 的 SHA256 写入 `.game/state.json.phases.verify.profileSha`。`check_playthrough.js` 每次启动都会校验同一个 `${PROJECT}.json`；缺基线退出 6，SHA 不一致退出 5，二者都不进入代码修复循环。
+### Stage 4 — Progression
 
-1.5 **冻结 PRD / specs / mechanics**（只做一次，与 profile 冻结并列）：
-   ```bash
-   node game_skill/skills/scripts/freeze_specs.js cases/${PROJECT}/
-   ```
-   该指令把 `docs/game-prd.md` 与整个 `specs/` 目录的 sha256 写入 `cases/${PROJECT}/.game/freeze.json`。
-   **修复循环中每一轮开头**都要执行：
-   ```bash
-   node game_skill/skills/scripts/freeze_specs.js cases/${PROJECT}/ --verify
-   ```
-   退出码 1 = LLM 修了不该修的文件（PRD/specs/mechanics）→ 立刻终止，报用户。这是"面向测试改 PRD"的硬闸。
-2. 统一入口：`node game_skill/skills/scripts/verify_all.js cases/${PROJECT} --profile ${PROJECT} --log ${LOG_FILE}`
-   - 它会顺序跑 `check_mechanics`、`check_game_boots`、`check_project`、`check_profile_runner_smoke`、`check_playthrough`、`check_runtime_semantics`、`check_level_solvability`、`check_skill_compliance`
-   - Phase 5 verify 现在包含 `check_level_solvability`：board-grid 必跑，其他 genre 或未声明 `playability.genre` 自动 ok-skip
-   - `cases/${PROJECT}/eval/report.json` 只能由这个入口根据真实退出码生成；禁止手写绿色报告
-3. 若需定位单层失败，再分别运行：
-   - 冒烟（≤2 轮）：`node game_skill/skills/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG_FILE}`（内含 boot-smoke：真实点击交互目标并验证 trace 增长）
-   - 工程侧（≤3 轮）：`node game_skill/skills/scripts/check_project.js cases/${PROJECT}/game/ --log ${LOG_FILE}`
-   - profile runner 冒烟（≤1 轮）：`node game_skill/skills/scripts/check_profile_runner_smoke.js cases/${PROJECT}/game/ --log ${LOG_FILE}`
-   - 产品侧（≤10 轮）：`node game_skill/skills/scripts/check_playthrough.js cases/${PROJECT}/game/ --profile ${PROJECT} --log ${LOG_FILE}`
-   - 运行时语义：`node game_skill/skills/scripts/check_runtime_semantics.js cases/${PROJECT}/ --log ${LOG_FILE}`
-   - P2 可玩性：`node game_skill/skills/scripts/check_level_solvability.js cases/${PROJECT}/ --log ${LOG_FILE}`
-   - profile 在 `game_skill/skills/scripts/profiles/` 下，若缺少需先创建
-   - **profile 必须覆盖 PRD 中所有 `@check(layer: product)` 条目**（脚本会自动校验，覆盖不足退出码 4）
-   - **profile 必须包含至少一条真实 click**（`{ action: "click", selector: "..." }` 或 `{ action: "click", x, y }`），纯 `eval` 不够；每个交互类 assertion 也必须自己包含真实 click/press/fill，不能靠别的 assertion 的 click 混过
-   - **profile 禁止写 `expect`**；它只负责驱动 UI，产品真相来自 `window.__trace` 覆盖率、runtime errors、asset HTTP errors
-   - **退出码 4/5/6 不进入修复循环**：暂停，补全/重新冻结 profile 后重新运行（不算在 10 轮内）
-   - 创建/补充 profile 时，逐条对照 PRD 的 `@check` 列表：
-     - 每个 `@check(layer: product)` 必须有对应 assertion
-     - 核心交互类 check 的 assertion 必须有真实 click setup（不能只查初始状态，不能只调 `window.gameTest`）
-4. **修复循环（严格流程，每轮 3 步，不可跳过任何一步）**：
+- 输入：Stage 3 产物、`.game/preserve.lock.yaml`、`specs/stage-contract-4.yaml`。
+- 产出：资源循环、升级/奖励/消耗与推进系统，归档到 `.game/stages/4/`。
+- check 入口：`check_preserve_regression.js` + `check_stage_contract.js --stage 4`。
+- preserve 规则：不升级策略下仍可完成 Stage 1 核心玩法；升级系统不能吞掉原有数值敏感度。
+- 用户确认策略：默认自动推进，可被用户反馈打断。
 
-   校验脚本返回非 0 时，进入修复循环。**每一轮修复必须严格执行以下 3 步**：
+### Stage 5 — Polish
 
-   **Step A — 记录失败详情到日志**（在修改代码之前）：
-   ```bash
-   echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"fix-applied","phase":"verify","step":"<boot|project|playthrough>","round":<N>,"failures":["<逐条列出失败的 assertion id 或错误描述>"],"fix_description":"<计划修复什么>","files_changed":["<将要修改的文件>"]}' >> ${LOG_FILE}
-   ```
-
-   **Step B — 修改代码修复问题**
-
-   **Step C — 重跑对应的 check 脚本**（带 `--log`，结果自动追加到日志）
-
-   > ⚠ **Step A 是硬性要求**。不写日志就修代码 = 违规。这条日志是回溯问题根因的唯一依据。
-
-5. 三层都通过后：
-   - 生成 `cases/${PROJECT}/eval/report.json`（三层指标，含 `prd_check_coverage` 和 `has_interaction_assertions`）
-   - 生成 `cases/${PROJECT}/docs/delivery.md`（简洁交付文档）
-6. state.json `verify.status = completed`，done
+- 输入：Stage 4 产物、`.game/preserve.lock.yaml`、`specs/stage-contract-5.yaml`、正式 profile。
+- 产出：平衡与表现收敛、`eval/report.json`、`docs/delivery.md`。
+- check 入口：`check_preserve_regression.js` + `check_stage_contract.js --stage 5`；最终交付仍必须由真实 verify 结果生成。
+- preserve 规则：Stage 4 resource loop 和 Stage 3 variety 行为不变，只改表现、节奏和反馈。
+- 用户确认策略：自动完成交付；交付后反馈进入支路 SOP。
 
 ---
 
@@ -863,8 +789,9 @@ Agent 我：
    - AskUserQuestion 让用户选引擎 → 用户选 DOM+Tailwind
    - 回写到 ClarifiedBrief.runtime=dom-ui，更新 state.json
 4. Phase 2: 生成 docs/game-prd.md，末尾 strategy 回写，跑 check_game_prd.js 退出 0
-5. Phase 3: 先跑 game-mechanic-decomposer 产 mechanics.yaml，再并发 5 个 game-gameplay-expander，产 scene/rule/data/assets/event-graph 五份 specs；随后主 agent 生成 implementation-contract.yaml
-6. Phase 4: cp 模板到 game/，启 game-engine-codegen 填玩法
-7. Phase 5: verify_all（含 check_level_solvability），产 report.json + delivery.md
-8. task_done: "单词消消乐已生成。open cases/word-match-lite/game/index.html 可体验。"
+5. Phase 2.5A/2.5B: 先固定 spec-clarifications，再生成 design-strategy.yaml
+6. Phase 3: game-mechanic-decomposer 基于 design-strategy 动态产 mechanics.yaml，再由 expander 产 scene/rule/data/assets/event-graph 与 implementation-contract
+7. Stage 1: 按 stage-contract-1 生成 vertical slice，跑 check_stage_contract，通过后生成 preserve.lock 并等待用户确认
+8. Stage 2-5: 每段先跑 preserve 回归，再按本段 stage-contract 扩内容、变化、progression、polish
+9. task_done: "单词消消乐已生成。open cases/word-match-lite/game/index.html 可体验。"
 ```

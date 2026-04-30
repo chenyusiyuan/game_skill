@@ -46,6 +46,24 @@
       "additionalProperties": true,
       "properties": {
         "mode": { "type": "string" },
+        "allowedPhases": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "allowedStages": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1, "maximum": 5 }
+        },
+        "stageType": {
+          "type": ["string", "null"],
+          "enum": ["vertical-slice", "content", "variety", "progression", "polish", null]
+        },
+        "currentStage": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 5
+        },
+        "userConfirmationRequired": { "type": "boolean" },
         "plannedPhases": {
           "type": "array",
           "items": { "type": "string" }
@@ -58,17 +76,22 @@
     },
     "currentPhase": {
       "type": "string",
-      "enum": ["understand", "prd", "spec-clarify", "design-strategy", "expand", "codegen", "verify", "done", "failed"]
+      "enum": ["understand", "prd", "spec-clarify", "design-strategy", "expand", "codegen", "verify", "stage-1", "stage-2", "stage-3", "stage-4", "stage-5", "done", "failed"]
     },
     "phases": {
       "type": "object",
-      "required": ["understand", "prd", "spec-clarify", "design-strategy", "expand", "codegen", "verify"],
+      "required": ["understand", "prd", "spec-clarify", "design-strategy", "expand", "codegen", "verify", "stage-1", "stage-2", "stage-3", "stage-4", "stage-5"],
       "additionalProperties": false,
       "properties": {
         "understand": { "$ref": "#/definitions/phase" },
         "prd": { "$ref": "#/definitions/phase" },
         "spec-clarify": { "$ref": "#/definitions/phase" },
         "design-strategy": { "$ref": "#/definitions/phase" },
+        "stage-1": { "$ref": "#/definitions/phase" },
+        "stage-2": { "$ref": "#/definitions/phase" },
+        "stage-3": { "$ref": "#/definitions/phase" },
+        "stage-4": { "$ref": "#/definitions/phase" },
+        "stage-5": { "$ref": "#/definitions/phase" },
         "expand": {
           "allOf": [
             { "$ref": "#/definitions/phase" },
