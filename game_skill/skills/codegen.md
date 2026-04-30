@@ -251,14 +251,17 @@ const registry = await createRegistry(manifest);
 
 **P1.6 runtime evidence**：每次 `registry.getTexture / getSpritesheet / getAudio` 被业务
 代码调用时，adapter 内部自动 `recordAssetUsage(...)` 记录 `requested`。但
-`must-render=true` 不能停在 requested：真正渲染时必须使用 engine wrapper 或
-`recordAssetRendered/recordAssetVisible` 记录 `rendered/visible`。
+`must-render=true` 不能停在 requested：真正渲染时必须使用 engine wrapper 记录
+`rendered/visible`。业务代码禁止为了过 checker 直接调用
+`recordAssetRendered` / `recordAssetVisible` / `recordAssetRenderEvidence`。
 `check_asset_usage.js` 的 runtime 层会读取 `window.__assetUsage`，要求视觉素材至少
 `requested + rendered`，核心视觉素材还要 `visible`。业务代码对 color-block /
 color-unit **建议**把当前颜色传进 extra：
 
 ```js
-registry.getTexture('pig-red', { color: pig.color });
+registry.drawAsset(ctx, 'pig-red', { x, y, width: 32, height: 32 }, { entityId: pig.id, extra: { color: pig.color } }); // canvas
+registry.createImageElement('pig-red', { entityId: pig.id, className: 'pig' }); // dom-ui
+registry.setBackgroundAsset(el, 'pig-red', { entityId: pig.id }); // dom-ui
 registry.addSprite(container, 'pig-red', { entityId: pig.id, width: 32, height: 32 });
 registry.addImage('pig-red', x, y, { entityId: pig.id, width: 32, height: 32 });
 registry.addObject(scene, 'hero-model', { entityId: hero.id, width: 1, height: 1 });
@@ -474,7 +477,8 @@ function onPigTickIntoSegment(pig) {
 
   const match = predicateMatch({
     rule: 'attack-consume', node: 'attack-consume',
-    candidate: hit, filter: { color: pig.color },
+    left: pig, right: hit,
+    params: { fields: ['color'], op: 'eq' },
   });
   if (!match) return;
 
@@ -901,8 +905,8 @@ codegen 常见失误模式（背单词 phaser/pixijs case 已复现）：
 
 | 引擎 | 最小消费调用 |
 |---|---|
-| canvas | `ctx.drawImage(registry.getTexture(id), x, y)` 或 `<img src="...">` |
-| dom-ui | `<img src="{registry.getTextureUrl(id)}">` 或 CSS `background-image: url(...)` |
+| canvas | `registry.drawAsset(ctx, id, rect, opts)` |
+| dom-ui | `registry.createImageElement(id, opts)` 或 `registry.setBackgroundAsset(el, id, opts)` |
 | phaser3 | `this.add.image(x, y, id)` / `this.add.sprite(x, y, id)` / `this.sound.add(id)` |
 | pixijs | `new Sprite(registry.getTexture(id))` 或 `Sprite.from(id)` |
 | three | `new THREE.TextureLoader().load(url)` / `new GLTFLoader().load(url)` / `new THREE.Sprite(new SpriteMaterial({ map: tex }))` |

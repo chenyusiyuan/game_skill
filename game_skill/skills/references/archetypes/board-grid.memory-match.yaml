@@ -1,4 +1,5 @@
 archetype-id: board-grid.memory-match
+support-level: direct
 description: Card flip and pair-matching board preset with reveal, compare, consume, and completion checks.
 archetype-plan:
   genre: board-grid
@@ -38,8 +39,72 @@ runtime-modules:
   - slot-pool.runtime.mjs
   - win-lose-check.runtime.mjs
 semantic-probes:
-  - third-card-blocked
-  - mismatch-hides-pair
+  - id: memory.same-pair-stays-open
+    setup:
+      cards:
+        - { id: c1, pairId: A, lifecycle: hidden }
+        - { id: c2, pairId: A, lifecycle: hidden }
+    actions:
+      - driver: clickCard
+        args: [c1]
+      - driver: clickCard
+        args: [c2]
+    expect:
+      state:
+        c1.lifecycle: matched
+        c2.lifecycle: matched
+      traceContains:
+        - primitive: predicate-match@v1
+          rule: compare-open-pair
+          after:
+            matched: true
+    maps-to:
+      primitives: [entity-lifecycle@v1, predicate-match@v1, slot-pool@v1]
+      rules: [reveal-card, compare-open-pair, settle-pair]
+    evidence-required: [trace, snapshot]
+  - id: memory.wrong-pair-flips-back
+    setup:
+      cards:
+        - { id: c1, pairId: A, lifecycle: hidden }
+        - { id: c3, pairId: B, lifecycle: hidden }
+    actions:
+      - driver: clickCard
+        args: [c1]
+      - driver: clickCard
+        args: [c3]
+    expect:
+      state:
+        c1.lifecycle: hidden
+        c3.lifecycle: hidden
+      traceContains:
+        - primitive: predicate-match@v1
+          rule: compare-open-pair
+          after:
+            matched: false
+    maps-to:
+      primitives: [entity-lifecycle@v1, predicate-match@v1]
+      rules: [compare-open-pair, settle-pair]
+    evidence-required: [trace, snapshot]
+  - id: memory.all-pairs-win
+    setup:
+      cards:
+        - { id: c1, pairId: A, lifecycle: matched }
+        - { id: c2, pairId: A, lifecycle: matched }
+        - { id: c3, pairId: B, lifecycle: revealed }
+        - { id: c4, pairId: B, lifecycle: revealed }
+    actions:
+      - driver: clickCard
+        args: [c4]
+    expect:
+      state:
+        phase: win
+      traceContains:
+        - primitive: win-lose-check@v1
+          rule: terminal-check
+    maps-to:
+      primitives: [predicate-match@v1, win-lose-check@v1]
+      rules: [settle-pair, terminal-check]
+    evidence-required: [trace, snapshot]
 profile-skeleton:
   drivers: [clickStartButton, clickCard]
   observers: [getSnapshot, getTrace, getAssetUsage]

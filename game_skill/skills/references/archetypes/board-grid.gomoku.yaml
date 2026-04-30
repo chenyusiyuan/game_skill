@@ -1,4 +1,5 @@
 archetype-id: board-grid.gomoku
+support-level: direct
 description: Turn-based line-forming board preset for gomoku / five-in-a-row variants.
 archetype-plan:
   genre: board-grid
@@ -40,8 +41,73 @@ runtime-modules:
   - predicate-match.runtime.mjs
   - win-lose-check.runtime.mjs
 semantic-probes:
-  - occupied-cell-rejected
-  - five-line-terminal
+  - id: gomoku.five-in-row-win
+    setup:
+      current-player: black
+      grid:
+        stones:
+          - { row: 7, col: 3, owner: black }
+          - { row: 7, col: 4, owner: black }
+          - { row: 7, col: 5, owner: black }
+          - { row: 7, col: 6, owner: black }
+    actions:
+      - driver: clickBoardCell
+        args: [7, 7]
+    expect:
+      state:
+        phase: win
+        winner: black
+      traceContains:
+        - primitive: win-lose-check@v1
+          rule: terminal-check
+    maps-to:
+      primitives: [capacity-gate@v1, neighbor-query@v1, win-lose-check@v1]
+      rules: [place-token, line-detect, terminal-check]
+    evidence-required: [trace, snapshot]
+  - id: gomoku.four-not-win
+    setup:
+      current-player: black
+      grid:
+        stones:
+          - { row: 7, col: 3, owner: black }
+          - { row: 7, col: 4, owner: black }
+          - { row: 7, col: 5, owner: black }
+    actions:
+      - driver: clickBoardCell
+        args: [7, 6]
+    expect:
+      state:
+        phase-not: win
+      traceNotContains:
+        - primitive: win-lose-check@v1
+          after:
+            result: win
+    maps-to:
+      primitives: [capacity-gate@v1, neighbor-query@v1, win-lose-check@v1]
+      rules: [place-token, line-detect, terminal-check]
+    evidence-required: [trace, snapshot]
+  - id: gomoku.occupied-cell-rejected
+    setup:
+      current-player: white
+      grid:
+        stones:
+          - { row: 7, col: 7, owner: black }
+    actions:
+      - driver: clickBoardCell
+        args: [7, 7]
+    expect:
+      stateUnchanged:
+        - entityId: cell-7-7
+          fields: [occupant]
+      traceContains:
+        - primitive: capacity-gate@v1
+          rule: place-token
+      traceNotContains:
+        - rule: alternate-turn
+    maps-to:
+      primitives: [capacity-gate@v1, grid-board@v1]
+      rules: [place-token, alternate-turn]
+    evidence-required: [trace, snapshot]
 profile-skeleton:
   drivers: [clickStartButton, clickBoardCell]
   observers: [getSnapshot, getTrace, getAssetUsage]

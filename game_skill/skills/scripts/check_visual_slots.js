@@ -2,8 +2,10 @@
 /**
  * check_visual_slots.js — 轻量 visual-slots 语义槽校验。
  *
- * 兼容策略：
- *   - specs/visual-slots.yaml 不存在：warning 后通过，旧 case 不被强制迁移。
+ * 规则：
+ *   - asset-strategy.mode=none：允许缺 visual-slots.yaml。
+ *   - 新 case 只在显式 --allow-missing 时允许缺 visual-slots.yaml。
+ *   - 有 visual-core-entities 或 core must-render visual asset 时，缺 visual-slots.yaml 必须 fail。
  *   - 一旦存在 visual-slots.yaml：must-render 核心视觉 asset 必须绑定到合法 slot。
  */
 
@@ -14,7 +16,9 @@ import { createLogger, parseLogArg } from "./_logger.js";
 import { readAssetStrategy } from "./_asset_strategy.js";
 import { isValidVisualPrimitive } from "./_visual_primitive_enum.js";
 
-const caseDir = resolve(process.argv[2] ?? ".");
+const args = process.argv.slice(2);
+const caseDir = resolve(args[0] ?? ".");
+const allowMissing = args.includes("--allow-missing");
 const log = createLogger(parseLogArg(process.argv));
 const specsDir = join(caseDir, "specs");
 const visualSlotsPath = join(specsDir, "visual-slots.yaml");
@@ -30,7 +34,22 @@ function ok(msg) { console.log(`  ✓ ${msg}`); }
 console.log(`visual-slots 校验: ${caseDir}`);
 
 if (!existsSync(visualSlotsPath)) {
-  warn("specs/visual-slots.yaml 不存在，按过渡策略跳过；新 case 建议由 generate_visual_slots.js 生成并纳入 gate");
+  const strategy = readAssetStrategy(caseDir);
+  if (strategy.mode === "none") {
+    ok("asset-strategy.mode=none：允许缺 specs/visual-slots.yaml");
+    finish();
+  }
+  const coreEntities = Array.isArray(strategy["visual-core-entities"]) ? strategy["visual-core-entities"].map(String) : [];
+  const coreMustRender = hasCoreMustRenderAsset(contractPath, new Set(coreEntities));
+  if (allowMissing) {
+    warn(`specs/visual-slots.yaml 不存在，但 --allow-missing 已显式开启（legacy 兼容）；core-entities=${coreEntities.length}, core-must-render=${coreMustRender}`);
+    finish();
+  }
+  if (coreEntities.length > 0 || coreMustRender) {
+    fail(`specs/visual-slots.yaml 不存在；asset-strategy.visual-core-entities 非空或 implementation-contract 存在 core must-render visual asset 时必须生成 visual-slots`);
+  } else {
+    warn("specs/visual-slots.yaml 不存在；当前未发现 core visual entity / core must-render visual asset，按非核心视觉 case 放行");
+  }
   finish();
 }
 
@@ -183,6 +202,26 @@ function inferAssetKind(asset) {
   if (/tile_|\/tiles\//.test(text)) return "terrain-tile";
   if (/character|player|enemy|sprite/.test(text)) return "sprite";
   return "image";
+}
+
+function hasCoreMustRenderAsset(path, coreEntityIds) {
+  if (!existsSync(path)) return false;
+  let contract;
+  try {
+    contract = yaml.load(readFileSync(path, "utf-8")) ?? {};
+  } catch {
+    return false;
+  }
+  const explicitCoreRoles = new Set(["core-visual", "primary-core", "primary-visual"]);
+  for (const binding of contract["asset-bindings"] ?? []) {
+    if (!binding || binding["must-render"] !== true) continue;
+    if (!["images", "spritesheets"].includes(String(binding.section ?? ""))) continue;
+    const bindingTo = String(binding["binding-to"] ?? "");
+    const role = String(binding.role ?? "");
+    if (coreEntityIds.has(bindingTo)) return true;
+    if (explicitCoreRoles.has(role) || binding["core-visual"] === true) return true;
+  }
+  return false;
 }
 
 function finish() {

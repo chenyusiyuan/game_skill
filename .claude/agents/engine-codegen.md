@@ -104,6 +104,9 @@ tools: Read, Write, Edit, Bash, Glob, Grep
      const tex = registry.getTexture('hero-warrior-idle');
      ```
      **禁止**手写 `this.load.image` / `Assets.load` / `new Image()` 的 loader 循环。
+     **Canvas must-render local-file 必须通过 `registry.drawAsset(ctx, id, rect, opts)` 渲染；禁止裸写 `ctx.drawImage(registry.getTexture(...))`。**
+     **DOM must-render local-file 必须通过 `registry.createImageElement(id, opts)` 或 `registry.setBackgroundAsset(el, id, opts)` 渲染。**
+     **业务代码禁止直接调用 `recordAssetRendered` / `recordAssetVisible` / `recordAssetRenderEvidence`；rendered/visible 证据必须来自 registry/render wrapper。**
      Phaser 必须按 lifecycle 契约使用两段式加载：
      ```js
      preload() { preloadRegistryAssets(manifest, { scene: this }); }

@@ -11,7 +11,9 @@ import yaml from "js-yaml";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../../..");
-const archetypeDir = join(repoRoot, "game_skill/skills/references/archetypes");
+const args = process.argv.slice(2);
+const dirIdx = args.indexOf("--dir");
+const archetypeDir = dirIdx >= 0 ? resolve(args[dirIdx + 1]) : join(repoRoot, "game_skill/skills/references/archetypes");
 const indexPath = join(archetypeDir, "index.yaml");
 const errors = [];
 
@@ -68,6 +70,7 @@ function validatePreset(expectedId, path) {
   if (preset["archetype-id"] !== expectedId) {
     fail(`[${expectedId}] archetype-id 与 index 不一致: ${preset["archetype-id"]}`);
   }
+  const supportLevel = String(preset["support-level"] ?? preset.supportLevel ?? "direct");
   const requiredObjects = [
     "archetype-plan",
     "mechanics-preset",
@@ -84,7 +87,6 @@ function validatePreset(expectedId, path) {
     ["mechanics-preset", "required-rules"],
     ["visual-slots-preset", "slots"],
     [null, "runtime-modules"],
-    [null, "semantic-probes"],
     ["profile-skeleton", "drivers"],
     ["profile-skeleton", "observers"],
     ["profile-skeleton", "steps"],
@@ -96,8 +98,44 @@ function validatePreset(expectedId, path) {
       fail(`[${expectedId}] ${parent ? `${parent}.` : ""}${key} 必须是非空数组`);
     }
   }
+  if (supportLevel === "direct") {
+    validateSemanticProbes(expectedId, preset["semantic-probes"]);
+  }
   if (preset["game-code-template"] || preset["template-code"]) {
     fail(`[${expectedId}] preset 禁止携带完整 game code template；只能提供 specs/profile 骨架`);
+  }
+}
+
+function validateSemanticProbes(expectedId, probes) {
+  if (!Array.isArray(probes) || probes.length === 0) {
+    fail(`[${expectedId}] support-level=direct 必须提供非空 semantic-probes`);
+    return;
+  }
+  const ids = new Set();
+  for (const probe of probes) {
+    if (!probe || typeof probe !== "object" || Array.isArray(probe)) {
+      fail(`[${expectedId}] semantic-probes 每项必须是结构化对象，不能是字符串占位`);
+      continue;
+    }
+    const id = String(probe.id ?? "");
+    if (!id) {
+      fail(`[${expectedId}] semantic-probe 缺 id`);
+    } else if (ids.has(id)) {
+      fail(`[${expectedId}] semantic-probe id 重复: ${id}`);
+    } else {
+      ids.add(id);
+    }
+    if (!probe.setup || typeof probe.setup !== "object") {
+      fail(`[${expectedId}][probe.${id || "<missing>"}] 缺 setup 对象`);
+    }
+    const hasActions = Array.isArray(probe.actions) && probe.actions.length > 0;
+    const hasInput = probe.input !== undefined && probe.input !== null;
+    if (!hasActions && !hasInput) {
+      fail(`[${expectedId}][probe.${id || "<missing>"}] 缺 actions 或 input`);
+    }
+    if (!probe.expect || typeof probe.expect !== "object") {
+      fail(`[${expectedId}][probe.${id || "<missing>"}] 缺 expect 对象`);
+    }
   }
 }
 

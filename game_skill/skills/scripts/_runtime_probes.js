@@ -70,7 +70,14 @@ export const RAY_CAST_GRID_PROBES = [
         sourceId: "pig-1",
         firstHitId: "b-0-2",
       }],
-      // 由于 predicate-match 会拦住，consume 不触发；这条由后续 resource-consume primitive 的 probe 断言
+      traceNotContains: [{
+        primitive: "resource-consume@v1",
+        targetId: "b-1-2",
+      }],
+      stateUnchanged: [
+        { entityId: "b-0-2", fields: ["durability", "alive"] },
+        { entityId: "b-1-2", fields: ["durability", "alive"] },
+      ],
       nonMutation: ["b-0-2", "b-1-2"],
     },
   },
@@ -117,22 +124,57 @@ export function selectApplicableProbes(mechanics) {
 
 /**
  * 比对 trace 事件是否满足 expect.traceContains 的某一条断言。
- * 断言形态：{ primitive, sourceId, firstHitId? }
+ * 断言形态：{ primitive, rule, node, sourceId, targetId, firstHitId?, before?, after? }
  * 返回 true 代表匹配。
  */
 export function traceEventMatches(event, assertion) {
   if (!event || !assertion) return false;
   if (assertion.primitive && event.primitive !== assertion.primitive) return false;
+  if (assertion.rule && event.rule !== assertion.rule) return false;
+  if (assertion.node && event.node !== assertion.node) return false;
   if (assertion.sourceId) {
-    const src = event?.before?.source?.id ?? event?.source?.id ?? event?.sourceId;
+    const src = event?.before?.source?.id
+      ?? event?.before?.agent?.id
+      ?? event?.before?.left?.id
+      ?? event?.source?.id
+      ?? event?.sourceId;
     if (String(src ?? "") !== String(assertion.sourceId)) return false;
+  }
+  if (assertion.targetId) {
+    const target = event?.before?.target?.id
+      ?? event?.after?.target?.id
+      ?? event?.before?.right?.id
+      ?? event?.after?.right?.id
+      ?? event?.target?.id
+      ?? event?.targetId;
+    if (String(target ?? "") !== String(assertion.targetId)) return false;
   }
   if (assertion.firstHitId) {
     const first = event?.after?.returnedHits?.[0]?.id
       ?? event?.returnedHits?.[0]?.id;
     if (String(first ?? "") !== String(assertion.firstHitId)) return false;
   }
+  if (assertion.before && !partialDeepMatch(event.before, assertion.before)) return false;
+  if (assertion.after && !partialDeepMatch(event.after, assertion.after)) return false;
   return true;
+}
+
+function partialDeepMatch(actual, expected) {
+  if (!expected || typeof expected !== "object") return actual === expected;
+  if (!actual || typeof actual !== "object") return false;
+  for (const [key, expectedValue] of Object.entries(expected)) {
+    const actualValue = key.includes(".") ? getPath(actual, key) : actual[key];
+    if (expectedValue && typeof expectedValue === "object" && !Array.isArray(expectedValue)) {
+      if (!partialDeepMatch(actualValue, expectedValue)) return false;
+    } else if (JSON.stringify(actualValue) !== JSON.stringify(expectedValue)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function getPath(obj, path) {
+  return String(path).split(".").reduce((cur, part) => cur?.[part], obj);
 }
 
 /**

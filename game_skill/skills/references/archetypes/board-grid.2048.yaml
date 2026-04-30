@@ -1,4 +1,5 @@
 archetype-id: board-grid.2048
+support-level: direct
 description: Sliding merge grid preset for 2048-like move, merge, spawn, and terminal checks.
 archetype-plan:
   genre: board-grid
@@ -36,8 +37,69 @@ runtime-modules:
   - slot-pool.runtime.mjs
   - win-lose-check.runtime.mjs
 semantic-probes:
-  - merge-once-per-turn
-  - blocked-grid-terminal
+  - id: 2048.merge-once-per-tile
+    setup:
+      grid:
+        - [2, 2, 2, 0]
+        - [0, 0, 0, 0]
+        - [0, 0, 0, 0]
+        - [0, 0, 0, 0]
+      score: 0
+      rng-seed: no-spawn
+    actions:
+      - driver: pressDirection
+        args: [left]
+    expect:
+      grid-row-0: [4, 2, 0, 0]
+      score-delta: 4
+      traceContains:
+        - primitive: predicate-match@v1
+          rule: merge-equal-tile
+    maps-to:
+      primitives: [grid-step@v1, predicate-match@v1, score-accum@v1]
+      rules: [move-direction, merge-equal-tile]
+    evidence-required: [trace, snapshot]
+  - id: 2048.no-move-no-spawn
+    setup:
+      grid:
+        - [2, 4, 2, 4]
+        - [4, 2, 4, 2]
+        - [2, 4, 2, 4]
+        - [4, 2, 4, 0]
+      rng-seed: deterministic
+    actions:
+      - driver: pressDirection
+        args: [left]
+    expect:
+      stateUnchanged:
+        - entityId: grid
+          fields: [cells]
+      traceNotContains:
+        - rule: spawn-next-tile
+    maps-to:
+      primitives: [grid-step@v1, slot-pool@v1]
+      rules: [move-direction, spawn-next-tile]
+    evidence-required: [trace, snapshot]
+  - id: 2048.spawn-after-valid-move
+    setup:
+      grid:
+        - [2, 0, 0, 0]
+        - [0, 0, 0, 0]
+        - [0, 0, 0, 0]
+        - [0, 0, 0, 0]
+      rng-seed: first-empty
+    actions:
+      - driver: pressDirection
+        args: [right]
+    expect:
+      spawned-count: 1
+      traceContains:
+        - primitive: slot-pool@v1
+          rule: spawn-next-tile
+    maps-to:
+      primitives: [grid-step@v1, slot-pool@v1]
+      rules: [move-direction, spawn-next-tile]
+    evidence-required: [trace, snapshot]
 profile-skeleton:
   drivers: [clickStartButton, pressDirection]
   observers: [getSnapshot, getTrace, getAssetUsage]

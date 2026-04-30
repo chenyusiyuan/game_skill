@@ -336,6 +336,7 @@ function checkGeneratedCode(c, assets, root) {
   checkBusinessAntiCheat(businessSrc);  // SB-unified: 业务代码同步跑 profile 反作弊子集
   checkPrimitiveImplementationCoverage(allSrc); // mechanics -> code 1:1
   checkRuntimePrimitiveImports(c, businessSrc); // P1.4: enforced engines must import runtime APIs
+  checkPredicateMatchCallShape(businessSrc); // P0-1: canonical predicateMatch({ rule,node,left,right,params.fields })
   checkWinLoseRuntimeContract(businessSrc); // R2: win-lose-check ctx.fields/elapsedMs/collections contract
 
   if (engine === "phaser3" || engine === "phaser") {
@@ -344,6 +345,43 @@ function checkGeneratedCode(c, assets, root) {
     } else {
       ok("[contract.lifecycle.phaser] 业务代码未发现 scene.load.start() 反模式");
     }
+  }
+}
+
+function checkPredicateMatchCallShape(businessSrc) {
+  const codeOnly = stripCommentsAndImports(businessSrc);
+  const calls = extractFunctionCalls(codeOnly, "predicateMatch");
+  if (calls.length === 0) return;
+
+  const failures = [];
+  for (let idx = 0; idx < calls.length; idx++) {
+    const call = calls[idx].trim();
+    if (!call.startsWith("{")) {
+      failures.push(`#${idx + 1} 必须直接传 object literal，不能传变量/函数返回值`);
+      continue;
+    }
+    const legacyKeys = ["candidate", "filter"].filter((key) => hasTopLevelObjectProperty(call, key));
+    const missing = ["rule", "node", "left", "right", "params"].filter((key) => !hasTopLevelObjectProperty(call, key));
+    const paramsExpr = findObjectPropertyExpression(call, "params");
+    const fieldsExpr = paramsExpr ? findObjectPropertyExpression(paramsExpr, "fields") : null;
+    if (fieldsExpr === null) missing.push("params.fields");
+    else if (!isNonEmptyStaticStringArray(fieldsExpr)) missing.push("params.fields(non-empty static string array)");
+
+    if (legacyKeys.length > 0) {
+      failures.push(`#${idx + 1} 使用了旧 API 字段 ${legacyKeys.join("+")}；新代码必须使用 left/right/params.fields`);
+    }
+    if (missing.length > 0) {
+      failures.push(`#${idx + 1} 缺少 ${missing.join("/")}`);
+    }
+  }
+
+  if (failures.length > 0) {
+    fail(
+      `[runtime.predicate-match] predicateMatch 调用形态不符合 canonical API：${failures.join("; ")}。` +
+      `应使用 predicateMatch({ rule, node, left, right, params: { fields: ["color"], op: "eq" } })，禁止 candidate/filter 新写法。`,
+    );
+  } else {
+    ok(`[runtime.predicate-match] ${calls.length} 个 predicateMatch 调用均使用 left/right/params.fields canonical API`);
   }
 }
 
@@ -897,6 +935,18 @@ function findVariableObject(source, name) {
 
 function hasTopLevelObjectProperty(objectExpr, prop) {
   return findObjectPropertyExpression(objectExpr, prop) !== null;
+}
+
+function isNonEmptyStaticStringArray(expr) {
+  const s = String(expr ?? "").trim();
+  if (!s.startsWith("[")) return false;
+  const end = findBalancedEnd(s, 0, "[", "]");
+  if (end < 0 || s.slice(end + 1).trim() !== "") return false;
+  const body = s.slice(1, end).trim();
+  if (!body) return false;
+  const parts = body.split(",").map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 0) return false;
+  return parts.every((part) => stringLiteralValue(part) !== null);
 }
 
 function objectCallHasStringProperty(callExpr, prop, expected) {

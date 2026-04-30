@@ -91,19 +91,22 @@ console.log("\n[phase-plan] staged execution boundaries");
 console.log("\n[phase-gate] expand gate wiring");
 test("run_phase_gate expand includes clarification and solvability gates", () => {
   const src = readFileSync(join(scriptsDir, "run_phase_gate.js"), "utf-8");
+  const verifyAll = readFileSync(join(scriptsDir, "verify_all.js"), "utf-8");
   const expandBlock = src.match(/expand:\s*\{[\s\S]*?\n\s*\},\n\s*codegen:/)?.[0] ?? "";
   const codegenBlock = src.match(/codegen:\s*\{[\s\S]*?\n\s*\},\n\s*verify:/)?.[0] ?? "";
   assert(/check_spec_clarifications\.js/.test(expandBlock), "expand gate 应跑 check_spec_clarifications.js");
   assert(/check_level_solvability\.js/.test(expandBlock), "expand gate 应提前跑 check_level_solvability.js");
   assert(/check_visual_slots\.js/.test(expandBlock), "expand gate 应跑 check_visual_slots.js");
   assert(/check_visual_slots\.js/.test(codegenBlock), "codegen gate 应跑 check_visual_slots.js");
+  assert(!/--allow-missing/.test(expandBlock + codegenBlock), "phase gate 默认不应给 check_visual_slots 传 --allow-missing");
+  assert(!/check_visual_slots\.js"[\s\S]{0,120}--allow-missing/.test(verifyAll), "verify_all 默认不应给 check_visual_slots 传 --allow-missing");
 });
 
 test("check_project accepts local module src with cache-busting query", () => {
   const gameDir = join(tmp, "project-query-script", "game");
   mkdirSync(join(gameDir, "src"), { recursive: true });
   writeFileSync(join(gameDir, "index.html"), [
-    "<!-- ENGINE: canvas | VERSION: test | RUN: file -->",
+    "<!-- ENGINE: canvas | VERSION: test | RUN: local-http -->",
     "<script src=\"./src/main.js?v=123\"></script>",
   ].join("\n"));
   writeFileSync(join(gameDir, "src/main.js"), [
@@ -117,6 +120,76 @@ test("check_project accepts local module src with cache-busting query", () => {
 test("check_archetype_presets: 高频 archetype preset 骨架合法", () => {
   const r = run([join(scriptsDir, "check_archetype_presets.js")]);
   assert(r.status === 0, `archetype preset 校验应通过，exit=${r.status}\n${r.stdout}\n${r.stderr}`);
+});
+
+test("check_archetype_presets: direct archetype 缺 semantic-probes 应 fail", () => {
+  const dir = join(tmp, "archetype-missing-probes");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "index.yaml"), [
+    "archetype-index-version: 1",
+    "presets:",
+    "  - id: direct.bad",
+    "    path: direct.bad.yaml",
+  ].join("\n"));
+  writeFileSync(join(dir, "direct.bad.yaml"), [
+    "archetype-id: direct.bad",
+    "support-level: direct",
+    "archetype-plan: {}",
+    "mechanics-preset:",
+    "  primitives: [predicate-match@v1]",
+    "  required-rules: [answer-evaluate]",
+    "data-schema: {}",
+    "visual-slots-preset:",
+    "  slots: [entity.answer.primary]",
+    "runtime-modules: [predicate-match.runtime.mjs]",
+    "profile-skeleton:",
+    "  drivers: [clickAnswer]",
+    "  observers: [getSnapshot]",
+    "  steps: [click-answer]",
+    "gate-policy:",
+    "  must-pass: [check_runtime_semantics.js]",
+  ].join("\n"));
+  const r = run([join(scriptsDir, "check_archetype_presets.js"), "--dir", dir]);
+  assert(r.status !== 0, `缺 semantic-probes 应 fail\n${r.stdout}\n${r.stderr}`);
+  assert(/semantic-probes/.test(r.stdout), `应点名 semantic-probes\n${r.stdout}`);
+});
+
+test("check_archetype_presets: direct archetype probe 字段完整应 pass", () => {
+  const dir = join(tmp, "archetype-good-probes");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "index.yaml"), [
+    "archetype-index-version: 1",
+    "presets:",
+    "  - id: direct.good",
+    "    path: direct.good.yaml",
+  ].join("\n"));
+  writeFileSync(join(dir, "direct.good.yaml"), [
+    "archetype-id: direct.good",
+    "support-level: direct",
+    "archetype-plan: {}",
+    "mechanics-preset:",
+    "  primitives: [predicate-match@v1]",
+    "  required-rules: [answer-evaluate]",
+    "data-schema: {}",
+    "visual-slots-preset:",
+    "  slots: [entity.answer.primary]",
+    "runtime-modules: [predicate-match.runtime.mjs]",
+    "semantic-probes:",
+    "  - id: direct.answer-match",
+    "    setup: { score: 0 }",
+    "    actions:",
+    "      - driver: clickAnswer",
+    "        args: [A]",
+    "    expect: { score-delta-min: 1 }",
+    "profile-skeleton:",
+    "  drivers: [clickAnswer]",
+    "  observers: [getSnapshot]",
+    "  steps: [click-answer]",
+    "gate-policy:",
+    "  must-pass: [check_runtime_semantics.js]",
+  ].join("\n"));
+  const r = run([join(scriptsDir, "check_archetype_presets.js"), "--dir", dir]);
+  assert(r.status === 0, `字段完整 direct archetype 应 pass\n${r.stdout}\n${r.stderr}`);
 });
 
 // =============================
@@ -628,6 +701,91 @@ test("visual-core-entities 每个核心 id 必须有非 decor asset 绑定", () 
   assert(/\[core-binding\]/.test(r.stdout), `应报 core-binding，实际:\n${r.stdout}`);
 });
 
+test("check_asset_selection: core entity 非空 + decor ratio > 40% 应 fail", () => {
+  const caseDir = join(tmp, "asset-decor-ratio-core");
+  writeCasePrd(caseDir, [
+    "  mode: library-first",
+    `  rationale: "${"核心实体需要真实绑定，不能把多数本地素材都声明成 decor 来绕过实体语义。".repeat(2)}"`,
+    "  visual-core-entities: [pig, block]",
+    "  visual-peripheral: []",
+    "  style-coherence: { level: flexible }",
+  ].join("\n"));
+  writeAssets(caseDir, [
+    "  - id: pig-sprite",
+    "    source: assets/library_2d/sprites/puzzle/ballBlue.png",
+    "    type: local-file",
+    "    binding-to: pig",
+    "    visual-primitive: color-unit",
+    "    color-source: entity.color",
+    "  - id: block-sprite",
+    "    source: assets/library_2d/sprites/puzzle/ballGrey.png",
+    "    type: local-file",
+    "    binding-to: block",
+    "    visual-primitive: color-unit",
+    "    color-source: entity.color",
+    ...Array.from({ length: 3 }, (_, i) => [
+      `  - id: decor-${i}`,
+      "    source: assets/library_2d/ui-pixel/tile_0013.png",
+      "    type: local-file",
+      "    binding-to: decor",
+    ].join("\n")),
+  ].join("\n"));
+  const r = run([join(scriptsDir, "check_asset_selection.js"), caseDir]);
+  assert(r.status !== 0, `core 非空 decor ratio > 40% 应 fail\n${r.stdout}`);
+  assert(/\[binding-decor\]/.test(r.stdout), `应报 binding-decor\n${r.stdout}`);
+});
+
+test("check_asset_selection: core slot asset binding-to decor 应 fail", () => {
+  const caseDir = join(tmp, "asset-core-slot-decor");
+  writeCasePrd(caseDir, [
+    "  mode: library-first",
+    `  rationale: "${"核心 pig 的 slot 是玩法识别关键，不允许 asset 用 decor 绑定伪装通过。".repeat(2)}"`,
+    "  visual-core-entities: [pig]",
+    "  visual-peripheral: []",
+    "  style-coherence: { level: flexible }",
+  ].join("\n"));
+  writeAssets(caseDir, [
+    "  - id: pig-core",
+    "    source: assets/library_2d/sprites/puzzle/ballBlue.png",
+    "    type: local-file",
+    "    binding-to: decor",
+    "    fulfills-slot: entity.pig.primary",
+  ].join("\n"));
+  writeFileSync(join(caseDir, "specs/visual-slots.yaml"), [
+    "visual-slots-version: 1",
+    "slots:",
+    "  - id: entity.pig.primary",
+    "    entity: pig",
+    "    semantic-slot: color-unit",
+    "    render-zone: board-grid-cell",
+    "    required: true",
+    "    state-driven-fields: [color]",
+  ].join("\n"));
+  const r = run([join(scriptsDir, "check_asset_selection.js"), caseDir]);
+  assert(r.status !== 0, `core slot decor 应 fail\n${r.stdout}`);
+  assert(/core visual slot|core entity/.test(r.stdout), `应报 core slot/core entity decor\n${r.stdout}`);
+});
+
+test("check_asset_selection: visual-core-entities 为空 + decor ratio > 40% 仍 warn/pass", () => {
+  const caseDir = join(tmp, "asset-decor-ratio-no-core");
+  writeCasePrd(caseDir, [
+    "  mode: library-first",
+    `  rationale: "${"这是装饰素材压力测试，没有声明核心视觉实体，因此 decor 高占比只作为提醒。".repeat(2)}"`,
+    "  visual-core-entities: []",
+    "  visual-peripheral: [scene-background]",
+    "  style-coherence: { level: flexible }",
+  ].join("\n"));
+  writeAssets(caseDir, Array.from({ length: 5 }, (_, i) => [
+    `  - id: decor-only-${i}`,
+    "    source: assets/library_2d/ui-pixel/tile_0013.png",
+    "    type: local-file",
+    "    binding-to: decor",
+  ].join("\n")).join("\n"));
+  const r = run([join(scriptsDir, "check_asset_selection.js"), caseDir]);
+  assert(r.status === 0, `core 为空 decor ratio > 40% 应 warn/pass\n${r.stdout}\n${r.stderr}`);
+  assert(/\[binding-decor\].*warning|保留 warning/.test(r.stdout), `应保留 decor warning\n${r.stdout}`);
+});
+
 test("mode=none 时 generate_implementation_contract 可在无 assets.yaml 下生成空 asset-bindings", () => {
   const caseDir = join(tmp, "asset-none-contract");
   writeCasePrd(caseDir, [
@@ -671,19 +829,24 @@ function writeGeneratedUsageCase(caseDir, withDrawCall) {
     "    binding-to: pig",
     "    must-render: true",
   ].join("\n"));
-  mkdirSync(join(caseDir, "game"), { recursive: true });
+  mkdirSync(join(caseDir, "game/src/_common"), { recursive: true });
+  writeFileSync(
+    join(caseDir, "game/src/_common/asset-usage.js"),
+    readFileSync(join(resolve(here, "../../../.."), "game_skill/skills/references/engines/_common/asset-usage.js"), "utf-8"),
+  );
   writeFileSync(join(caseDir, "game/index.html"), [
-    "<!-- ENGINE: canvas | VERSION: test | RUN: file -->",
+    "<!-- ENGINE: canvas | VERSION: test | RUN: local-http -->",
     "<canvas id=\"game\"></canvas>",
-    "<script>",
-    "window.__assetUsage = window.__assetUsage || [];",
+    "<script type=\"module\">",
+    "import { recordAssetUsage, renderSlot } from './src/_common/asset-usage.js';",
     "const assetId = 'pig-shape';",
     "const ctx = document.getElementById('game').getContext('2d');",
     "function renderGeneratedPrimitive(id) {",
-    "  window.__assetUsage.push({ id, section: 'images', kind: 'generated', phase: 'requested' });",
+    "  renderSlot({ assetId: id, section: 'images', kind: 'generated', width: 12, height: 12, draw: () => ctx.fillRect(0, 0, 12, 12) });",
+    "}",
+    "function requestOnly() {",
+    "  recordAssetUsage({ id: 'pig-shape', section: 'images', kind: 'generated' });",
     "  ctx.fillRect(0, 0, 12, 12);",
-    "  window.__assetUsage.push({ id, section: 'images', kind: 'generated', phase: 'rendered', width: 12, height: 12, visible: true });",
-    "  window.__assetUsage.push({ id, section: 'images', kind: 'generated', phase: 'visible', width: 12, height: 12, visible: true });",
     "}",
     withDrawCall ? "renderGeneratedPrimitive('pig-shape');" : "console.log(assetId);",
     "</script>",
@@ -707,8 +870,7 @@ test("runtime asset usage: requested-only 不能替代 rendered/visible", () => 
   const caseDir = join(tmp, "asset-requested-only");
   writeGeneratedUsageCase(caseDir, true);
   const html = readFileSync(join(caseDir, "game/index.html"), "utf-8")
-    .replace(/ctx\.fillRect\(0, 0, 12, 12\);\n\s*window\.__assetUsage\.push\(\{ id, section: 'images', kind: 'generated', phase: 'rendered'[\s\S]*?phase: 'visible'[\s\S]*?\}\);/m,
-      "ctx.fillRect(0, 0, 12, 12);");
+    .replace("renderGeneratedPrimitive('pig-shape');", "requestOnly();");
   writeFileSync(join(caseDir, "game/index.html"), html);
   const r = run([join(scriptsDir, "check_asset_usage.js"), caseDir]);
   assert(r.status !== 0, `requested-only 应失败，exit=${r.status}\n${r.stdout}`);
@@ -721,13 +883,70 @@ test("runtime asset usage: Phaser/Pixi/Three 视觉 must-render 也要求 render
     writeGeneratedUsageCase(caseDir, true);
     let html = readFileSync(join(caseDir, "game/index.html"), "utf-8")
       .replace("ENGINE: canvas", `ENGINE: ${engine}`)
-      .replace(/ctx\.fillRect\(0, 0, 12, 12\);\n\s*window\.__assetUsage\.push\(\{ id, section: 'images', kind: 'generated', phase: 'rendered'[\s\S]*?phase: 'visible'[\s\S]*?\}\);/m,
-        "ctx.fillRect(0, 0, 12, 12);");
+      .replace("renderGeneratedPrimitive('pig-shape');", "requestOnly();");
     writeFileSync(join(caseDir, "game/index.html"), html);
     const r = run([join(scriptsDir, "check_asset_usage.js"), caseDir]);
     assert(r.status !== 0, `${engine} requested-only 应失败，exit=${r.status}\n${r.stdout}`);
     assert(/pig-shape\(rendered\+visible\)/.test(r.stdout), `${engine} 应缺 rendered+visible，实际:\n${r.stdout}`);
   }
+});
+
+test("check_asset_usage: 只 getTexture 不走 drawAsset 的 must-render visual 应 fail", () => {
+  const caseDir = join(tmp, "asset-gettexture-only");
+  writeCasePrd(caseDir, [
+    "  mode: generated-only",
+    `  rationale: "${"核心视觉即使来自 inline svg，也必须真实渲染并产生 rendered/visible 证据，单纯请求 texture 不算。".repeat(2)}"`,
+    "  visual-core-entities: [pig]",
+    "  visual-peripheral: []",
+    "  style-coherence: { level: \"n/a\" }",
+  ].join("\n"));
+  mkdirSync(join(caseDir, "specs"), { recursive: true });
+  writeFileSync(join(caseDir, "specs/assets.yaml"), [
+    "images:",
+    "  - id: pig-img",
+    "    source: inline-svg",
+    "    type: inline-svg",
+    "    binding-to: pig",
+    "audio: []",
+    "spritesheets: []",
+  ].join("\n"));
+  writeFileSync(join(caseDir, "specs/implementation-contract.yaml"), [
+    "asset-bindings:",
+    "  - id: pig-img",
+    "    section: images",
+    "    type: inline-svg",
+    "    binding-to: pig",
+    "    must-render: true",
+  ].join("\n"));
+  mkdirSync(join(caseDir, "game/src/adapters"), { recursive: true });
+  mkdirSync(join(caseDir, "game/src/_common"), { recursive: true });
+  for (const f of ["registry.spec.js", "asset-usage.js"]) {
+    writeFileSync(
+      join(caseDir, "game/src/_common", f),
+      readFileSync(join(resolve(here, "../../../.."), "game_skill/skills/references/engines/_common", f), "utf-8"),
+    );
+  }
+  writeFileSync(
+    join(caseDir, "game/src/adapters/canvas-registry.js"),
+    readFileSync(join(resolve(here, "../../../.."), "game_skill/skills/references/engines/canvas/template/src/adapters/canvas-registry.js"), "utf-8"),
+  );
+  writeFileSync(join(caseDir, "game/index.html"), [
+    "<!-- ENGINE: canvas | VERSION: test | RUN: local-http -->",
+    "<canvas id=\"game\"></canvas>",
+    "<script type=\"module\">",
+    "import { createRegistry } from './src/adapters/canvas-registry.js';",
+    "const registry = await createRegistry({",
+    "  basePath: '',",
+    "  images: [{ id: 'pig-img', type: 'inline-svg', svg: '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\"><rect width=\"12\" height=\"12\" fill=\"red\"/></svg>' }],",
+    "  spritesheets: [],",
+    "  audio: [],",
+    "});",
+    "registry.getTexture('pig-img');",
+    "</script>",
+  ].join("\n"));
+  const r = run([join(scriptsDir, "check_asset_usage.js"), caseDir]);
+  assert(r.status !== 0, `getTexture-only 应失败\n${r.stdout}\n${r.stderr}`);
+  assert(/pig-img\(rendered\+visible\)/.test(r.stdout), `应缺 rendered+visible\n${r.stdout}`);
 });
 
 // =============================
@@ -797,6 +1016,35 @@ test("check_visual_slots: slot.allowed-visual-primitives 不匹配应 fail", () 
   const check = run([join(scriptsDir, "check_visual_slots.js"), caseDir]);
   assert(check.status !== 0, `visual primitive mismatch 应失败，exit=${check.status}\n${check.stdout}`);
   assert(/不在 slot\.allowed-visual-primitives/.test(check.stdout), `应报 allowed mismatch，实际:\n${check.stdout}`);
+});
+
+test("check_visual_slots: core entity 非空且缺 visual-slots 应 fail", () => {
+  const caseDir = join(tmp, "visual-slots-missing-core");
+  writeVisualSlotCase(caseDir);
+  const check = run([join(scriptsDir, "check_visual_slots.js"), caseDir]);
+  assert(check.status !== 0, `缺 visual-slots 且 core entity 非空应 fail\n${check.stdout}`);
+  assert(/visual-slots\.yaml 不存在/.test(check.stdout), `应报缺 visual-slots\n${check.stdout}`);
+});
+
+test("check_visual_slots: mode=none 缺 visual-slots 应 pass", () => {
+  const caseDir = join(tmp, "visual-slots-mode-none");
+  writeCasePrd(caseDir, [
+    "  mode: none",
+    `  rationale: "${"纯文字互动 case 不需要外部素材或核心视觉实体，因此 visual-slots 可以自然缺省。".repeat(2)}"`,
+    "  visual-core-entities: []",
+    "  visual-peripheral: []",
+    "  style-coherence: { level: \"n/a\" }",
+  ].join("\n"));
+  const check = run([join(scriptsDir, "check_visual_slots.js"), caseDir]);
+  assert(check.status === 0, `mode=none 缺 visual-slots 应 pass\n${check.stdout}\n${check.stderr}`);
+});
+
+test("check_visual_slots: core entity 非空但 --allow-missing 显式兼容应 pass/warn", () => {
+  const caseDir = join(tmp, "visual-slots-allow-missing");
+  writeVisualSlotCase(caseDir);
+  const check = run([join(scriptsDir, "check_visual_slots.js"), caseDir, "--allow-missing"]);
+  assert(check.status === 0, `--allow-missing 应兼容通过\n${check.stdout}\n${check.stderr}`);
+  assert(/allow-missing/.test(check.stdout), `应输出 allow-missing warning\n${check.stdout}`);
 });
 
 // =============================
@@ -1718,6 +1966,41 @@ console.log("\n[P0.2] _runtime_probes: ray-cast 语义复算");
     assert(!traceEventMatches(event, { primitive: "ray-cast@v1", firstHitId: "b-9-9" }), "firstHitId 不符应 false");
   });
 
+  test("traceEventMatches 支持 rule/node/targetId/before/after 结构化断言", () => {
+    const event = {
+      primitive: "resource-consume@v1",
+      rule: "consume",
+      node: "consume-block",
+      before: { agent: { id: "pig-1", ammo: 3 }, target: { id: "b-1-2", durability: 1 } },
+      after: { agent: { id: "pig-1", ammo: 2 }, target: { id: "b-1-2", durability: 0 } },
+    };
+    assert(traceEventMatches(event, {
+      primitive: "resource-consume@v1",
+      rule: "consume",
+      node: "consume-block",
+      sourceId: "pig-1",
+      targetId: "b-1-2",
+      before: { "target.durability": 1 },
+      after: { target: { durability: 0 } },
+    }), "结构化 trace 断言应命中");
+    assert(!traceEventMatches(event, { primitive: "resource-consume@v1", targetId: "b-0-2" }), "targetId 不符应 false");
+  });
+
+  test("no-penetration.mismatch probe 带 traceNotContains + stateUnchanged 契约", () => {
+    const probe = RAY_CAST_GRID_PROBES.find((p) => p.id === "no-penetration.mismatch");
+    assert(probe, "应存在 no-penetration.mismatch probe");
+    assert(probe.expect.traceNotContains.some((a) => a.primitive === "resource-consume@v1" && a.targetId === "b-1-2"), "应禁止远端 b-1-2 被 consume");
+    assert(probe.expect.stateUnchanged.some((a) => a.entityId === "b-0-2" && a.fields.includes("durability")), "应要求近端 block durability 不变");
+    const wrongTrace = {
+      primitive: "resource-consume@v1",
+      rule: "consume",
+      node: "consume",
+      before: { agent: { id: "pig-1" }, target: { id: "b-1-2" } },
+      after: { target: { id: "b-1-2", durability: 0 } },
+    };
+    assert(traceEventMatches(wrongTrace, probe.expect.traceNotContains[0]), "错误 consume trace 会被 traceNotContains 命中并导致 checker fail");
+  });
+
   test("verifyRayCastSemantics 用 reducer 复算与 trace 对比", async () => {
     const { castGrid } = await import("../../references/mechanics/spatial/ray-cast.reducer.mjs");
     const event = {
@@ -2027,6 +2310,7 @@ console.log("\n[P1.1 full] engines/_common/primitives: 聚合导出与 smoke 测
     try {
       const ok = idx.predicateMatch({
         rule: "color-match",
+        node: "match-color",
         left: { id: "pig-1", color: "red" },
         right: { id: "b-0-2", color: "red" },
         params: { fields: ["color"], op: "eq" },
@@ -2048,6 +2332,7 @@ console.log("\n[P1.1 full] engines/_common/primitives: 聚合导出与 smoke 测
     try {
       const ok = idx.predicateMatch({
         rule: "color-match",
+        node: "match-color",
         left: { id: "pig-1", color: "red" },
         right: { id: "b-0-2", color: "blue" },
         params: { fields: ["color"], op: "eq" },
@@ -2249,6 +2534,107 @@ console.log("\n[P1.4] _primitive_runtime_map: parseEsmImports + isPrimitivesImpo
     assert(!isPrimitivesImport("./primitives/foo.js"));
   });
 }
+
+console.log("\n[P0-1] check_implementation_contract: predicateMatch canonical call shape");
+
+function writePredicateCallShapeCase(caseDir, callLines) {
+  rmSync(caseDir, { recursive: true, force: true });
+  mkdirSync(join(caseDir, "docs"), { recursive: true });
+  mkdirSync(join(caseDir, "specs"), { recursive: true });
+  mkdirSync(join(caseDir, "game/src"), { recursive: true });
+  writeFileSync(join(caseDir, "docs/game-prd.md"), [
+    "---",
+    'game-aprd: "0.1"',
+    "project: predicate-call-shape",
+    "platform: [web]",
+    "runtime: canvas",
+    "asset-strategy:",
+    "  mode: none",
+    `  rationale: "${"纯逻辑 predicateMatch call-shape 回归，无需任何视觉素材。".repeat(3)}"`,
+    "  visual-core-entities: []",
+    "  visual-peripheral: []",
+    "---",
+    "# Predicate Call Shape",
+  ].join("\n"));
+  writeFileSync(join(caseDir, "specs/mechanics.yaml"), [
+    "mechanics:",
+    "  - node: match-color",
+    "    primitive: predicate-match@v1",
+    "    params:",
+    "      fields: [color]",
+    "      op: eq",
+  ].join("\n"));
+  writeFileSync(join(caseDir, "specs/scene.yaml"), [
+    "scenes:",
+    "  - id: play",
+    "    zones:",
+    "      - id: start-button",
+    "    ui-slots: []",
+    "    layout:",
+    "      viewport: { width: 320, height: 240 }",
+    "      board-bbox: { x: 0, y: 0, w: 320, h: 200 }",
+    "      hud-bbox: { x: 0, y: 200, w: 320, h: 40 }",
+    "      safe-area: { x: 0, y: 0, w: 320, h: 240 }",
+  ].join("\n"));
+  writeFileSync(join(caseDir, "specs/implementation-contract.yaml"), [
+    "contract-version: 1",
+    "runtime:",
+    "  engine: canvas",
+    "  run-mode: local-http",
+    "boot:",
+    "  entry-scene: play",
+    "  ready-condition: window.gameState !== undefined",
+    "  start-action: { trigger: click, target: start-button }",
+    "  scene-transitions: []",
+    "asset-bindings: []",
+    "engine-lifecycle:",
+    "  asset-loading: registry",
+    "verification:",
+    "  required-runtime-evidence: []",
+    "  required-test-hooks:",
+    "    observers: [getSnapshot, getTrace]",
+    "    drivers: []",
+    "    probes: []",
+  ].join("\n"));
+  writeFileSync(join(caseDir, "game/src/main.js"), [
+    "// @primitive(predicate-match@v1): node-id=match-color",
+    "import { predicateMatch } from './_common/primitives/index.mjs';",
+    "export function matchColor(pig, hit) {",
+    ...callLines,
+    "}",
+  ].join("\n"));
+}
+
+test("predicateMatch canonical left/right/params.fields 通过 call-shape 检查", () => {
+  const caseDir = join(tmp, "predicate-call-shape-ok");
+  writePredicateCallShapeCase(caseDir, [
+    "  return predicateMatch({",
+    "    rule: 'match-color',",
+    "    node: 'match-color',",
+    "    left: pig,",
+    "    right: hit,",
+    "    params: { fields: ['color'], op: 'eq' },",
+    "  });",
+  ]);
+  const r = run([join(scriptsDir, "check_implementation_contract.js"), caseDir, "--stage", "codegen"]);
+  assert(r.status === 0, `canonical predicateMatch 应通过\n${r.stdout}\n${r.stderr}`);
+  assert(/predicateMatch 调用均使用/.test(r.stdout), `应输出 call-shape ok\n${r.stdout}`);
+});
+
+test("predicateMatch candidate/filter 旧形态必须 fail", () => {
+  const caseDir = join(tmp, "predicate-call-shape-bad");
+  writePredicateCallShapeCase(caseDir, [
+    "  return predicateMatch({",
+    "    rule: 'match-color',",
+    "    node: 'match-color',",
+    "    candidate: hit,",
+    "    filter: { color: pig.color },",
+    "  });",
+  ]);
+  const r = run([join(scriptsDir, "check_implementation_contract.js"), caseDir, "--stage", "codegen"]);
+  assert(r.status !== 0, `candidate/filter 应失败\n${r.stdout}\n${r.stderr}`);
+  assert(/candidate\+filter|left\/right\/params/.test(r.stdout), `应点名旧 API 和 canonical 字段\n${r.stdout}`);
+});
 
 console.log("\n[P1.4] check_implementation_contract: canvas 缺 runtime import 应 fail");
 
@@ -3013,6 +3399,96 @@ console.log("\n[P1.6] asset-usage: recordAssetUsage + observers.getAssetUsage �
     }
   });
 
+  test("canvas registry.drawAsset: 真实 drawImage 后记录 requested/rendered/visible", async () => {
+    const savedWindow = globalThis.window;
+    const savedImage = globalThis.Image;
+    try {
+      globalThis.window = {};
+      globalThis.Image = class {
+        set src(value) {
+          this._src = value;
+          setTimeout(() => this.onload?.(), 0);
+        }
+        get src() { return this._src; }
+      };
+      const { createRegistry } = await import(
+        `file://${repoRoot}/game_skill/skills/references/engines/canvas/template/src/adapters/canvas-registry.js`
+      );
+      const registry = await createRegistry({
+        basePath: "/assets",
+        images: [{ id: "pig-img", type: "local-file", src: "pig.png", "binding-to": "pig" }],
+        spritesheets: [],
+        audio: [],
+      });
+      const drawCalls = [];
+      const ctx = { drawImage: (...args) => drawCalls.push(args) };
+      const rendered = registry.drawAsset(ctx, "pig-img", { x: 1, y: 2, width: 16, height: 12 }, { entityId: "pig-1", semanticSlot: "color-unit" });
+      assert(rendered === true, "drawAsset 应返回 true");
+      assert(drawCalls.length === 1, "drawAsset 必须真实调用 ctx.drawImage");
+      const phases = globalThis.window.__assetUsage.map((e) => e.phase);
+      assert(phases.includes("requested"), `应有 requested，实际 ${phases}`);
+      assert(phases.includes("rendered"), `应有 rendered，实际 ${phases}`);
+      assert(phases.includes("visible"), `应有 visible，实际 ${phases}`);
+      const visible = globalThis.window.__assetUsage.find((e) => e.phase === "visible");
+      assert(visible.source === "canvas-registry.drawAsset", `visible evidence 应来自 wrapper，实际 ${JSON.stringify(visible)}`);
+    } finally {
+      if (savedWindow === undefined) delete globalThis.window;
+      else globalThis.window = savedWindow;
+      if (savedImage === undefined) delete globalThis.Image;
+      else globalThis.Image = savedImage;
+    }
+  });
+
+  test("dom registry wrappers: createImageElement/setBackgroundAsset 记录 rendered/visible", async () => {
+    const savedWindow = globalThis.window;
+    const savedDocument = globalThis.document;
+    const savedGetComputedStyle = globalThis.getComputedStyle;
+    const savedRaf = globalThis.requestAnimationFrame;
+    try {
+      globalThis.window = {};
+      class FakeElement {
+        constructor(tag) {
+          this.tagName = tag.toUpperCase();
+          this.style = {};
+          this.dataset = {};
+          this.children = [];
+        }
+        addEventListener(_type, cb) { setTimeout(cb, 0); }
+        getBoundingClientRect() { return { x: 0, y: 0, width: 20, height: 18 }; }
+      }
+      globalThis.document = { createElement: (tag) => new FakeElement(tag) };
+      globalThis.getComputedStyle = () => ({ display: "block", visibility: "visible", opacity: "1" });
+      globalThis.requestAnimationFrame = (cb) => { cb(); return 1; };
+      const { createRegistry } = await import(
+        `file://${repoRoot}/game_skill/skills/references/engines/dom/template/src/adapters/dom-registry.js`
+      );
+      const registry = await createRegistry({
+        basePath: "/assets",
+        images: [{ id: "pig-img", type: "local-file", src: "pig.png", "binding-to": "pig" }],
+        spritesheets: [],
+        audio: [],
+      });
+      const img = registry.createImageElement("pig-img", { entityId: "pig-1", className: "pig" });
+      assert(img && img.src === "/assets/pig.png", "createImageElement 应返回 img 元素");
+      const panel = new FakeElement("div");
+      const okBg = registry.setBackgroundAsset(panel, "pig-img", { renderZone: "hud" });
+      assert(okBg === true && /pig\.png/.test(panel.style.backgroundImage), "setBackgroundAsset 应设置 backgroundImage");
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      const phases = globalThis.window.__assetUsage.map((e) => e.phase);
+      assert(phases.filter((p) => p === "rendered").length >= 2, `应记录 rendered，实际 ${phases}`);
+      assert(phases.filter((p) => p === "visible").length >= 2, `应记录 visible，实际 ${phases}`);
+    } finally {
+      if (savedWindow === undefined) delete globalThis.window;
+      else globalThis.window = savedWindow;
+      if (savedDocument === undefined) delete globalThis.document;
+      else globalThis.document = savedDocument;
+      if (savedGetComputedStyle === undefined) delete globalThis.getComputedStyle;
+      else globalThis.getComputedStyle = savedGetComputedStyle;
+      if (savedRaf === undefined) delete globalThis.requestAnimationFrame;
+      else globalThis.requestAnimationFrame = savedRaf;
+    }
+  });
+
   test("exposeTestHooks: 默认自动挂 observers.getAssetUsage", () => {
     const saved = globalThis.window;
     try {
@@ -3421,7 +3897,8 @@ console.log("\n[P0+P1 集成] mini-pixel-flow: visual-primitive + runtime import
     "  if (!hit) return;",
     "  const match = predicateMatch({",
     "    rule: 'match-color', node: 'match-color',",
-    "    candidate: hit, filter: { color: pig.color },",
+    "    left: pig, right: hit,",
+    "    params: { fields: ['color'], op: 'eq' },",
     "  });",
     "  if (!match) return;",
     "  const r = consumeResource({",

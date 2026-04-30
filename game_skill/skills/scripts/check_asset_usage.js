@@ -176,6 +176,26 @@ for (const p of jsFiles) {
 const businessSrc = businessBlobs.join("\n");
 const generatedConsumerPattern = /fillRect\s*\(|strokeRect\s*\(|roundRect\s*\(|arc\s*\(|beginPath\s*\(|ctx\.fill\s*\(|ctx\.stroke\s*\(|new\s+Graphics\s*\(|\.add\.graphics\s*\(|\.fillRect\s*\(|\.fillCircle\s*\(|\.rect\s*\(|\.circle\s*\(|\.fill\s*\(|\.stroke\s*\(|<svg\b|createElementNS\s*\([^)]*svg/;
 
+const directEvidenceCalls = [...businessSrc.matchAll(/\brecordAsset(?:Rendered|Visible|RenderEvidence)\s*\(/g)];
+if (directEvidenceCalls.length > 0) {
+  fail(`[asset-evidence] 业务代码禁止直接调用 recordAssetRendered/recordAssetVisible/recordAssetRenderEvidence；rendered/visible 证据必须来自 registry/render wrapper（命中 ${directEvidenceCalls.length} 处）`);
+}
+let directAssetUsageWrites = 0;
+for (const line of businessSrc.split("\n")) {
+  if (/window\.__assetUsage\.push\s*\(/.test(line)) {
+    directAssetUsageWrites++;
+    continue;
+  }
+  const m = line.match(/window\.__assetUsage\s*=\s*(.+)/);
+  if (!m) continue;
+  const rhs = m[1].trim().replace(/;.*$/, "");
+  if (/^window\.__assetUsage\s*\|\|\s*\[\s*\]$/.test(rhs)) continue;
+  directAssetUsageWrites++;
+}
+if (directAssetUsageWrites > 0) {
+  fail(`[asset-evidence] 业务代码禁止直接写 window.__assetUsage（除幂等初始化外）；requested/rendered/visible 证据必须来自 registry/render wrapper（命中 ${directAssetUsageWrites} 处）`);
+}
+
 // 4) 单条 asset 被引用判定：必须绑定到当前 asset id/source 的消费调用
 // T9: 只统计 required（contract 声明 must-render=true）子集；其它 asset 存在不报错
 let used = 0;
@@ -206,9 +226,9 @@ if (ratio < 1.0 && requiredAssets.length > 0) {
 
 // 5) 引擎级消费调用至少出现一次
 const engineConsumerPatterns = {
-  canvas:  [/\.drawImage\s*\(/, /<img\s+[^>]*src\s*=/i],
-  "dom-ui": [/<img\s+[^>]*src\s*=/i, /background-image\s*:\s*url\(/i, /getTextureUrl\s*\(/],
-  dom:     [/<img\s+[^>]*src\s*=/i, /background-image\s*:\s*url\(/i, /getTextureUrl\s*\(/],
+  canvas:  [/\bregistry\.drawAsset\s*\(/, /\.drawAsset\s*\(/, /\.drawImage\s*\(/, /<img\s+[^>]*src\s*=/i],
+  "dom-ui": [/\bregistry\.createImageElement\s*\(/, /\.createImageElement\s*\(/, /\bregistry\.setBackgroundAsset\s*\(/, /\.setBackgroundAsset\s*\(/, /<img\s+[^>]*src\s*=/i, /background-image\s*:\s*url\(/i],
+  dom:     [/\bregistry\.createImageElement\s*\(/, /\.createImageElement\s*\(/, /\bregistry\.setBackgroundAsset\s*\(/, /\.setBackgroundAsset\s*\(/, /<img\s+[^>]*src\s*=/i, /background-image\s*:\s*url\(/i],
   phaser3: [/\.add\.image\s*\(/, /\.add\.sprite\s*\(/, /\.sound\.add\s*\(/, /\.sound\.play\s*\(/, /this\.load\.image\s*\(/, /this\.load\.audio\s*\(/, /\.addImage\s*\(/, /\.recordGameObject\s*\(/],
   phaser:  [/\.add\.image\s*\(/, /\.add\.sprite\s*\(/, /\.sound\.add\s*\(/, /\.sound\.play\s*\(/, /this\.load\.image\s*\(/, /this\.load\.audio\s*\(/, /\.addImage\s*\(/, /\.recordGameObject\s*\(/],
   pixijs:  [/new\s+Sprite\s*\(/, /Sprite\.from\s*\(/, /PIXI\.Sprite\s*\(/, /\.addSprite\s*\(/, /\.recordDisplayObject\s*\(/],
@@ -272,7 +292,9 @@ function consumerPatternsForAsset(asset) {
   const recordUsage = new RegExp(`recordAssetUsage\\s*\\(\\s*\\{[\\s\\S]{0,300}id\\s*:\\s*${quotedId}`, "m");
   const recordRendered = new RegExp(`recordAssetRendered\\s*\\(\\s*\\{[\\s\\S]{0,300}(?:id|assetId)\\s*:\\s*${quotedId}`, "m");
   const recordVisible = new RegExp(`recordAssetVisible\\s*\\(\\s*\\{[\\s\\S]{0,300}(?:id|assetId)\\s*:\\s*${quotedId}`, "m");
-  const genericDrawAsset = new RegExp(`drawAsset\\s*\\([\\s\\S]{0,160}${quotedId}`, "m");
+  const genericDrawAsset = new RegExp(`(?:registry\\.)?drawAsset\\s*\\([\\s\\S]{0,160}${quotedId}`, "m");
+  const createImageElement = new RegExp(`(?:registry\\.)?createImageElement\\s*\\(\\s*${quotedId}`, "m");
+  const setBackgroundAsset = new RegExp(`(?:registry\\.)?setBackgroundAsset\\s*\\([\\s\\S]{0,160}${quotedId}`, "m");
   const addSpriteIdFirst = new RegExp(`\\.addSprite\\s*\\(\\s*${quotedId}`, "m");
   const addSpriteIdSecond = new RegExp(`\\.addSprite\\s*\\([\\s\\S]{0,120},\\s*${quotedId}`, "m");
   const addImageIdFirst = new RegExp(`\\.addImage\\s*\\(\\s*${quotedId}`, "m");
@@ -317,18 +339,15 @@ function consumerPatternsForAsset(asset) {
     ];
   }
   const out = [
-    recordUsage,
-    recordRendered,
-    recordVisible,
     renderSlot,
     genericDrawAsset,
+    createImageElement,
+    setBackgroundAsset,
     addSpriteIdFirst,
     addSpriteIdSecond,
     addImageIdFirst,
     addObjectIdSecond,
     recordRenderedObject,
-    new RegExp(`getTexture\\s*\\(\\s*${quotedId}`),
-    new RegExp(`getTextureUrl\\s*\\(\\s*${quotedId}`),
     new RegExp(`\\.add\\.image\\s*\\([\\s\\S]{0,200}${quotedId}`, "m"),
     new RegExp(`\\.add\\.sprite\\s*\\([\\s\\S]{0,200}${quotedId}`, "m"),
     new RegExp(`Sprite\\.from\\s*\\(\\s*${quotedId}`),
@@ -446,8 +465,13 @@ function missingRuntimeUsage(required, usage) {
     const phases = byId.get(id);
     const phase = e?.phase ? String(e.phase) : "requested";
     if (phase === "visible") {
-      phases.add("rendered");
-      phases.add("visible");
+      if (e?.visible !== false) {
+        phases.add("rendered");
+        phases.add("visible");
+      }
+    } else if (phase === "played") {
+      phases.add("requested");
+      phases.add("played");
     } else {
       phases.add(phase);
       if (phase === "rendered" && e?.visible === true) phases.add("visible");

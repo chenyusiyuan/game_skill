@@ -184,6 +184,7 @@ try {
   fail(`assets.yaml 解析失败: ${e.message}`);
   finish();
 }
+const visualSlotInfo = loadVisualSlotInfo(caseDir, coreEntityIds);
 
 // ── 2. color-scheme / genre 合法性 ──────────────────────────────
 // 新流程：visual-style 已废弃，改为 color-scheme 段（含 palette-id + fx-hint）
@@ -245,7 +246,15 @@ for (const sec of sections) {
     const source = item.source ?? "";
     const bindingTo = item["binding-to"];
     perSectionCount[sec].total++;
-    assetItems.push({ id: String(id), section: sec, type, source, bindingTo, raw: item });
+    assetItems.push({
+      id: String(id),
+      section: sec,
+      type,
+      source,
+      bindingTo,
+      fulfillsSlot: item["fulfills-slot"],
+      raw: item,
+    });
 
     if (bindingTo && bindingTo !== "decor" && prdEntityUiIds.size > 0 && !prdEntityUiIds.has(String(bindingTo))) {
       fail(`[${sec}.${id}] binding-to="${bindingTo}" 在 PRD 的 @entity/@ui 里不存在；合法值（节选）: ${[...prdEntityUiIds].slice(0, 8).join(", ")}...`);
@@ -307,6 +316,19 @@ for (const sec of sections) {
       // 装饰音效 / 字体除外（声明 binding-to: "decor" 可豁免）
       if (!bindingTo) {
         fail(`[${sec}.${id}] 缺少 binding-to 字段——每个 local-file 必须声明它绑定到哪个 @entity/@ui；纯装饰写 binding-to: decor`);
+      }
+      if (coreEntityIds.size > 0 && String(bindingTo ?? "") === "decor") {
+        const slotId = String(item["fulfills-slot"] ?? visualSlotInfo.assetSlotById.get(String(id)) ?? "");
+        const text = `${id} ${item.usage ?? ""} ${item["semantic-slot"] ?? ""} ${source}`.toLowerCase();
+        const namesCore = [...coreEntityIds].find((coreId) => {
+          const needle = String(coreId).toLowerCase();
+          return needle && new RegExp(`(^|[^a-z0-9_-])${escapeReg(needle)}([^a-z0-9_-]|$)`).test(text);
+        });
+        if (slotId && visualSlotInfo.coreSlotIds.has(slotId)) {
+          fail(`[${sec}.${id}] binding-to: decor 但 fulfills-slot="${slotId}" 指向 required/core visual slot；核心 slot 禁止 decor 绑定`);
+        } else if (namesCore) {
+          fail(`[${sec}.${id}] binding-to: decor 但 id/usage/source 指向 core entity "${namesCore}"；核心实体素材禁止 decor 绑定`);
+        }
       }
       // 语义校验已移至 check_implementation_contract.js 的 validateSemanticBinding
       // 此处只做文件存在性 + pack style/genre 匹配
@@ -392,7 +414,9 @@ for (const coreId of coreEntityIds) {
 if (MODE === "generated-only") {
   ok(`mode=generated-only：允许核心视觉使用 generated/inline-svg，跳过 local-file 阈值`);
 } else if (MODE === "library-first") {
-  if (coreVisualAssets.length === 0) {
+  if (coreEntityIds.size === 0) {
+    ok(`[core-local-file] visual-core-entities 为空，跳过核心 local-file 阈值`);
+  } else if (coreVisualAssets.length === 0) {
     fail(`[core-local-file] library-first 需要至少一个绑定到 visual-core-entities 的视觉 asset`);
   } else {
     const coreLocal = coreVisualAssets.filter((a) => a.type === "local-file").length;
@@ -426,7 +450,7 @@ if (!report) {
   }
 }
 
-// ── 5.5. T8 辅助：decor 占比 > 40% 时 warn ──────────────────
+// ── 5.5. T8/P1-2：decor 占比 > 40% 的阻断策略 ──────────────────
 // decor 是 binding-to 的退路，但不应用它水通过。如果一半以上 asset 都写 decor，
 // 大概率是 expander 偷懒没去绑真正的 @entity/@ui。
 let totalBindings = 0, decorBindings = 0;
@@ -437,11 +461,15 @@ for (const sec of sections) {
     if (String(item["binding-to"] ?? "") === "decor") decorBindings++;
   }
 }
-if (totalBindings >= 5) {
+if (totalBindings > 0) {
   const decorRatio = decorBindings / totalBindings;
   const decorPct = (decorRatio * 100).toFixed(0);
   if (decorRatio > 0.4) {
-    warn(`[binding-decor] ${decorBindings}/${totalBindings} (${decorPct}%) 的 local-file 写了 binding-to: decor，可能漏绑 @entity/@ui；请检查 core 素材是否正确绑定到 PRD 实体`);
+    if (coreEntityIds.size > 0) {
+      fail(`[binding-decor] visual-core-entities 非空时，local-file decor 占比 ${decorBindings}/${totalBindings} (${decorPct}%) > 40%，必须改为绑定真实 @entity/@ui 或降低素材数量`);
+    } else {
+      warn(`[binding-decor] ${decorBindings}/${totalBindings} (${decorPct}%) 的 local-file 写了 binding-to: decor，可能漏绑 @entity/@ui；当前 visual-core-entities 为空，保留 warning`);
+    }
   } else {
     ok(`[binding-decor] decor 占比 ${decorPct}% ≤ 40%`);
   }
@@ -539,6 +567,32 @@ function loadColorPrimitiveEntityIds(caseDir) {
     }
   } catch {}
   return ids;
+}
+
+function loadVisualSlotInfo(caseDir, coreEntityIds) {
+  const slotPath = join(caseDir, "specs/visual-slots.yaml");
+  const info = { coreSlotIds: new Set(), assetSlotById: new Map() };
+  if (!existsSync(slotPath)) return info;
+  try {
+    const doc = yaml.load(readFileSync(slotPath, "utf-8")) ?? {};
+    for (const slot of doc.slots ?? []) {
+      const id = String(slot?.id ?? "");
+      if (!id) continue;
+      if (slot.required === true || coreEntityIds.has(String(slot.entity ?? ""))) {
+        info.coreSlotIds.add(id);
+      }
+    }
+    for (const binding of doc["asset-slot-bindings"] ?? []) {
+      const assetId = String(binding?.["asset-id"] ?? "");
+      const slotId = String(binding?.["fulfills-slot"] ?? "");
+      if (assetId && slotId) info.assetSlotById.set(assetId, slotId);
+    }
+  } catch {}
+  return info;
+}
+
+function escapeReg(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function isColorBlockSemantic({ id, item, bindingTo, colorPrimitiveIds }) {

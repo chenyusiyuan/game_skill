@@ -235,14 +235,15 @@ async function readRuntimeSnapshot(page) {
 
 async function checkProbeStateExpectations(probe, baselineSnapshot, page) {
   const ids = probe.expect?.nonMutation ?? [];
-  if (!Array.isArray(ids) || ids.length === 0) return;
+  const unchanged = normalizeStateUnchanged(probe.expect?.stateUnchanged);
+  if ((!Array.isArray(ids) || ids.length === 0) && unchanged.length === 0) return;
   if (!baselineSnapshot) {
-    fail(`[${probe.id}] nonMutation 需要 gameTest.observers.getSnapshot() 或 window.gameState snapshot`);
+    fail(`[${probe.id}] state expectations 需要 gameTest.observers.getSnapshot() 或 window.gameState snapshot`);
     return;
   }
   const afterSnapshot = await readRuntimeSnapshot(page);
   if (!afterSnapshot) {
-    fail(`[${probe.id}] nonMutation 无法读取 actions 后 snapshot`);
+    fail(`[${probe.id}] state expectations 无法读取 actions 后 snapshot`);
     return;
   }
   for (const id of ids) {
@@ -263,6 +264,57 @@ async function checkProbeStateExpectations(probe, baselineSnapshot, page) {
       ok(`[${probe.id}] nonMutation entity id=${id} 核心字段未变`);
     }
   }
+  for (const assertion of unchanged) {
+    const beforeEntity = findEntityByIdOrKey(baselineSnapshot, assertion.entityId);
+    const afterEntity = findEntityByIdOrKey(afterSnapshot, assertion.entityId);
+    if (!beforeEntity) {
+      fail(`[${probe.id}] stateUnchanged baseline 找不到 entity id=${assertion.entityId}`);
+      continue;
+    }
+    if (!afterEntity) {
+      fail(`[${probe.id}] stateUnchanged entity id=${assertion.entityId} 在 actions 后消失`);
+      continue;
+    }
+    const changed = [];
+    for (const field of assertion.fields) {
+      const beforeValue = getFieldPath(beforeEntity, field);
+      const afterValue = getFieldPath(afterEntity, field);
+      if (JSON.stringify(beforeValue) !== JSON.stringify(afterValue)) {
+        changed.push(`${field}: ${JSON.stringify(beforeValue)} -> ${JSON.stringify(afterValue)}`);
+      }
+    }
+    if (changed.length > 0) {
+      fail(`[${probe.id}] stateUnchanged entity id=${assertion.entityId} 字段变化: ${changed.join(", ")}`);
+    } else {
+      ok(`[${probe.id}] stateUnchanged entity id=${assertion.entityId} 字段未变: ${assertion.fields.join(", ")}`);
+    }
+  }
+}
+
+function normalizeStateUnchanged(value) {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  for (const item of value) {
+    if (typeof item === "string") {
+      out.push({ entityId: item, fields: ["alive", "durability", "hp", "health", "ammo", "lifecycle", "state", "phase"] });
+      continue;
+    }
+    const entityId = item?.entityId ?? item?.entity ?? item?.id;
+    const fields = Array.isArray(item?.fields) ? item.fields.map(String).filter(Boolean) : [];
+    if (entityId && fields.length > 0) out.push({ entityId: String(entityId), fields });
+  }
+  return out;
+}
+
+function findEntityByIdOrKey(snapshot, id) {
+  if (snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) && snapshot[id] !== undefined) {
+    return snapshot[id];
+  }
+  return findEntityById(snapshot, id);
+}
+
+function getFieldPath(obj, path) {
+  return String(path).split(".").reduce((cur, part) => cur?.[part], obj);
 }
 
 function findEntityById(value, id, seen = new Set()) {

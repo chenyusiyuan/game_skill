@@ -7,7 +7,7 @@
  */
 
 import { validateManifest, buildStats } from "../_common/registry.spec.js";
-import { recordAssetUsage } from "../_common/asset-usage.js";
+import { recordAssetUsage, recordAssetRenderEvidence } from "../_common/asset-usage.js";
 
 export async function createRegistry(manifest) {
   const { ok, errors } = validateManifest(manifest);
@@ -87,11 +87,12 @@ export async function createRegistry(manifest) {
       const e = get(id);
       if (!e) { console.warn(`[registry] missing id: ${id}`); return null; }
       if (e.kind !== "image") return null;
+      const isSheet = manifestSheetById.has(id);
       recordAssetUsage({
         id,
-        section: "images",
+        section: isSheet ? "spritesheets" : "images",
         kind: "texture",
-        manifestItem: manifestImageById.get(id),
+        manifestItem: isSheet ? manifestSheetById.get(id) : manifestImageById.get(id),
         extra,
       });
       return e.value;
@@ -134,6 +135,34 @@ export async function createRegistry(manifest) {
         return { synthParams: e.value };
       }
       return null;
+    },
+    drawAsset(ctx, id, rect, opts = {}) {
+      const texture = this.getTexture(id, opts.extra ?? null);
+      if (!texture) return false;
+      const x = Number(rect?.x ?? 0);
+      const y = Number(rect?.y ?? 0);
+      const width = Number(rect?.width ?? rect?.w ?? 0);
+      const height = Number(rect?.height ?? rect?.h ?? 0);
+      ctx.drawImage(texture, x, y, width, height);
+      const manifestItem = manifestImageById.get(id) ?? manifestSheetById.get(id) ?? null;
+      recordAssetRenderEvidence({
+        id,
+        section: manifestSheetById.has(id) ? "spritesheets" : "images",
+        kind: "canvas-draw-image",
+        manifestItem,
+        slotId: opts.slotId ?? null,
+        entityId: opts.entityId ?? null,
+        semanticSlot: opts.semanticSlot ?? null,
+        renderZone: opts.renderZone ?? null,
+        x,
+        y,
+        width,
+        height,
+        visible: width > 0 && height > 0,
+        source: "canvas-registry.drawAsset",
+        extra: opts.extra ?? null,
+      });
+      return true;
     },
     has: (id) => entries.has(id),
     stats: () => buildStats(entries),
