@@ -23,7 +23,7 @@ description: "Phase 5: 校验。分层预算：冒烟 ≤2 轮、工程侧 ≤3 
 node ${SKILL_DIR}/scripts/verify_all.js cases/${PROJECT} --profile ${PROJECT} --log ${LOG_FILE}
 ```
 
-`verify_all.js` 顺序运行 mechanics / boot / project / playthrough / runtime_semantics / compliance，并把真实退出码写进 report。任一脚本失败时 report.status 必须是 `failed`。主 agent、子 agent 或人工修复循环都不得手写绿色 `eval/report.json`。
+`verify_all.js` 顺序运行 mechanics / boot / project / profile_runner_smoke / playthrough / runtime_semantics / compliance，并把真实退出码写进 report。任一脚本失败时 report.status 必须是 `failed`。主 agent、子 agent 或人工修复循环都不得手写绿色 `eval/report.json`。
 
 ## 两种验证模式
 
@@ -44,10 +44,11 @@ Phase 5 必须先区分本轮是“分层诊断”还是“最终回归”：
 4. 冒烟：`check_game_boots.js`
 5. 工程：`check_project.js`
 6. 运行时语义：`check_runtime_semantics.js`
-7. 产品走通：`check_playthrough.js`
-8. 合规：`check_skill_compliance.js`
+7. Profile runner 冒烟：`check_profile_runner_smoke.js`
+8. 产品走通：`check_playthrough.js`
+9. 合规：`check_skill_compliance.js`
 
-只有 1-8 全部通过，才建议切到 `verify-e2e` 跑统一入口生成正式 report。
+只有 1-9 全部通过，才建议切到 `verify-e2e` 跑统一入口生成正式 report。
 
 ## 分层预算
 
@@ -56,10 +57,11 @@ Phase 5 必须先区分本轮是“分层诊断”还是“最终回归”：
 | 玩法语义 | `check_mechanics.js` | Phase 3/4 前置 | primitive DAG 可执行，至少一个 win/settle scenario 可达 |
 | 冒烟 | `check_game_boots.js` | ≤ 2 轮 | 最低门槛：游戏能起、无 console error、gameState 暴露 |
 | 工程侧 | `check_project.js` | ≤ 3 轮 | 启动错、语法错、资源错，以及 contract / asset-selection / asset-usage gate |
+| profile runner 冒烟 | `check_profile_runner_smoke.js` | ≤ 1 轮 | 用最小 setup 证明 runner 能识别真实 click shape 且 trace 会增长 |
 | 产品侧 | `check_playthrough.js` | ≤ 10 轮 | 玩法 bug 修复更慢 |
 | 合规审计 | `check_skill_compliance.js` | ≤ 2 轮 | spec ↔ code 绑定率 / state schema / 场景闭环，机械校验 |
 
-执行顺序固定：**玩法语义 → 冒烟 → 工程 → 产品 → 合规**。`check_implementation_contract.js` / `check_asset_selection.js` / `check_asset_usage.js` 由工程侧脚本链式执行；只有定位单层失败时才单独运行。
+执行顺序固定：**玩法语义 → 冒烟 → 工程 → profile runner 冒烟 → 产品 → 合规**。`check_implementation_contract.js` / `check_asset_selection.js` / `check_asset_usage.js` 由工程侧脚本链式执行；只有定位单层失败时才单独运行。
 
 ## 流程
 
@@ -91,6 +93,7 @@ node ${SKILL_DIR}/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG
 - 0 条 console error
 - body 有实际文本
 - `window.gameState` 已定义
+- 若已生成 `rule-traces`，boot-smoke 会实机点击一个可交互目标，并要求 `window.__trace.length` 增长
 
 常见失败与修复：
 
@@ -100,6 +103,7 @@ node ${SKILL_DIR}/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG
 | local-http 模式仍有 net error | 资源路径、import 路径、server root 不对 | 修正相对路径和入口 |
 | body.innerText 为空 | 启动时抛 pageerror 阻塞渲染 | 读 pageerror 定位文件+行号 |
 | gameState undefined | 未暴露 `window.gameState = state` | 在 state 初始化后补上 |
+| BOOT-SMOKE trace 不增长 | UI 目标没绑 click/pointer handler，或 handler 没调用 runtime primitive | 回 Phase 4 修 codegen/template，不要先改 profile |
 
 ### Step 2：工程侧校验
 
@@ -118,7 +122,17 @@ node ${SKILL_DIR}/scripts/check_project.js cases/${PROJECT}/game/ --log ${LOG_FI
 - `specs/implementation-contract.yaml` 结构完整，contract 被代码实现
 - local-file 素材选择合法且在业务代码中有真实消费证据
 
-### Step 3：产品侧校验
+### Step 3：Profile runner 冒烟
+
+```bash
+node ${SKILL_DIR}/scripts/check_profile_runner_smoke.js cases/${PROJECT}/game/ --log ${LOG_FILE}
+```
+
+这一步在正式 profile 前运行一个最小生成 setup。它会发现实机页面上的交互目标，并通过与 `check_playthrough.js` 共用的 runner 执行点击；canvas 目标会使用 `selector: "canvas" + options.position`，专门防止 runner shape 解析再次漂移。
+
+红灯时优先检查 runner shape、异步启动时机、Phase 4 交互 handler / trace 是否接通；不要先把正式 profile 当作根因。
+
+### Step 4：产品侧校验
 
 ```bash
 node ${SKILL_DIR}/scripts/check_playthrough.js cases/${PROJECT}/game/ --profile ${CASE_ID} --log ${LOG_FILE}

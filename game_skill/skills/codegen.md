@@ -1032,6 +1032,7 @@ node ${SKILL_DIR}/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG
 退出码必须为 0。除原有检查外，引擎项目还会校验：
 - `window.gameTest` 存在（Canvas/Pixi/Phaser/Three）
 - 点击开始按钮后 `phase` 能变为 `playing`（"能开始一局"）
+- boot-smoke 会在实机页面中发现一个真实可交互目标并点击；若已有 `rule-traces`，点击后必须看到 `window.__trace.length` 增长。这是 Phase 4 进入 Phase 5 前的左移验证，红灯时先修 codegen/template 的事件绑定或 runtime primitive 调用。
 
 #### 8.3 契约、素材加载与消费校验（由 check_project 覆盖）
 

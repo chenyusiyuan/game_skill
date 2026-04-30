@@ -125,6 +125,7 @@ check_mechanics，给我 exit code。不要跑 Phase 5 playthrough。"
 
 **inspect**：
 - 产物能启动（check_game_boots 绿）
+- boot-smoke 已实机点击交互目标并产生 trace 增长（若有 rule-traces）
 - primitive runtime import 完整（contract check 绿）
 - 三分类 hooks 按 schema 暴露（boot check 的 ENGINE-TEST-TRI）
 - 手工打开 `game/index.html` 看看能不能点动
@@ -140,6 +141,7 @@ check_mechanics，给我 exit code。不要跑 Phase 5 playthrough。"
 **inspect**：
 - `report.status === "passed"`
 - `report.generated_by === "verify_all.js"`
+- `profile_runner_smoke` 在正式 `playthrough` 前通过；若红，先怀疑 runner shape / Phase 4 交互 wiring，不先改正式 profile
 - 若有红：记下**最早红的 check**
 
 ---

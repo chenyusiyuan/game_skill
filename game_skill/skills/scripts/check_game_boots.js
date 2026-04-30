@@ -20,6 +20,11 @@ import { basename, join, resolve } from "path";
 import yaml from "js-yaml";
 import { resolveLaunchTarget } from "./_run_mode.js";
 import { createLogger, parseLogArg } from "./_logger.js";
+import {
+  caseDirFromGameDir,
+  readRuleTraceIds,
+  runTraceInteractionSmoke,
+} from "./_interaction_smoke.js";
 
 const _logPath = parseLogArg(process.argv);
 const log = createLogger(_logPath);
@@ -443,6 +448,46 @@ if (isEngineProject) {
   }
 }
 
+// 6. 生成内实机验证：真实点击一个可交互目标，要求 trace 增长。
+// 这是 Phase 4 尾部的 boot-smoke，目的是在进入正式 profile 前抓住
+// "画面能渲染但实际没绑 pointer/click handler" 这类问题。
+{
+  const expectedRuleIds = readRuleTraceIds(caseDirFromGameDir(gameDir));
+  const requireTrace = expectedRuleIds.length > 0;
+  const bootSmoke = await runTraceInteractionSmoke(page, {
+    label: "BOOT-SMOKE",
+    requireTrace,
+    preferPostStartTrace: true,
+    maxAttempts: 5,
+    waitAfterClickMs: 750,
+    settleBetweenAttemptsMs: 700,
+  });
+  if (bootSmoke.ok) {
+    const icon = bootSmoke.warning ? "⚠" : "✓";
+    console.log(`  ${icon} [BOOT-SMOKE] ${bootSmoke.message}`);
+    log.entry({
+      type: "boot-smoke",
+      phase: "verify",
+      step: "boot-smoke",
+      script: "check_game_boots.js",
+      status: bootSmoke.warning ? "warning" : "passed",
+      require_trace: requireTrace,
+      attempts: bootSmoke.attempts.map(summarizeSmokeAttemptForLog),
+    });
+  } else {
+    errors.push(`[BOOT-SMOKE] ${bootSmoke.message}`);
+    log.entry({
+      type: "boot-smoke",
+      phase: "verify",
+      step: "boot-smoke",
+      script: "check_game_boots.js",
+      status: "failed",
+      require_trace: requireTrace,
+      attempts: bootSmoke.attempts.map(summarizeSmokeAttemptForLog),
+    });
+  }
+}
+
 await launch.close();
 await browser.close();
 
@@ -469,4 +514,20 @@ function readRequiredAssetSources(caseDir) {
   } catch {
     return [];
   }
+}
+
+function summarizeSmokeAttemptForLog(attempt) {
+  if (attempt.missingTarget) return { missing_target: true };
+  return {
+    target: {
+      kind: attempt.target?.kind,
+      label: attempt.target?.label,
+      x: Math.round(attempt.target?.pageX ?? 0),
+      y: Math.round(attempt.target?.pageY ?? 0),
+    },
+    trace_before: attempt.before?.traceLength,
+    trace_after: attempt.after?.traceLength,
+    trace_delta: attempt.traceDelta,
+    state_changed: attempt.stateChanged,
+  };
 }

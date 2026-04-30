@@ -78,6 +78,7 @@ if (!profileId) {
   });
   console.log("  ✗ playthrough: missing --profile <profile-id>");
 } else {
+  runCheck("profile_runner_smoke", ["check_profile_runner_smoke.js", gameDir, ...logArgs()]);
   runCheck("playthrough", ["check_playthrough.js", gameDir, "--profile", profileId, ...logArgs()]);
 }
 

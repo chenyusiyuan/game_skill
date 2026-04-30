@@ -237,6 +237,35 @@ test("profile skeleton 只生成 setup 且包含真实 click 占位", () => {
   assert(assertions.some(a => (a.setup ?? []).some(s => s.action === "click" && s.selector)), "至少一条 assertion 应包含真实 click 占位");
 });
 
+console.log("\n[profile-runner] shared click step parser");
+{
+  const {
+    readClickPosition,
+    hasRealClickStep,
+    hasRealUserInputStep,
+    clickOptionsForStep,
+  } = await import("../_profile_steps.js");
+  const { buildSmokeClickStep } = await import("../_interaction_smoke.js");
+
+  test("options.position click 算真实输入并传给 Playwright position", () => {
+    const assertion = {
+      setup: [{ action: "click", selector: "canvas", options: { position: { x: 123, y: 45 } } }],
+    };
+    assert(hasRealClickStep(assertion), "嵌套 options.position 应算真实 click");
+    assert(hasRealUserInputStep(assertion), "嵌套 options.position 应算真实用户输入");
+    const pos = readClickPosition(assertion.setup[0]);
+    assert(pos?.source === "options.position" && pos.x === 123 && pos.y === 45, `实际 pos=${JSON.stringify(pos)}`);
+    const opts = clickOptionsForStep(assertion.setup[0]);
+    assert(opts.position?.x === 123 && opts.position?.y === 45, `实际 opts=${JSON.stringify(opts)}`);
+  });
+
+  test("boot/profile smoke canvas 目标生成 selector + options.position 形状", () => {
+    const step = buildSmokeClickStep({ kind: "pixijs", canvasRelX: 320, canvasRelY: 240, pageX: 320, pageY: 240 });
+    assert(step.selector === "canvas", "canvas 目标应使用 selector=canvas");
+    assert(step.options?.position?.x === 320 && step.options?.position?.y === 240, `实际 step=${JSON.stringify(step)}`);
+  });
+}
+
 // =============================
 // T11 + T1: check_game_prd RL004/RL005 严格化
 // =============================

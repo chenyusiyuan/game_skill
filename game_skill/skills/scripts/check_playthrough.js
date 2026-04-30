@@ -27,6 +27,12 @@ import { resolveLaunchTarget } from "./_run_mode.js";
 import { createLogger, parseLogArg } from "./_logger.js";
 import { guardProfileSha } from "./_profile_guard.js";
 import { detectAntiCheatHits } from "./_profile_anti_cheat.js";
+import {
+  hasRealClickStep,
+  hasRealUserInputStep,
+  runProfileStep,
+  snapshotGameStateJson,
+} from "./_profile_steps.js";
 
 const _logPath = parseLogArg(process.argv);
 const log = createLogger(_logPath);
@@ -81,23 +87,6 @@ function assertionText(a) {
     a.hard_rule_id,
     a.description,
   ].filter(Boolean).join(" ").toLowerCase();
-}
-
-function hasRealClickStep(a) {
-  for (const s of a.setup ?? []) {
-    if (s.action === "click" && s.selector) return true;
-    if (s.action === "click" && Number.isFinite(s.x) && Number.isFinite(s.y)) return true;
-  }
-  return false;
-}
-
-function hasRealUserInputStep(a) {
-  for (const s of a.setup ?? []) {
-    if (s.action === "click" && (s.selector || (Number.isFinite(s.x) && Number.isFinite(s.y)))) return true;
-    if (s.action === "press" && s.key) return true;
-    if (s.action === "fill" && s.selector) return true;
-  }
-  return false;
 }
 
 function isInteractionAssertion(a) {
@@ -444,43 +433,18 @@ for (let idx = 0; idx < allAssertions.length; idx++) {
         // click 前取 gameState 浅快照，click 后再取；差异 0 即本次 click 没推进任何语义。
         // 对 interaction kind 的 assertion，连续多次 click 前后全无差异即判 [CLICK-HITS-NOTHING]。
         // 比 SB-1 启发式（3+ 共用坐标）更硬：直接看效果，不靠坐标推测。
-        const before = await page.evaluate(() => {
-          try { return JSON.stringify(window.gameState ?? null); } catch { return null; }
-        });
-        if (step.selector) {
-          const options = { timeout: 2000 };
-          // 支持两种坐标表达：顶层 step.x/y，或嵌套 step.options.position.{x,y}
-          const topX = step.x, topY = step.y;
-          const nestedPos = step.options?.position;
-          if (Number.isFinite(topX) && Number.isFinite(topY)) {
-            options.position = { x: topX, y: topY };
-          } else if (nestedPos && Number.isFinite(nestedPos.x) && Number.isFinite(nestedPos.y)) {
-            options.position = { x: nestedPos.x, y: nestedPos.y };
-          }
-          await page.click(step.selector, options);
-        } else if (Number.isFinite(step.x) && Number.isFinite(step.y)) {
-          await page.mouse.click(step.x, step.y);
-        } else {
-          throw new Error("click step 需要 selector 或 x/y 坐标");
-        }
+        const before = await snapshotGameStateJson(page);
+        await runProfileStep(page, step, { clickTimeout: 2000 });
         // 给 click 的同步/微任务完成点时间（常见情况下 PixiJS 的 pointerdown → 业务 handler 走完）
         await page.waitForTimeout(80);
-        const after = await page.evaluate(() => {
-          try { return JSON.stringify(window.gameState ?? null); } catch { return null; }
-        });
+        const after = await snapshotGameStateJson(page);
         clickStateDeltas.push({
           assertionId: a.id,
           kind: a.kind,
           changed: before !== after,
         });
-      } else if (step.action === "wait") {
-        await page.waitForTimeout(step.ms ?? 100);
-      } else if (step.action === "eval") {
-        await page.evaluate(step.js ?? step.code);
-      } else if (step.action === "fill") {
-        await page.fill(step.selector, step.value);
-      } else if (step.action === "press") {
-        await page.keyboard.press(step.key);
+      } else {
+        await runProfileStep(page, step, { clickTimeout: 2000 });
       }
     }
     console.log(`  ✓ [setup] ${label} 已驱动`);

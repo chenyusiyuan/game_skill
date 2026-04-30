@@ -197,6 +197,7 @@ function buildPlan(options) {
   const allowE2E = Boolean(preset.allowE2E && plannedPhases.includes("deliver") && !stopBefore);
 
   const instructions = [];
+  const handoffChecks = [];
   if (!allowE2E) {
     instructions.push("Do not run verify_all.js as an E2E repair loop in this mode.");
   }
@@ -208,6 +209,20 @@ function buildPlan(options) {
   }
   if (hardStop !== "none") {
     instructions.push(`Stop at ${hardStop} and report evidence before continuing.`);
+  }
+  if (plannedPhases.includes("codegen")) {
+    handoffChecks.push({
+      at: "Phase 4 tail",
+      check: "check_game_boots.js",
+      purpose: "boot-smoke: discover a real interactive target, click it, and require runtime trace evidence before Phase 5",
+    });
+  }
+  if (plannedPhases.includes("verify")) {
+    handoffChecks.push({
+      at: "Phase 5 entry",
+      check: "check_profile_runner_smoke.js",
+      purpose: "profile-smoke: run one minimal generated setup step through the shared runner before the real profile",
+    });
   }
 
   return {
@@ -225,6 +240,7 @@ function buildPlan(options) {
     allowE2E,
     layeredVerify: Boolean(preset.layeredVerify),
     instructions,
+    handoffChecks,
   };
 }
 

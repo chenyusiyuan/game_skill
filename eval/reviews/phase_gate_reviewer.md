@@ -64,6 +64,8 @@ Case 根目录: /Users/bytedance/Project/game_skill/cases/<CASE-slug>/
 2. /Users/bytedance/Project/game_skill/eval/protocols/iteration_testing_protocol.md
 3. /Users/bytedance/Project/game_skill/.pipeline_patterns.md
    — 历史跨 case 模式记录（决定本次 Blocker 是第几次出现）
+   — 每次 verdict 前必须额外做"怀疑驱动"扫描：取最近 3 条非示例 pattern，
+     对照当前 check 输出 / 产物症状；若相似，先按历史根因假设验证，再下结论
 4. cases/<CASE-slug>/INTENT.md    — 本 case 意图与预期不覆盖范围
 5. cases/<CASE-slug>/DEBT.md      — 已登记的 Debt（避免重复登记）
 6. cases/<CASE-slug>/failures/    — 历史 failure analysis
@@ -73,6 +75,19 @@ Case 根目录: /Users/bytedance/Project/game_skill/cases/<CASE-slug>/
 ## ━━━ 核心：Blocker 分类规则（必做）━━━
 
 每条 Blocker 必须打标签: CASE-LOCAL 或 SYSTEMATIC。
+
+### 怀疑驱动扫描（每次 verdict 必做）
+
+在逐条 Blocker 分类前，先读 `.pipeline_patterns.md` 的最近 3 条真实记录
+（跳过示例和 changelog），并做一个很短的对照：
+
+- 当前症状是否像最近 3 条里的任一 pattern（同一 checker、同一 phase、
+  同类 trace/profile/click/asset/runtime 失败）？
+- 如果相似，先验证历史根因是否仍成立：读对应脚本/产物/日志的证据，
+  不允许只凭 check 红绿猜测。
+- 如果命中历史 pattern，即使当前 case 是第 1 次，也要在 verdict 的证据里
+  写明"疑似复发 pattern: <日期/case/症状>"；累计计数仍按下方分类规则执行。
+- 如果不相似，写明"近 3 条 pattern 未命中"，避免把新问题误归到旧结论。
 
 ### 判定规则（优先级从高到低）
 
@@ -251,13 +266,15 @@ Debt:
 1. 按 Phase Routing 找清单
 2. 读 cases/<CASE-slug>/ 下该 Phase 产物（check 输出不全用 Bash 补跑）
 3. 逐条 Blocker 判定
-4. **对每条 Blocker 应用 "Blocker 分类规则"** 打 CASE-LOCAL 或 SYSTEMATIC 标签
+4. 先做"怀疑驱动扫描"：对照 `.pipeline_patterns.md` 最近 3 条 pattern，
+   命中则优先验证历史根因；未命中也要在 verdict 中简写
+5. **对每条 Blocker 应用 "Blocker 分类规则"** 打 CASE-LOCAL 或 SYSTEMATIC 标签
    - 读 failures/ 计数本 case 内重复
    - 读 .pipeline_patterns.md 计数跨 case 累计
    - 判断是否明显 skill bug
-5. 逐条 Debt 收集；排查伪 Debt
-6. 输出 VERDICT（模板见下）
-7. 回到驻留
+6. 逐条 Debt 收集；排查伪 Debt
+7. 输出 VERDICT（模板见下）
+8. 回到驻留
 
 ## 收到"Phase N 第 M 次失败，看下"信号时
 
@@ -287,6 +304,10 @@ Debt:
 ### Blockers
 
 分类 + 计数必填。每条 Blocker 必须标明 [CASE-LOCAL] 或 [SYSTEMATIC]。
+
+#### 怀疑驱动扫描
+- 近 3 条 pattern: <命中 / 未命中；若命中列日期、case、症状>
+- 本次验证结论: <历史根因复发 / 相似但根因不同 / 未命中>
 
 #### CASE-LOCAL Blockers（修本 case 产物，继续跑）
 - [B_id] [CASE-LOCAL, pattern-count 1/3] 简短描述

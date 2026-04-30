@@ -13,7 +13,7 @@ Phase 2: GamePRD           → docs/game-prd.md（必须过 check_game_prd.js）
 Phase 2.5: Spec Clarify    → docs/spec-clarifications.md（功能机制歧义：必要时最多 1-2 问，否则记录默认假设）
 Phase 3: Expand            → specs/{mechanics,scene,rule,data,assets,event-graph,implementation-contract}.yaml（始终必做）
 Phase 4: Codegen           → game/index.html + src/
-Phase 5: Verify + Deliver  → verify_all.js(check_mechanics + check_game_boots + check_project + check_playthrough + check_runtime_semantics + check_level_solvability + check_skill_compliance) + eval/report.json + docs/delivery.md
+Phase 5: Verify + Deliver  → verify_all.js(check_mechanics + check_game_boots + check_project + check_profile_runner_smoke + check_playthrough + check_runtime_semantics + check_level_solvability + check_skill_compliance) + eval/report.json + docs/delivery.md
 ```
 
 **核心约束**：严格串行，每阶段完成前不启动下一阶段；失败不降级。
@@ -569,12 +569,13 @@ node game_skill/skills/scripts/phase_plan.js --mode ${PHASE_MODE:-full} --projec
    ```
    退出码 1 = LLM 修了不该修的文件（PRD/specs/mechanics）→ 立刻终止，报用户。这是"面向测试改 PRD"的硬闸。
 2. 统一入口：`node game_skill/skills/scripts/verify_all.js cases/${PROJECT} --profile ${PROJECT} --log ${LOG_FILE}`
-   - 它会顺序跑 `check_mechanics`、`check_game_boots`、`check_project`、`check_playthrough`、`check_runtime_semantics`、`check_level_solvability`、`check_skill_compliance`
+   - 它会顺序跑 `check_mechanics`、`check_game_boots`、`check_project`、`check_profile_runner_smoke`、`check_playthrough`、`check_runtime_semantics`、`check_level_solvability`、`check_skill_compliance`
    - Phase 5 verify 现在包含 `check_level_solvability`：board-grid 必跑，其他 genre 或未声明 `playability.genre` 自动 ok-skip
    - `cases/${PROJECT}/eval/report.json` 只能由这个入口根据真实退出码生成；禁止手写绿色报告
 3. 若需定位单层失败，再分别运行：
-   - 冒烟（≤2 轮）：`node game_skill/skills/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG_FILE}`
+   - 冒烟（≤2 轮）：`node game_skill/skills/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG_FILE}`（内含 boot-smoke：真实点击交互目标并验证 trace 增长）
    - 工程侧（≤3 轮）：`node game_skill/skills/scripts/check_project.js cases/${PROJECT}/game/ --log ${LOG_FILE}`
+   - profile runner 冒烟（≤1 轮）：`node game_skill/skills/scripts/check_profile_runner_smoke.js cases/${PROJECT}/game/ --log ${LOG_FILE}`
    - 产品侧（≤10 轮）：`node game_skill/skills/scripts/check_playthrough.js cases/${PROJECT}/game/ --profile ${PROJECT} --log ${LOG_FILE}`
    - 运行时语义：`node game_skill/skills/scripts/check_runtime_semantics.js cases/${PROJECT}/ --log ${LOG_FILE}`
    - P2 可玩性：`node game_skill/skills/scripts/check_level_solvability.js cases/${PROJECT}/ --log ${LOG_FILE}`
