@@ -324,7 +324,7 @@ function checkGeneratedCode(c, assets, root) {
   }
   checkTracePushPoints(businessSrc);  // T3
   checkBusinessAntiCheat(businessSrc);  // SB-unified: 业务代码同步跑 profile 反作弊子集
-  checkPrimitiveImplementationCoverage(businessSrc, allSrc); // mechanics -> code 1:1
+  checkPrimitiveImplementationCoverage(businessSrc, allSrc, root); // mechanics -> code 1:1
 
   if (engine === "phaser3" || engine === "phaser") {
     if (/\.load\.start\s*\(/.test(businessSrc)) {
@@ -335,7 +335,7 @@ function checkGeneratedCode(c, assets, root) {
   }
 }
 
-function checkPrimitiveImplementationCoverage(businessSrc, sourceBlob) {
+function checkPrimitiveImplementationCoverage(businessSrc, sourceBlob, root) {
   if (!existsSync(mechanicsPath)) {
     fail("[mechanics] specs/mechanics.yaml 不存在，无法校验 mechanics 代码覆盖率");
     return;
@@ -354,7 +354,12 @@ function checkPrimitiveImplementationCoverage(businessSrc, sourceBlob) {
   }
   const missingNodeCalls = [];
   const missingRuntimeModules = [];
+  const invalidRuntimePaths = [];
+  const missingRuntimeFiles = [];
   const missingRuntimeImports = [];
+  const missingTraceImports = [];
+  const missingPushTraceCalls = [];
+  const missingTraceEvents = [];
   for (const node of nodes) {
     const id = node.node;
     if (!id) {
@@ -369,28 +374,81 @@ function checkPrimitiveImplementationCoverage(businessSrc, sourceBlob) {
       missingRuntimeModules.push(id);
       continue;
     }
+    const runtimePath = normalizeRuntimeModulePath(runtimeModule);
+    if (!runtimePath) {
+      invalidRuntimePaths.push(`${id} -> ${runtimeModule}`);
+      continue;
+    }
     if (!isRuntimeModuleImported(businessSrc, runtimeModule)) {
       missingRuntimeImports.push(`${id} -> ${runtimeModule}`);
+    }
+    const absoluteRuntimePath = join(root, runtimePath);
+    if (!existsSync(absoluteRuntimePath)) {
+      missingRuntimeFiles.push(`${id} -> ${runtimePath}`);
+      continue;
+    }
+    let runtimeSource = "";
+    try {
+      runtimeSource = readFileSync(absoluteRuntimePath, "utf-8");
+    } catch (e) {
+      missingRuntimeFiles.push(`${id} -> ${runtimePath} (${e.message})`);
+      continue;
+    }
+    if (!/from\s*["'][^"']*_trace\.mjs["']/.test(runtimeSource)) {
+      missingTraceImports.push(`${id} -> ${runtimePath}`);
+    }
+    if (!/\bpushTrace\s*\(/.test(runtimeSource)) {
+      missingPushTraceCalls.push(`${id} -> ${runtimePath}`);
+    }
+    for (const eventType of collectTraceEvents(node)) {
+      if (!runtimeSource.includes(eventType)) {
+        missingTraceEvents.push(`${id} -> ${runtimePath} 缺 trace-event "${eventType}"`);
+      }
     }
   }
   if (missingRuntimeModules.length) {
     fail(`[mechanics] ${missingRuntimeModules.length}/${nodes.length} 个 mechanics node 缺 runtime-module: ${missingRuntimeModules.slice(0, 8).join(", ")}`);
   }
+  if (invalidRuntimePaths.length) {
+    fail(`[mechanics.runtime] ${invalidRuntimePaths.length}/${nodes.length} 个 runtime-module 路径必须使用 src/mechanics/*.runtime.mjs: ${invalidRuntimePaths.slice(0, 8).join(", ")}`);
+  }
+  if (missingRuntimeFiles.length) {
+    fail(`[mechanics.runtime] ${missingRuntimeFiles.length}/${nodes.length} 个 runtime-module 文件不存在于 game/: ${missingRuntimeFiles.slice(0, 8).join(", ")}`);
+  }
   if (missingRuntimeImports.length) {
     fail(`[mechanics] ${missingRuntimeImports.length}/${nodes.length} 个 runtime-module 未被业务代码 import: ${missingRuntimeImports.slice(0, 8).join(", ")}`);
+  }
+  if (missingTraceImports.length) {
+    fail(`[mechanics.runtime] ${missingTraceImports.length}/${nodes.length} 个 runtime-module 未 import _trace.mjs: ${missingTraceImports.slice(0, 8).join(", ")}`);
+  }
+  if (missingPushTraceCalls.length) {
+    fail(`[mechanics.runtime] ${missingPushTraceCalls.length}/${nodes.length} 个 runtime-module 未调用 pushTrace(): ${missingPushTraceCalls.slice(0, 8).join(", ")}`);
+  }
+  if (missingTraceEvents.length) {
+    fail(`[mechanics.runtime] ${missingTraceEvents.length} 个 node.trace-events 未在对应 runtime-module 出现: ${missingTraceEvents.slice(0, 8).join(", ")}`);
   }
   if (missingNodeCalls.length) {
     fail(`[mechanics] ${missingNodeCalls.length}/${nodes.length} 个 mechanics node 缺少业务调用证据 node: "<id>": ${missingNodeCalls.slice(0, 8).join(", ")}`);
   }
-  if (missingRuntimeModules.length === 0 && missingRuntimeImports.length === 0 && missingNodeCalls.length === 0) {
-    ok(`[mechanics] 所有 ${nodes.length} 个 mechanics node 均有 runtime-module import + node 调用证据`);
+  if (
+    missingRuntimeModules.length === 0 &&
+    invalidRuntimePaths.length === 0 &&
+    missingRuntimeFiles.length === 0 &&
+    missingRuntimeImports.length === 0 &&
+    missingTraceImports.length === 0 &&
+    missingPushTraceCalls.length === 0 &&
+    missingTraceEvents.length === 0 &&
+    missingNodeCalls.length === 0
+  ) {
+    ok(`[mechanics] 所有 ${nodes.length} 个 mechanics node 均有 runtime-module 文件 + trace + 业务调用证据`);
   }
 
-  const mechanicsRuntimeFiles = (sourceBlob.match(/src\/mechanics\/[\w/-]+\.runtime\.mjs/g) ?? []).length;
-  if (mechanicsRuntimeFiles > 0) {
-    ok(`[mechanics] 发现 ${mechanicsRuntimeFiles} 处 src/mechanics/*.runtime.mjs 引用`);
+  const mechanicsRuntimeImports = [...businessSrc.matchAll(/import[\s\S]{0,240}["'][^"']*mechanics\/[\w/-]+\.runtime\.mjs["']/g)].length;
+  const mechanicsRuntimeRefs = (sourceBlob.match(/src\/mechanics\/[\w/-]+\.runtime\.mjs/g) ?? []).length;
+  if (mechanicsRuntimeImports > 0) {
+    ok(`[mechanics] 业务代码发现 ${mechanicsRuntimeImports} 处 mechanics/*.runtime.mjs import`);
   } else {
-    warn("[mechanics] 未发现 src/mechanics/*.runtime.mjs 字面引用；若使用相对路径 import，请确认上方 node 检查已覆盖");
+    fail(`[mechanics] 业务代码必须 import 至少一个 src/mechanics/*.runtime.mjs wrapper（当前 import=0，源码字面引用=${mechanicsRuntimeRefs}）`);
   }
 }
 
@@ -406,6 +464,27 @@ function isRuntimeModuleImported(source, runtimeModule) {
     base,
   ].map(escapeReg);
   return new RegExp(`import[\\s\\S]{0,240}["'][^"']*(?:${patterns.join("|")})["']`).test(source);
+}
+
+function normalizeRuntimeModulePath(runtimeModule) {
+  const clean = String(runtimeModule ?? "")
+    .replace(/\\/g, "/")
+    .replace(/^\.?\//, "")
+    .replace(/^game\//, "");
+  if (!/^src\/mechanics\/[\w/-]+\.runtime\.mjs$/.test(clean)) return null;
+  return clean;
+}
+
+function collectTraceEvents(node) {
+  const raw = node?.["trace-events"];
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object") return item.type ?? item.event ?? item.name;
+      return null;
+    })
+    .filter((value) => typeof value === "string" && value.length > 0);
 }
 
 // T3: 扫 event-graph.yaml 里声明的每条 rule-id，业务代码必须有对应 push

@@ -11,7 +11,7 @@
  *      建议：没变化 / 只改 PRD / 只改 assets / 都改了。
  *
  *   3. `--classify <case-dir> <feedback-file>`  读用户反馈文本 + 当前快照，
- *      给出 code-bug / design-change / art-change 的建议分流（基于关键字启发式）。
+ *      给出 7+1 类建议分流（基于关键字启发式）。
  *
  * 退出码: 0 = OK, 1 = case-dir 不存在, 2 = 参数错
  */
@@ -118,7 +118,15 @@ process.exit(2);
  */
 function classifyFeedback(text) {
   const lc = text.toLowerCase();
-  const signals = { codeBug: [], designChange: [], artChange: [] };
+  const signals = {
+    "code-bug": [],
+    tuning: [],
+    "art-change": [],
+    "scope-change": [],
+    rework: [],
+    extension: [],
+    pivot: [],
+  };
 
   const codeBugPatterns = [
     /崩|闪退|白屏|报错|console.*error|undefined|null|exception/i,
@@ -127,34 +135,64 @@ function classifyFeedback(text) {
     /打不开|load.*fail|404|加载失败/i,
     /按钮.*(?:没|无).*用|缺.*按钮/i,
   ];
-  const designChangePatterns = [
-    /太难|太简单|节奏|平衡|balance|玩法|不好玩|too hard|too easy/i,
-    /想.*(?:改|换).*(?:玩法|规则|机制)|能不能.*(?:加|改)(?:个|一个)/i,
-    /应该.*(?:变|换|改成)|change.*(?:rule|mechanic)/i,
-    /关卡|关数|level.*(?:count|number)|loops?|几关/i,
-    /胜利条件|失败条件|win.*condition|lose.*condition/i,
-    /\d+\s*(?:秒|分钟|min|sec).*(?:太短|太长|too)/i,
+  const tuningPatterns = [
+    /太难|太简单|too hard|too easy|难度|平衡|balance/i,
+    /血量|时间|分数|速度|频率|伤害|冷却|cd|金币|生命|hp|score|timer?/i,
+    /改(?:一下)?(?:数值|难度|时间|分数)|调(?:低|高|整|一下)|微调/i,
+    /删(?:掉)?(?:一条|这个|那个|单条)|少一点|多一点/i,
   ];
   const artChangePatterns = [
     /风格|配色|颜色|字体|调色|color|palette|font|style/i,
-    /图|素材|贴图|icon|sprite|art|图标/i,
+    /图|素材|贴图|音效|icon|sprite|art|图标|sound|audio/i,
     /换.*(?:一套|个)?(?:素材|图|贴图)|replace.*art/i,
     /太丑|不好看|丑|美化|polish.*visual|looks? (ugly|bad)/i,
-    /动画|特效|animation|effect/i,  // 特效也算 art 层
+    /动画|特效|animation|effect/i,
+  ];
+  const scopeChangePatterns = [
+    /\d+\s*关.*(?:改|变|到|成)\s*\d+\s*关|关数|几关|level.*(?:count|number)/i,
+    /加(?:一个)?关卡选择|关卡选择|level select/i,
+    /本(?:阶段|stage).*范围|scope/i,
+    /把.*(?:扩到|增加到|减少到).*关/i,
+  ];
+  const reworkPatterns = [
+    /撤销|回滚|退回|回到\s*stage\s*\d+|回到第?\s*\d+\s*阶段/i,
+    /去掉\s*stage\s*\d+|删掉\s*stage\s*\d+|不要.*(?:boss|道具|升级|系统)/i,
+    /恢复到|还原|reverse patch|rework/i,
+  ];
+  const extensionPatterns = [
+    /排行榜|分享|成就|多人|联机|账号|存档|商店|任务|皮肤|leaderboard|share|achievement|multiplayer/i,
+    /加(?:一个)?(?:新功能|新特性|系统)|新增(?:功能|系统|玩法外)/i,
+  ];
+  const pivotPatterns = [
+    /换成.*玩法|改成.*玩法|玩法.*换成|这不是我要的游戏/i,
+    /核心玩法|胜利条件|失败条件|win.*condition|lose.*condition/i,
+    /完全(?:换|改)|重新做|重做|restart|pivot/i,
   ];
 
-  for (const re of codeBugPatterns) if (re.test(lc)) signals.codeBug.push(re.source);
-  for (const re of designChangePatterns) if (re.test(lc)) signals.designChange.push(re.source);
-  for (const re of artChangePatterns) if (re.test(lc)) signals.artChange.push(re.source);
+  for (const re of codeBugPatterns) if (re.test(lc)) signals["code-bug"].push(re.source);
+  for (const re of tuningPatterns) if (re.test(lc)) signals.tuning.push(re.source);
+  for (const re of artChangePatterns) if (re.test(lc)) signals["art-change"].push(re.source);
+  for (const re of scopeChangePatterns) if (re.test(lc)) signals["scope-change"].push(re.source);
+  for (const re of reworkPatterns) if (re.test(lc)) signals.rework.push(re.source);
+  for (const re of extensionPatterns) if (re.test(lc)) signals.extension.push(re.source);
+  for (const re of pivotPatterns) if (re.test(lc)) signals.pivot.push(re.source);
 
   const scores = {
-    "code-bug": signals.codeBug.length,
-    "design-change": signals.designChange.length,
-    "art-change": signals.artChange.length,
+    "code-bug": signals["code-bug"].length,
+    tuning: signals.tuning.length,
+    "art-change": signals["art-change"].length,
+    "scope-change": signals["scope-change"].length,
+    rework: signals.rework.length,
+    extension: signals.extension.length,
+    pivot: signals.pivot.length,
   };
-  const top = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+  const priority = ["pivot", "rework", "extension", "scope-change", "code-bug", "art-change", "tuning"];
+  const top = Object.entries(scores).sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1];
+    return priority.indexOf(a[0]) - priority.indexOf(b[0]);
+  })[0];
   const category = top[1] === 0 ? "ambiguous" : top[0];
-  const total = scores["code-bug"] + scores["design-change"] + scores["art-change"];
+  const total = Object.values(scores).reduce((sum, n) => sum + n, 0);
   const confidence = total === 0 ? 0 : (top[1] / total);
 
   return {
@@ -169,12 +207,20 @@ function classifyFeedback(text) {
 function recommendedAction(category) {
   switch (category) {
     case "code-bug":
-      return "走 Phase 5 验证修复循环：定位并修 game/src/，不改 PRD/specs";
-    case "design-change":
-      return "回流 Phase 2：修改 docs/game-prd.md（或创建 game-prd.v2.md），重跑 Phase 3 expand + Phase 4 codegen + Phase 5 verify";
+      return "run verify_all; fix in current stage";
+    case "tuning":
+      return "edit data.yaml only; run current stage verify";
     case "art-change":
-      return "只重跑 Phase 3 的 assets 维度 + Phase 4 的素材绑定段（generate_registry.js）+ Phase 5 的 compliance/playthrough；逻辑代码尽量保留";
+      return "edit color-scheme + assets.yaml + juice-plan; run assets stage";
+    case "scope-change":
+      return "regenerate stage-contract-N; rerun phase 3-5 of current stage";
+    case "rework":
+      return "generate reverse patch on target stage; replay subsequent stages";
+    case "extension":
+      return "create extension-contract-N; apply patch after delivery";
+    case "pivot":
+      return "archive game.v{N}/ specs.v{N}/ preserve.v{N}.lock.yaml; rewrite PRD + design-strategy; restart Stage 1";
     default:
-      return "反馈信号不明确，建议用 AskUserQuestion 问用户：是『代码 bug』、『想改玩法/数值』还是『想换视觉』？";
+      return "AskUserQuestion with all 7 options + Other";
   }
 }

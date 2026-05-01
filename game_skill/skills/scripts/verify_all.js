@@ -6,7 +6,7 @@
  * Agents must not hand-write a green report while any gate is red.
  *
  * Usage:
- *   node verify_all.js <case-dir> --profile <profile-id> [--log <log.jsonl>]
+ *   node verify_all.js <case-dir> --profile <profile-id> [--stage 1-5] [--log <log.jsonl>]
  */
 
 import { existsSync, mkdirSync, writeFileSync, readdirSync, readFileSync } from "fs";
@@ -59,37 +59,12 @@ if (!existsSync(caseDir)) {
 const gameDir = join(caseDir, "game");
 const reportPath = join(caseDir, "eval/report.json");
 const checks = [];
+const stage = parseStageArg(args);
 
-console.log(`verify_all: ${caseDir}`);
+console.log(`verify_all: ${caseDir}${stage ? ` [stage=${stage}]` : ""}`);
 
-runCheck("mechanics", ["check_mechanics.js", caseDir]);
-runCheck("asset_selection", ["check_asset_selection.js", caseDir, ...logArgs()]);
-runCheck("implementation_contract", ["check_implementation_contract.js", caseDir, "--stage", "codegen", ...logArgs()]);
-runCheck("visual_slots", ["check_visual_slots.js", caseDir, ...logArgs()]);
-runCheck("boot", ["check_game_boots.js", gameDir, ...logArgs()]);
-runCheck("project", ["check_project.js", gameDir, ...logArgs()]);
-
-if (!profileId) {
-  checks.push({
-    name: "playthrough",
-    script: "check_playthrough.js",
-    exit_code: 3,
-    status: "failed",
-    error: "missing --profile <profile-id>",
-  });
-  console.log("  ✗ playthrough: missing --profile <profile-id>");
-} else {
-  runCheck("profile_runner_smoke", ["check_profile_runner_smoke.js", gameDir, ...logArgs()]);
-  runCheck("playthrough", ["check_playthrough.js", gameDir, "--profile", profileId, ...logArgs()]);
-}
-
-// P0.2: runtime_semantics 接在 playthrough 之后。不读产品 profile，使用 probe scenario
-// 语义复算。当前 case 若不含 ray-cast@v1 或未暴露 probes API 会自动 ok-skip。
-runCheck("runtime_semantics", ["check_runtime_semantics.js", caseDir, ...logArgs()]);
-runCheck("level_solvability", ["check_level_solvability.js", caseDir, ...logArgs()]);
-runCheck("pipeline_patterns", ["check_pipeline_patterns.js", caseDir, ...logArgs()]);
-
-runCheck("compliance", ["check_skill_compliance.js", caseDir, ...logArgs()]);
+if (stage) runStageChecks(stage);
+else runDefaultChecks();
 
 const passed = checks.every(c => c.exit_code === 0);
 const specialFailure = checks.find(c => [4, 5, 6].includes(c.exit_code));
@@ -99,6 +74,7 @@ const report = {
   status: passed ? "passed" : "failed",
   failure_kind: specialFailure ? "profile_gate" : (passed ? null : "verification_gate"),
   generated_by: "verify_all.js",
+  ...(stage ? { stage } : {}),
   timestamp: new Date().toISOString(),
   checks,
 };
@@ -121,10 +97,77 @@ log.entry({
   script: "verify_all.js",
   exit_code: aggregateExitCode,
   checks: checks.map(c => ({ name: c.name, exit_code: c.exit_code })),
+  stage,
   report: noWrite ? null : reportPath,
 });
 
 process.exit(aggregateExitCode);
+
+function runDefaultChecks() {
+  runCheck("mechanics", ["check_mechanics.js", caseDir]);
+  runCheck("asset_selection", ["check_asset_selection.js", caseDir, ...logArgs()]);
+  runCheck("implementation_contract", ["check_implementation_contract.js", caseDir, "--stage", "codegen", ...logArgs()]);
+  runCheck("visual_slots", ["check_visual_slots.js", caseDir, ...logArgs()]);
+  runCheck("boot", ["check_game_boots.js", gameDir, ...logArgs()]);
+  runCheck("project", ["check_project.js", gameDir, ...logArgs()]);
+  runProfileChecks();
+  // P0.2: runtime_semantics 接在 playthrough 之后。不读产品 profile，使用 probe scenario。
+  runCheck("runtime_semantics", ["check_runtime_semantics.js", caseDir, ...logArgs()]);
+  runCheck("level_solvability", ["check_level_solvability.js", caseDir, ...logArgs()]);
+  runCheck("pipeline_patterns", ["check_pipeline_patterns.js", caseDir, ...logArgs()]);
+  runCheck("compliance", ["check_skill_compliance.js", caseDir, ...logArgs()]);
+}
+
+function runStageChecks(stageNum) {
+  runCheck("mechanics", ["check_mechanics.js", caseDir]);
+  runCheck("asset_selection", ["check_asset_selection.js", caseDir, ...logArgs()]);
+  runCheck("implementation_contract", ["check_implementation_contract.js", caseDir, "--stage", "codegen", ...logArgs()]);
+  runCheck("visual_slots", ["check_visual_slots.js", caseDir, ...logArgs()]);
+  runCheck("boot", ["check_game_boots.js", gameDir, ...logArgs()]);
+  runCheck("project", ["check_project.js", gameDir, ...logArgs()]);
+  runProfileChecks();
+  runCheck("runtime_semantics", ["check_runtime_semantics.js", caseDir, ...logArgs()]);
+  runCheck("level_solvability", ["check_level_solvability.js", caseDir, ...logArgs()]);
+  runCheck("game_feel", ["check_game_feel.js", caseDir, ...logArgs()]);
+  runCheck("decision_graph", ["check_decision_graph.js", caseDir, ...logArgs()]);
+  if (stageNum >= 2) {
+    const difficultyStage = stageNum >= 5 ? 5 : 2;
+    runCheck("difficulty_curve", ["check_difficulty_curve.js", caseDir, "--stage", String(difficultyStage), ...logArgs()]);
+    runCheck("preserve_regression", ["check_preserve_regression.js", caseDir, ...logArgs()]);
+  }
+  if (stageNum >= 4) {
+    runCheck("resource_loop", ["check_resource_loop.js", caseDir, ...logArgs()]);
+  }
+  runCheck("pipeline_patterns", ["check_pipeline_patterns.js", caseDir, ...logArgs()]);
+  runCheck("skill_compliance", ["check_skill_compliance.js", caseDir, ...logArgs()]);
+}
+
+function runProfileChecks() {
+  if (!profileId) {
+    checks.push({
+      name: "playthrough",
+      script: "check_playthrough.js",
+      exit_code: 3,
+      status: "failed",
+      error: "missing --profile <profile-id>",
+    });
+    console.log("  ✗ playthrough: missing --profile <profile-id>");
+    return;
+  }
+  runCheck("profile_runner_smoke", ["check_profile_runner_smoke.js", gameDir, ...logArgs()]);
+  runCheck("playthrough", ["check_playthrough.js", gameDir, "--profile", profileId, ...logArgs()]);
+}
+
+function parseStageArg(argv) {
+  const idx = argv.indexOf("--stage");
+  if (idx < 0) return null;
+  const value = Number(argv[idx + 1]);
+  if (!Number.isInteger(value) || value < 1 || value > 5) {
+    console.error("✗ --stage 只接受 1-5");
+    process.exit(2);
+  }
+  return value;
+}
 
 function runCheck(name, argv) {
   const [script, ...rest] = argv;

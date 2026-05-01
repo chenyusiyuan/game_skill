@@ -570,11 +570,33 @@ Phase 2.5A 与 Phase 2.5B 的提问预算完全独立：2.5A 最多 4 问，2.5B
 
 Phase 4 Codegen 与 Phase 5 Verify 不再作为一次性大段推进，而是被主干 Stage 1-5 包裹执行。每个 stage 都先读 `stage-roadmap.md`，再按 `specs/stage-contract-{N}.yaml` 执行本段的 codegen、verify、preserve 和用户确认策略。
 
+### Phase 4 Codegen Agent 约束
+
+主 agent 发起 `game-engine-codegen` 时，prompt 必须追加以下硬约束：
+
+- 读取 `specs/mechanics.yaml`，为每个 mechanics node 生成 `game/src/mechanics/<node-id>.runtime.mjs`。
+- 每个 wrapper 必须 `import { pushTrace } from '../_common/_trace.mjs'`，export 一个由 node id camelCase 得到的函数，签名为 `({ rule, node, state, action })`，内部执行对应业务状态变更、调用 `pushTrace({ type, rule, node, before, after })`，并返回 next state。
+- `type` 必须来自该 node 的 `trace-events`；多条 trace event 时，每次只 push 当前触发的 event。
+- 业务代码中任何 state mutation 或 trace 产生都必须经过对应 runtime wrapper；业务代码不得 import 已删除的旧 primitive 共享目录，也不得手写 `window.__trace.push(...)`。
+- 多个 wrapper 可协作处理同一实体，但每个 wrapper 都要独立产出 trace 证据；不再要求 `predicateMatch` / `scoreAccum` 等固定 API 形态。
+
+### Phase 5 Verify Agent 约束
+
+- Stage acceptance 以 `stage-roadmap.md` 对应 stage 段为准；`specs/stage-contract-{N}.yaml` 负责把该段 acceptance 落成当前 case 的可执行契约。
+- 新增独特判断 check：
+  - `check_game_feel.js`：Stage 1，验证 MDPM、action-feedback latency、首败重试率。
+  - `check_decision_graph.js`：Stage 1/3，验证 `window.gameTest.getAvailableActions()` 可观察选项数不低于 `design-strategy.yaml` 声明。
+  - `check_difficulty_curve.js`：Stage 2/5，验证关卡难度单调、layout hash 不重复；Stage 5 额外跑 10 局 replay 胜率。
+  - `check_resource_loop.js`：Stage 4，验证资源闭环、无孤立资源、无无限增殖，并在有 trace 时检查产出/消耗比。
+- `verify_all.js` 支持 `--stage 1-5`：stage 模式会在旧基础项之外按当前 stage 加入上述 check 和 preserve regression，并在生成的 `eval/report.json` 写入 `stage` 字段。
+- 未传 `--stage` 时，`verify_all.js` 保持旧 12 项固定顺序兼容；`--stage N` 只决定跑哪些 check，不改变 `failures/*.md` 未填完时禁止继续 verify 的前置门禁。
+
 ### Stage 1 — Vertical Slice
 
 - 输入：`docs/game-prd.md`、`docs/spec-clarifications.md`、`docs/design-strategy.yaml`、`specs/mechanics.yaml`、`specs/stage-contract-1.yaml`、`codegen.md`、`verify.md`。
 - 产出：最小可玩的 `game/`、Stage 1 acceptance 证据、`.game/preserve.lock.yaml`。
-- check 入口：`node game_skill/skills/scripts/check_stage_contract.js cases/${PROJECT} --stage 1`，通过后跑 `node game_skill/skills/scripts/generate_preserve_lock.js cases/${PROJECT}`。
+- check 入口：`node game_skill/skills/scripts/check_stage_contract.js cases/${PROJECT} --stage 1` + `node game_skill/skills/scripts/verify_all.js cases/${PROJECT} --profile ${PROJECT} --stage 1`；通过后跑 `node game_skill/skills/scripts/generate_preserve_lock.js cases/${PROJECT}`。
+- acceptance 必含：`check_game_feel.js` 与 `check_decision_graph.js`，对应 `stage-roadmap.md` 的 Stage 1 acceptance。
 - preserve 规则：从核心 entity、win/lose/settle 条件、input model、核心 UI zone 和前 3 条 scenario 生成 preserve lock。
 - 用户确认策略：必须停下让用户确认玩法方向，确认后才进入 Stage 2。
 
@@ -582,7 +604,8 @@ Phase 4 Codegen 与 Phase 5 Verify 不再作为一次性大段推进，而是被
 
 - 输入：Stage 1 产物、`.game/preserve.lock.yaml`、`specs/stage-contract-2.yaml`。
 - 产出：新增关卡、内容规模和数据扩展，归档到 `.game/stages/2/`。
-- check 入口：先跑 `check_preserve_regression.js`，再跑 `check_stage_contract.js --stage 2`。
+- check 入口：先跑 `check_preserve_regression.js`，再跑 `check_stage_contract.js --stage 2` 与 `verify_all.js --stage 2`。
+- acceptance 必含：`check_difficulty_curve.js` 单调难度与 layout hash，对应 `stage-roadmap.md` 的 Stage 2 acceptance。
 - preserve 规则：Stage 1 core-loop、input-model、render-style 不变；禁止重写主入口绕开 preserve。
 - 用户确认策略：完成后建议停下确认内容规模，再进入 Stage 3。
 
@@ -590,7 +613,8 @@ Phase 4 Codegen 与 Phase 5 Verify 不再作为一次性大段推进，而是被
 
 - 输入：Stage 2 产物、`.game/preserve.lock.yaml`、`specs/stage-contract-3.yaml`。
 - 产出：新增局内变化、敌人/道具/事件或行为差异，归档到 `.game/stages/3/`。
-- check 入口：`check_preserve_regression.js` + `check_stage_contract.js --stage 3`。
+- check 入口：`check_preserve_regression.js` + `check_stage_contract.js --stage 3` + `verify_all.js --stage 3`。
+- acceptance 必含：`check_decision_graph.js` 继续确认可决策选项数，对应 `stage-roadmap.md` 的 Stage 3 acceptance。
 - preserve 规则：Stage 1 win/lose/settle 路径不能被新 entity 绕开，核心操作仍可观察。
 - 用户确认策略：默认自动推进，但用户反馈可打断并进入支路 SOP。
 
@@ -598,7 +622,8 @@ Phase 4 Codegen 与 Phase 5 Verify 不再作为一次性大段推进，而是被
 
 - 输入：Stage 3 产物、`.game/preserve.lock.yaml`、`specs/stage-contract-4.yaml`。
 - 产出：资源循环、升级/奖励/消耗与推进系统，归档到 `.game/stages/4/`。
-- check 入口：`check_preserve_regression.js` + `check_stage_contract.js --stage 4`。
+- check 入口：`check_preserve_regression.js` + `check_stage_contract.js --stage 4` + `verify_all.js --stage 4`。
+- acceptance 必含：`check_resource_loop.js`，对应 `stage-roadmap.md` 的 Stage 4 acceptance。
 - preserve 规则：不升级策略下仍可完成 Stage 1 核心玩法；升级系统不能吞掉原有数值敏感度。
 - 用户确认策略：默认自动推进，可被用户反馈打断。
 
@@ -606,7 +631,8 @@ Phase 4 Codegen 与 Phase 5 Verify 不再作为一次性大段推进，而是被
 
 - 输入：Stage 4 产物、`.game/preserve.lock.yaml`、`specs/stage-contract-5.yaml`、正式 profile。
 - 产出：平衡与表现收敛、`eval/report.json`、`docs/delivery.md`。
-- check 入口：`check_preserve_regression.js` + `check_stage_contract.js --stage 5`；最终交付仍必须由真实 verify 结果生成。
+- check 入口：`check_preserve_regression.js` + `check_stage_contract.js --stage 5` + `verify_all.js --stage 5`；最终交付仍必须由真实 verify 结果生成。
+- acceptance 必含：`check_difficulty_curve.js --stage 5` 的 10 局 replay 胜率，对应 `stage-roadmap.md` 的 Stage 5 acceptance。
 - preserve 规则：Stage 4 resource loop 和 Stage 3 variety 行为不变，只改表现、节奏和反馈。
 - 用户确认策略：自动完成交付；交付后反馈进入支路 SOP。
 
@@ -635,7 +661,7 @@ import('./game_skill/skills/scripts/_state.js').then(m => {
 
 ## 用户反馈修复（生成完成后）
 
-游戏交付后，用户可能报告 bug、提出数值调整或希望更换视觉风格。不同类型的反馈走不同的重跑路径 —— **不要**把所有反馈都当作 "code-bug" 处理，否则会出现"代码小修小补，规则 / 素材永远追不上"的死循环。
+任意 stage 完成后，用户可能报告 bug、提出数值微调、更换视觉、调整本 stage 范围、撤销历史 stage、追加新特性，或要求核心玩法转向。支路统一按 `iteration.md` 执行：先记录原文，再分类，再跑 preserve preflight，最后按 7+1 类路径回到主干。
 
 ### Step 0 — 交付完成时先打快照（Phase 5 末尾做）
 
@@ -660,96 +686,98 @@ node game_skill/skills/scripts/prd_diff.js --classify cases/${PROJECT} /tmp/fb.t
 ```
 
 输出 JSON：`{ category, confidence, recommended_action }`。
-- `category` ∈ `code-bug` / `design-change` / `art-change` / `ambiguous`
-- `confidence < 0.5` 或 `category === "ambiguous"` → 用 `AskUserQuestion` 让用户明确是哪类；选项必须包含"让我决定（按 recommended_action 执行）"
+- `category` ∈ `code-bug` / `tuning` / `art-change` / `scope-change` / `rework` / `extension` / `pivot` / `ambiguous`
+- `confidence < 0.5` 或 `category === "ambiguous"` → 用 `AskUserQuestion` 让用户在 7 类中明确选择；工具自带 Other 入口。
+
+### Step 2.5 — preserve 冲突预演（不可跳过）
+
+```bash
+node game_skill/skills/scripts/preserve_preflight.js cases/${PROJECT} /tmp/fb.txt
+```
+
+输出 JSON：`{ conflicts, "recommended-type", "requires-user-confirm" }`。
+- `conflicts.length === 0`：按分类器路径执行。
+- `conflicts.length >= 1`：必须让用户确认，是走 `rework`、升级为 `pivot`，还是放弃本次反馈；主 agent 不得自行绕开 `preserve.lock.yaml`。
 
 分类矩阵：
 
-| 分类 | 典型用词 | 重跑路径 | 预算 |
-|---|---|---|---|
-| **code-bug** | 闪退、没反应、console error、白屏、点了没用 | Phase 5 验证修复循环（不碰 PRD / specs） | ≤ 5 轮 |
-| **design-change** | 太难、太简单、节奏、想改玩法 / 关卡数 / 胜负条件 | Phase 2 → Phase 3 → Phase 4 → Phase 5 全流程重跑 | 各层预算重置 |
-| **art-change** | 风格、配色、换素材、太丑、动画 / 特效 | 只重跑 Phase 3.assets + Phase 4 素材绑定 + Phase 5 全套校验 | expand.subtasks.assets 重置 |
-| **ambiguous** | 模糊 | AskUserQuestion 澄清 | — |
+| 分类 | 典型用词 | 事实源 | 归还主干位置 | 用户确认 |
+|---|---|---|---|---|
+| **code-bug** | 白屏、报错、点击没反应 | `game/` | 回本 stage verify | 自动 |
+| **tuning** | 太难、太简单、血量、时间、分数、改数值 | `specs/data.yaml` | 回本 stage verify | 自动 |
+| **art-change** | 颜色、素材、音效、视觉风格 | `color-scheme` + `assets.yaml` + `juice-plan` | 回本 stage 素材 check | 自动 |
+| **scope-change** | 3 关改 5 关、加关卡选择 | `stage-contract-N` + `specs/` | 本 stage 重跑 Phase 3-5 | 推荐 |
+| **rework** | 去掉、撤销、回到 Stage N | 目标 stage patch + 后续重放 | 回最近成功 stage | 推荐 |
+| **extension** | 排行榜、分享、成就、多人 | `extension-contract-N` + patch | 交付后追加 | 推荐 |
+| **pivot** | 换成另一种玩法、这不是我要的游戏 | PRD + design-strategy 重写 | Stage 1 重启 | 强制 |
+| **ambiguous** | 模糊 | 无 | AskUserQuestion 澄清 | 强制 |
 
 ### Step 3 — 按路径重跑
 
 **code-bug**：
 
 ```bash
-# 只跑 Phase 5 的修复循环
+node game_skill/skills/scripts/phase_plan.js --mode iteration-code-bug --project ${PROJECT} --stage ${N}
 node game_skill/skills/scripts/verify_all.js cases/${PROJECT} --profile ${PROJECT} --log ${LOG_FILE}
-# 定位单层问题时再拆开跑：
-node game_skill/skills/scripts/check_game_boots.js cases/${PROJECT}/game/ --log ${LOG_FILE}
-node game_skill/skills/scripts/check_project.js cases/${PROJECT}/game/ --log ${LOG_FILE}
-node game_skill/skills/scripts/check_playthrough.js cases/${PROJECT}/game/ --profile ${PROJECT} --log ${LOG_FILE}
-node game_skill/skills/scripts/check_skill_compliance.js cases/${PROJECT} --log ${LOG_FILE}
 ```
-失败则进入常规修复循环（每轮先写 `fix-applied` 日志再改代码）。
-
-**design-change**：
-
-1. 在 PRD 上改 —— 推荐做法是**新建版本文件**保留历史：
-   ```bash
-   cp cases/${PROJECT}/docs/game-prd.md cases/${PROJECT}/docs/game-prd.v${N}.md
-   # 编辑 game-prd.md 反映新设计
-   ```
-2. 重跑 Phase 2 的 check：`node game_skill/skills/scripts/check_game_prd.js cases/${PROJECT}/docs/game-prd.md`
-3. 重新产 profile skeleton（`@check` 可能变了）：
-   ```bash
-   node game_skill/skills/scripts/extract_game_prd.js cases/${PROJECT}/docs/game-prd.md \
-     --profile-skeleton game_skill/skills/scripts/profiles/${PROJECT}.skeleton.json
-   ```
-4. 重新合并/补全 `profiles/${PROJECT}.json`，并重新 freeze 正式 profile：
-   ```bash
-   node game_skill/skills/scripts/_profile_guard.js \
-     cases/${PROJECT} \
-     game_skill/skills/scripts/profiles/${PROJECT}.json \
-     --freeze
-   ```
-5. 重置 expand 阶段：
-   ```bash
-   rm -f cases/${PROJECT}/specs/.pending/*.yaml
-   node -e "
-   import('./game_skill/skills/scripts/_state.js').then(m => {
-     let st = m.readState('cases/${PROJECT}/.game/state.json');
-     // 清空全部 expand subtask 和 codegen/verify；PRD 玩法变更必须重跑 mechanics
-     for (const k of ['mechanics','scene','rule','data','assets','event-graph','implementation-contract']) {
-       st = m.markSubtask(st, k, 'pending');
-     }
-     st = m.markPhase(st, 'expand', 'pending');
-     st = m.markPhase(st, 'codegen', 'pending');
-     st = m.markPhase(st, 'verify', 'pending');
-     m.writeState('cases/${PROJECT}/.game/state.json', st);
-   })
-   "
-   ```
-5. 继续按 Phase 3 → 4 → 5 的正常流程跑（`isResumable` 会告诉你从哪继续）。
 
 **art-change**：
 
-1. 改 `cases/${PROJECT}/docs/game-prd.md` 的 `color-scheme` 或在 `specs/assets.yaml` 换包；**不改**玩法 rule
-2. 只重置 assets 子任务：
-   ```bash
-   node -e "
-   import('./game_skill/skills/scripts/_state.js').then(m => {
-     let st = m.readState('cases/${PROJECT}/.game/state.json');
-     st = m.markSubtask(st, 'assets', 'pending');
-     st = m.markPhase(st, 'expand', 'running');
-     m.writeState('cases/${PROJECT}/.game/state.json', st);
-   })
-   "
-   ```
-3. 单独重跑 assets expander（`game-gameplay-expander` 子 agent，维度 = assets）
-4. 重跑 `generate_registry.js` 产出新 manifest
-5. 重跑 `check_project.js`（含素材 gate）、`check_game_boots.js`、`check_skill_compliance.js` 和 `check_playthrough.js`
+```bash
+node game_skill/skills/scripts/phase_plan.js --mode iteration-art-change --project ${PROJECT} --stage ${N}
+```
+
+只改视觉事实源和素材绑定：`color-scheme`、`specs/assets.yaml`、`juice-plan`。不改玩法 rule，不改 preserve.lock。
+
+**tuning**：
+
+```bash
+node game_skill/skills/scripts/phase_plan.js --mode iteration-tuning --project ${PROJECT} --stage ${N}
+```
+
+只改 `specs/data.yaml` 中的数值、单条内容或节奏参数；改完跑当前 stage acceptance 和 `verify_all --no-write` 回归。
+
+**scope-change**：
+
+```bash
+node game_skill/skills/scripts/phase_plan.js --mode iteration-scope-change --project ${PROJECT} --stage ${N}
+```
+
+重新生成 `specs/stage-contract-${N}.yaml`，只扩大或缩小当前 stage 的 scope，然后重跑本 stage 的 Phase 3 → Phase 4 → Phase 5。若 preserve preflight 有冲突，先让用户确认。
+
+**rework**：
+
+```bash
+node game_skill/skills/scripts/phase_plan.js --mode iteration-rework --project ${PROJECT} --stage ${TARGET_STAGE}
+node game_skill/skills/scripts/apply_patch.js cases/${PROJECT} /tmp/reverse-patch.json --dry-run
+```
+
+找到 `.game/stages/${TARGET_STAGE}/patches.json`，生成反向 patch，dry-run 通过后再 apply，并尝试重放后续 stage patches。重放失败时必须让用户决定升级 `pivot` 或人工介入。
+
+**extension**：
+
+```bash
+node game_skill/skills/scripts/phase_plan.js --mode iteration-extension --project ${PROJECT} --stage ${N}
+node game_skill/skills/scripts/check_preserve_regression.js cases/${PROJECT}
+node game_skill/skills/scripts/apply_patch.js cases/${PROJECT} /tmp/extension-patch.json --archive-to .game/stages/extension-${K}/patches.json
+```
+
+新增 `specs/extension-contract-${K}.yaml`，不占用主干 Stage 1-5 编号。extension 必须 preserve 回归通过，交付后可继续追加。
+
+**pivot**：
+
+```bash
+node game_skill/skills/scripts/phase_plan.js --mode iteration-pivot --project ${PROJECT}
+```
+
+归档 `game/`、`specs/`、`.game/preserve.lock.yaml` 到版本化路径，保留 `stage-history.yaml`，重写 PRD + design-strategy，并从 Stage 1 重新抽 preserve。
 
 ### Step 4 — 验证反馈有没有被真正解决
 
 不管走哪条路径，重跑完后都要写 `user-fix` 日志：
 
 ```bash
-echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"user-fix","category":"<code-bug|design-change|art-change>","round":<N>,"description":"<改了什么>","files_changed":["<文件列表>"]}' >> ${LOG_FILE}
+echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"user-fix","category":"<code-bug|tuning|art-change|scope-change|rework|extension|pivot>","round":<N>,"description":"<改了什么>","files_changed":["<文件列表>"]}' >> ${LOG_FILE}
 ```
 
 最后可用 `prd_diff --diff` 确认实际改动面符合预期：
@@ -760,7 +788,7 @@ node game_skill/skills/scripts/prd_diff.js --diff cases/${PROJECT}
 # 跟 Step 2 的 category 应该吻合，否则走错了路径
 ```
 
-> ⚠ **Step 1 / Step 2 是硬性要求**。不记录、不分类直接改代码 = 违规。修复后发现日志中缺 user-feedback 或 user-fix 条目 = 需要补录。
+Step 1 / Step 2 / Step 2.5 是硬性要求。不记录、不分类、不跑 preserve preflight 直接改代码 = 违规。修复后发现日志中缺 user-feedback 或 user-fix 条目 = 需要补录。
 
 ---
 

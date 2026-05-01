@@ -126,12 +126,90 @@ const MODE_PRESETS = {
     userConfirmationRequired: false,
     description: "Stage 5 Polish：只做平衡、表现和交付收敛，默认自动完成交付。",
   },
+  "iteration-code-bug": {
+    startAt: "verify",
+    stopAfter: "verify",
+    allowE2E: false,
+    layeredVerify: true,
+    allowedPhases: ["verify"],
+    allowedStages: "current",
+    iterationCategory: "code-bug",
+    userConfirmationRequired: false,
+    description: "Iteration Code Bug：只修 game/ 中的运行问题，回本 stage verify。",
+  },
+  "iteration-tuning": {
+    startAt: "expand",
+    stopAfter: "verify",
+    allowE2E: false,
+    layeredVerify: false,
+    allowedPhases: ["expand", "verify"],
+    allowedStages: "current",
+    iterationCategory: "tuning",
+    userConfirmationRequired: false,
+    description: "Iteration Tuning：只改 data.yaml 等数值事实源，回本 stage verify。",
+  },
+  "iteration-art-change": {
+    startAt: "expand",
+    stopAfter: "verify",
+    allowE2E: false,
+    layeredVerify: false,
+    allowedPhases: ["expand", "codegen", "verify"],
+    allowedStages: "current",
+    iterationCategory: "art-change",
+    userConfirmationRequired: false,
+    description: "Iteration Art Change：只重跑视觉、素材和表现绑定相关路径。",
+  },
+  "iteration-scope-change": {
+    startAt: "mechanics",
+    stopAfter: "verify",
+    allowE2E: false,
+    layeredVerify: false,
+    allowedPhases: ["mechanics", "expand", "codegen", "verify"],
+    allowedStages: "current",
+    iterationCategory: "scope-change",
+    userConfirmationRequired: true,
+    description: "Iteration Scope Change：重建当前 stage contract，并重跑本 stage Phase 3-5。",
+  },
+  "iteration-rework": {
+    startAt: "mechanics",
+    stopAfter: "verify",
+    allowE2E: false,
+    layeredVerify: false,
+    allowedPhases: ["mechanics", "expand", "codegen", "verify"],
+    allowedStages: "current",
+    iterationCategory: "rework",
+    userConfirmationRequired: true,
+    description: "Iteration Rework：按目标 stage 反向 patch，再重放后续 stage。",
+  },
+  "iteration-extension": {
+    startAt: "codegen",
+    stopAfter: "deliver",
+    allowE2E: true,
+    layeredVerify: false,
+    allowedPhases: ["codegen", "verify", "deliver"],
+    allowedStages: "current",
+    iterationCategory: "extension",
+    userConfirmationRequired: true,
+    description: "Iteration Extension：创建 extension-contract-N，用 patch-based codegen 交付后追加。",
+  },
+  "iteration-pivot": {
+    startAt: "understand",
+    stopAfter: "deliver",
+    allowE2E: true,
+    layeredVerify: false,
+    allowedPhases: [...PHASES],
+    allowedStages: [1],
+    stageType: "vertical-slice",
+    iterationCategory: "pivot",
+    userConfirmationRequired: true,
+    description: "Iteration Pivot：归档旧 game/specs/preserve，重写 PRD + design-strategy 并从 Stage 1 重启。",
+  },
 };
 
 function usage() {
   return [
     `Usage: node phase_plan.js [--mode ${Object.keys(MODE_PRESETS).join("|")}]`,
-    "                          [--project PROJECT] [--stop-before PHASE] [--stop-after PHASE] [--write-state]",
+    "                          [--project PROJECT] [--stage N] [--stop-before PHASE] [--stop-after PHASE] [--write-state]",
     "",
     "Examples:",
     "  node phase_plan.js --mode verify-layered --project pixel-flow-001",
@@ -144,6 +222,7 @@ function parseArgs(argv) {
   const out = {
     mode: process.env.PHASE_MODE || "full",
     project: process.env.PROJECT || null,
+    stage: process.env.STAGE ? Number(process.env.STAGE) : null,
     stopBefore: null,
     stopAfter: null,
     writeState: false,
@@ -160,6 +239,10 @@ function parseArgs(argv) {
     }
     if (arg === "--project") {
       out.project = argv[++i];
+      continue;
+    }
+    if (arg === "--stage") {
+      out.stage = Number(argv[++i]);
       continue;
     }
     if (arg === "--stop-before") {
@@ -186,6 +269,13 @@ function assertPhase(name, field) {
   }
 }
 
+function assertStage(value, field) {
+  if (value == null) return;
+  if (!Number.isInteger(value) || value < 1 || value > 5) {
+    throw new Error(`${field}: expected integer stage 1-5`);
+  }
+}
+
 function previousPhase(name) {
   const idx = PHASES.indexOf(name);
   if (idx <= 0) return null;
@@ -209,6 +299,25 @@ function mapResumePhase(resumeInfo) {
   return resumeInfo.resumeFrom;
 }
 
+function resolveAllowedStages(preset, options, state) {
+  if (Array.isArray(preset.allowedStages)) return preset.allowedStages;
+  if (preset.allowedStages !== "current") return [];
+  const stage = options.stage ?? inferCurrentStage(state);
+  return stage ? [stage] : [];
+}
+
+function inferCurrentStage(state) {
+  const planned = state?.phasePlan?.currentStage;
+  if (Number.isInteger(planned) && planned >= 1 && planned <= 5) return planned;
+  const match = /^stage-([1-5])$/.exec(state?.currentPhase ?? "");
+  if (match) return Number(match[1]);
+  for (const name of ["stage-5", "stage-4", "stage-3", "stage-2", "stage-1"]) {
+    const status = state?.phases?.[name]?.status;
+    if (status === "running" || status === "completed") return Number(name.slice("stage-".length));
+  }
+  return null;
+}
+
 function buildPlan(options) {
   if (options.help) {
     return { help: usage() };
@@ -221,6 +330,7 @@ function buildPlan(options) {
 
   assertPhase(options.stopBefore, "--stop-before");
   assertPhase(options.stopAfter, "--stop-after");
+  assertStage(options.stage, "--stage");
   if (options.stopBefore && options.stopAfter) {
     throw new Error("--stop-before and --stop-after are mutually exclusive");
   }
@@ -247,7 +357,11 @@ function buildPlan(options) {
     stopAfter = prev || stopBefore;
   }
 
-  const plannedPhases = startAt && stopAfter ? phaseSlice(startAt, stopAfter) : [];
+  const phaseWindow = startAt && stopAfter ? phaseSlice(startAt, stopAfter) : [];
+  const plannedPhases = Array.isArray(preset.allowedPhases)
+    ? preset.allowedPhases.filter((phase) => phaseWindow.includes(phase))
+    : phaseWindow;
+  const allowedStages = resolveAllowedStages(preset, options, state);
   const hardStop = stopBefore ? `before:${stopBefore}` : (stopAfter ? `after:${stopAfter}` : "none");
   const allowE2E = Boolean(preset.allowE2E && plannedPhases.includes("deliver") && !stopBefore);
 
@@ -262,8 +376,15 @@ function buildPlan(options) {
   if (preset.layeredVerify) {
     instructions.push("Run verification layers one by one and stop on the first failing layer.");
   }
-  if (Array.isArray(preset.allowedStages) && preset.allowedStages.length > 0) {
-    instructions.push(`Operate only stage(s): ${preset.allowedStages.join(", ")} (${preset.stageType}).`);
+  if (allowedStages.length > 0) {
+    const stageLabel = preset.stageType ? ` (${preset.stageType})` : "";
+    instructions.push(`Operate only stage(s): ${allowedStages.join(", ")}${stageLabel}.`);
+  }
+  if (preset.allowedStages === "current" && allowedStages.length === 0) {
+    instructions.push("Resolve the current stage from state or pass --stage before applying iteration changes.");
+  }
+  if (preset.iterationCategory) {
+    instructions.push(`Run prd_diff.js --classify and preserve_preflight.js before ${preset.iterationCategory} iteration work.`);
   }
   if (preset.userConfirmationRequired) {
     instructions.push("Stop for user confirmation after the stage acceptance checks pass.");
@@ -298,9 +419,10 @@ function buildPlan(options) {
     stopAfter,
     hardStop,
     plannedPhases,
-    allowedPhases: preset.allowedPhases ?? plannedPhases,
-    allowedStages: preset.allowedStages ?? [],
+    allowedPhases: plannedPhases,
+    allowedStages,
     stageType: preset.stageType ?? null,
+    iterationCategory: preset.iterationCategory ?? null,
     userConfirmationRequired: Boolean(preset.userConfirmationRequired),
     allowE2E,
     layeredVerify: Boolean(preset.layeredVerify),
@@ -328,6 +450,7 @@ try {
         allowedPhases: plan.allowedPhases,
         allowedStages: plan.allowedStages,
         stageType: plan.stageType,
+        iterationCategory: plan.iterationCategory,
         currentStage: plan.allowedStages?.[0] ?? null,
         userConfirmationRequired: plan.userConfirmationRequired,
         allowE2E: plan.allowE2E,

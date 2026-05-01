@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GameSkillPatchSet",
+  "description": "Patch-based codegen output for Stage 2+ and branch iterations. apply_patch.js accepts either this object form or a raw patch array.",
+  "oneOf": [
+    {
+      "type": "array",
+      "items": { "$ref": "#/definitions/patch" }
+    },
+    {
+      "type": "object",
+      "required": ["patches"],
+      "additionalProperties": true,
+      "properties": {
+        "stage": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "kind": { "type": "string" },
+        "patches": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/patch" }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "patch": {
+      "type": "object",
+      "required": ["op", "path"],
+      "additionalProperties": true,
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": ["add-file", "edit", "replace-function", "delete-file"]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Relative path under cases/<slug>/game."
+        },
+        "content": { "type": "string" },
+        "anchor": { "type": "string", "minLength": 1 },
+        "insert": { "type": "string" },
+        "name": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "op": { "const": "add-file" } },
+            "required": ["op"]
+          },
+          "then": { "required": ["content"] }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "edit" } },
+            "required": ["op"]
+          },
+          "then": { "required": ["anchor", "insert"] }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "replace-function" } },
+            "required": ["op"]
+          },
+          "then": { "required": ["name", "content"] }
+        }
+      ]
+    }
+  }
+}

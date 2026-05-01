@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GameSkillExtensionContract",
+  "description": "cases/<slug>/specs/extension-contract-N.yaml schema. Extension stages do not reuse mainline stage numbers.",
+  "type": "object",
+  "required": ["extension-n", "goal", "user-feedback", "scope", "acceptance", "complexity-budget"],
+  "additionalProperties": true,
+  "properties": {
+    "extension-n": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "user-feedback": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "object",
+      "required": ["add", "preserve", "forbid"],
+      "additionalProperties": true,
+      "properties": {
+        "add": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "preserve": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "forbid": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "acceptance": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["check", "threshold"],
+        "additionalProperties": true,
+        "properties": {
+          "check": {
+            "type": "string",
+            "minLength": 1
+          },
+          "threshold": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "complexity-budget": {
+      "type": "object",
+      "required": ["max-new-systems", "max-new-entities", "max-new-rules"],
+      "additionalProperties": true,
+      "properties": {
+        "max-new-systems": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max-new-entities": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max-new-rules": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

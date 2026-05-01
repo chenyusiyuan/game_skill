@@ -199,19 +199,25 @@ RUNTIME=$(grep "^runtime:" docs/game-prd.md | head -1 | awk '{print $2}')
 
 ### Step 4：复制 template → game/
 
+#### Phase 4 进场前的模板同步
+
 ```bash
 # ENGINE_TEMPLATE 来自 references/engines/_index.json 当前 runtime 的 template 字段
 cp -R ${SKILL_DIR}/references/${ENGINE_TEMPLATE}/. game/
 
 # 共享层拷进 game/src/_common/；
 # adapter / fx / registry / test-hook 通过 './_common/...' 或 '../_common/...' import
-mkdir -p game/src/_common
+mkdir -p game/src/_common game/src/mechanics
 cp -R ${SKILL_DIR}/references/engines/_common/. game/src/_common/
+
+# trace 底座必须明确落到 wrapper 的相对 import 位置
+cp ${SKILL_DIR}/references/engines/_common/_trace.mjs game/src/_common/_trace.mjs
 ```
 
 说明：`_common/test-hook.js` 是 §4.0.5 第 ③ 步的三分类 hook；
-`_common/fx.spec.js` / `registry.spec.js` 是 adapter 依赖。漏掉任意一个文件都会让
-业务代码 `import` 失败。
+`_common/fx.spec.js` / `registry.spec.js` 是 adapter 依赖；`_common/_trace.mjs`
+是 per-case runtime wrapper 的 trace 底座。漏掉任意一个文件都会让业务代码
+`import` 失败。
 
 ### Step 4.0.5：生成 registry manifest + 共享层依赖（P1-1 新增）
 
@@ -400,9 +406,34 @@ window.__assetUsage = window.__assetUsage || [];
 - [ ] `resetWithScenario` 清理了 spawn/cooldown timer 和 pool/gate accounting
 - [ ] `resetWithScenario` 结束前调用 UI/render 刷新
 
-### Step 4.0.6：per-case runtime wrapper 占位
+### 4.A per-case runtime wrapper 规范
 
-固定 runtime 库已移除。codegen 只在本 case 内为 mechanics.yaml 的每个 node 动态生成 `game/src/mechanics/<node-id>.runtime.mjs`，业务代码 import 对应 wrapper 并传入 `{ rule, node, state, action }` 或等价上下文。wrapper 负责执行该 node 的状态变更、生成 `{ type, rule, node, before, after }` trace，并保持函数名/签名由本 case 自定义。具体生成规范在后续 patch-codegen 阶段统一收敛；本批不再要求固定 API 映射。
+固定 runtime 库已移除。Codegen 必须在本 case 内同步生成 runtime wrapper：
+
+- 进入本节前必须已执行 Step 4 的模板同步命令，确保 `references/engines/_common/_trace.mjs` 已复制到 `cases/${PROJECT}/game/src/_common/_trace.mjs`。
+- 输入：`cases/${PROJECT}/specs/mechanics.yaml` 的 `mechanics[].node` 列表。
+- 产出：每个 node 对应一个 `cases/${PROJECT}/game/src/mechanics/<node-id>.runtime.mjs`。
+- `mechanics[].runtime-module` 必须与产物路径一致，统一使用 `src/mechanics/<node-id>.runtime.mjs`。
+- wrapper export 函数名由 node id 转 camelCase 得到，例如 `mole-spawn` → `moleSpawn`。
+- 业务代码从 `game/src/` 的相对路径 import wrapper，例如 `./mechanics/mole-spawn.runtime.mjs`。
+- 业务代码中 mechanics 相关 state mutation 必须经由 wrapper；UI-only render 刷新可以留在业务层。
+- 多个 wrapper 可以协作处理同一实体，但每个 wrapper 都必须独立 push trace。
+
+文件模板：
+
+```js
+import { pushTrace } from '../_common/_trace.mjs';
+
+export function <camelCaseNodeId>({ rule, node, state, action }) {
+  const before = structuredClone(state);
+  const next = structuredClone(state);
+  // TODO(codegen): 按 mechanics node 执行业务状态变更
+  pushTrace({ type: '<trace-event>', rule, node, before, after: structuredClone(next) });
+  return next;
+}
+```
+
+`<trace-event>` 必须来自当前 mechanics node 的 `trace-events`。如果同一 node 声明多条 trace event，每次 wrapper 调用只 push 当前触发的那一条。业务代码不得直接写 `window.__trace.push(...)`，也不得 import 已删除的旧 primitive 共享目录。
 
 ### Step 4.1：识别需要的通用系统模块
 
