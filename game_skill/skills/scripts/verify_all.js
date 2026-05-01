@@ -128,6 +128,7 @@ function runStageChecks(stageNum) {
   runProfileChecks();
   runCheck("runtime_semantics", ["check_runtime_semantics.js", caseDir, ...logArgs()]);
   runCheck("level_solvability", ["check_level_solvability.js", caseDir, ...logArgs()]);
+  runCheck("archetype_identity", ["check_archetype_identity.js", caseDir, ...logArgs()]);
   runCheck("game_feel", ["check_game_feel.js", caseDir, ...logArgs()]);
   runCheck("decision_graph", ["check_decision_graph.js", caseDir, ...logArgs()]);
   if (stageNum >= 2) {

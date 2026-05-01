@@ -21,6 +21,11 @@ description: "Phase 2.5B: Design Strategy。在 User Clarify 完成后、Expand 
 
 产物写入 `cases/${PROJECT}/docs/design-strategy.yaml`，后续 Phase 3.0 mechanic-decomposer 必须读取。Phase 4 的 per-case runtime wrapper 只实现 mechanics.yaml 中的节点，但 wrapper 的体验重点、trace 可观察点和反馈强度应参考本文件。
 
+## archetype 种子规则
+
+- 若 Phase 2.5B 识别到 query 含 reference-game（如“做个俄罗斯方块”），优先用对应 archetype 的 design-strategy 字段作为种子；允许覆盖但必须写明 `archetype-ref` 字段。
+- `archetype-ref` 缺失时 codegen 走完全自由模式；存在时必须在 Stage 1 通过 `check_archetype_identity.js`。
+
 ## 触发条件
 
 默认总是执行本阶段并产出 `design-strategy.yaml`。是否提问取决于是否存在会改变核心玩法方向的分叉。
@@ -80,6 +85,7 @@ options:
 
 ```yaml
 version: 1
+archetype-ref: "tetris" # optional; only when seeded from a known reference-game archetype
 
 target-experience:
   fantasy: "..."

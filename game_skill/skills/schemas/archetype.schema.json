@@ -1,26 +1,55 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "GameSkillDesignStrategy",
-  "description": "Phase 2.5B 玩法设计策略产物。写入 cases/<slug>/docs/design-strategy.yaml，供 dynamic mechanics、stage roadmap 和 codegen 读取。",
+  "title": "GameSkillGameplayArchetype",
+  "description": "Gameplay archetype seed used by Phase 2.5B design-strategy and Stage 1 identity checks.",
   "type": "object",
   "required": [
     "version",
+    "archetype",
     "target-experience",
     "gameplay-pillars",
     "core-loop",
     "decision-points",
     "resource-loop",
     "juice-plan",
-    "complexity-budget"
+    "complexity-budget",
+    "anti-patterns"
   ],
   "additionalProperties": true,
   "properties": {
     "version": {
       "type": "integer"
     },
-    "archetype-ref": {
-      "type": "string",
-      "description": "当本 case 的玩法基于某个已知 archetype 时，记录 archetype id（如 'tetris' / 'snake'）；为 codegen 提供种子"
+    "archetype": {
+      "type": "object",
+      "required": [
+        "id",
+        "display-name",
+        "aliases",
+        "mapping-category",
+        "priority",
+        "mention-count",
+        "difficulty-distribution"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string" },
+        "display-name": { "type": "string" },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "mapping-category": { "type": "string" },
+        "priority": {
+          "type": "string",
+          "enum": ["P0", "P1", "P2"]
+        },
+        "mention-count": { "type": "integer" },
+        "difficulty-distribution": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
     },
     "target-experience": {
       "type": "object",
@@ -161,6 +190,58 @@
         "max-new-systems-per-stage": { "type": "integer" },
         "max-new-entities-per-stage": { "type": "integer" },
         "max-new-rules-per-stage": { "type": "integer" }
+      }
+    },
+    "stage-extension-hints": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "stage-2-content": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "stage-3-variety": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "stage-4-progression": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "stage-5-polish": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "anti-patterns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "mitigation", "severity"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "mitigation": { "type": "string" },
+          "severity": {
+            "type": "string",
+            "enum": ["core-identity", "polish"]
+          },
+          "grep-evidence": { "type": "string" }
+        }
+      }
+    },
+    "real-query-samples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["project_id", "query"],
+        "additionalProperties": true,
+        "properties": {
+          "project_id": { "type": "string" },
+          "query": { "type": "string" }
+        }
       }
     }
   }
