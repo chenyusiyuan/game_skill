@@ -18,9 +18,33 @@
     "version": {
       "type": "integer"
     },
-    "archetype-ref": {
-      "type": "string",
-      "description": "当本 case 的玩法基于某个已知 archetype 时，记录 archetype id（如 'tetris' / 'snake'）；为 codegen 提供种子"
+    "identity-anchors": {
+      "type": "array",
+      "description": "由 Phase 2.5B agent 声明的核心手感锚点。Stage 1 必须为每个 anchor 留下可 grep 的实现证据。",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "mitigation"],
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "description": "kebab-case 唯一标识，脚本默认用此字符串做 grep"
+          },
+          "description": {
+            "type": "string",
+            "description": "人类可读的锚点描述（是什么手感特征）"
+          },
+          "mitigation": {
+            "type": "string",
+            "description": "实现策略指引，供 codegen agent 参考"
+          },
+          "grep-evidence": {
+            "type": "string",
+            "description": "可选；check 脚本用此正则替代 id 做 grep 匹配。默认使用 id 本身"
+          }
+        }
+      }
     },
     "target-experience": {
       "type": "object",

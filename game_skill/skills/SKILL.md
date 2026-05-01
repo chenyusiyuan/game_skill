@@ -579,14 +579,14 @@ Phase 4 Codegen 与 Phase 5 Verify 不再作为一次性大段推进，而是被
 - `type` 必须来自该 node 的 `trace-events`；多条 trace event 时，每次只 push 当前触发的 event。
 - 业务代码中任何 state mutation 或 trace 产生都必须经过对应 runtime wrapper；业务代码不得 import 已删除的旧 primitive 共享目录，也不得手写 `window.__trace.push(...)`。
 - 多个 wrapper 可协作处理同一实体，但每个 wrapper 都要独立产出 trace 证据；不再要求 `predicateMatch` / `scoreAccum` 等固定 API 形态。
-- 若 `docs/design-strategy.yaml` 的 `archetype-ref` 指向某 archetype，Stage 1 codegen 必须实现该 archetype 所有 `severity==core-identity` 的 anti-pattern 的 mitigation，并在 `game/src/` 中留下 anti-pattern id kebab-case 或 `grep-evidence` 可命中的实现证据。
+- 若 `docs/design-strategy.yaml` 的 `identity-anchors` 数组非空，Stage 1 codegen 必须为每个 anchor 在 `game/src/` 中留下可被 `grep` 命中的实现证据（默认匹配 anchor id，或 anchor.grep-evidence 指定的 pattern）；anchor.mitigation 字段由 codegen agent 参考，但不自动校验内容。
 - Stage >= 2 时产出必须是 `patches.json` 而非完整文件树；格式对齐 `schemas/patch.schema.json`。
 
 ### Phase 5 Verify Agent 约束
 
 - Stage acceptance 以 `stage-roadmap.md` 对应 stage 段为准；`specs/stage-contract-{N}.yaml` 负责把该段 acceptance 落成当前 case 的可执行契约。
 - 新增独特判断 check：
-  - `check_archetype_identity.js` / `archetype_identity`：Stage 1，若 `archetype-ref` 存在，验证对应 archetype 的 core-identity mitigation 证据。
+  - `check_archetype_identity.js` / `archetype_identity`：Stage 1，若 `design-strategy.identity-anchors` 非空，为每个 anchor 的 grep 证据把关。
   - `check_game_feel.js`：Stage 1，验证 MDPM、action-feedback latency、首败重试率。
   - `check_decision_graph.js`：Stage 1/3，验证 `window.gameTest.getAvailableActions()` 可观察选项数不低于 `design-strategy.yaml` 声明。
   - `check_difficulty_curve.js`：Stage 2/5，验证关卡难度单调、layout hash 不重复；Stage 5 额外跑 10 局 replay 胜率。
@@ -599,7 +599,7 @@ Phase 4 Codegen 与 Phase 5 Verify 不再作为一次性大段推进，而是被
 - 输入：`docs/game-prd.md`、`docs/spec-clarifications.md`、`docs/design-strategy.yaml`、`specs/mechanics.yaml`、`specs/stage-contract-1.yaml`、`codegen.md`、`verify.md`。
 - 产出：最小可玩的 `game/`、Stage 1 acceptance 证据、`.game/preserve.lock.yaml`。
 - check 入口：`node game_skill/skills/scripts/check_stage_contract.js cases/${PROJECT} --stage 1` + `node game_skill/skills/scripts/verify_all.js cases/${PROJECT} --profile ${PROJECT} --stage 1`；通过后跑 `node game_skill/skills/scripts/generate_preserve_lock.js cases/${PROJECT}`。
-- acceptance 必含：`check_archetype_identity.js` 通过（若有 `archetype-ref`）、`check_game_feel.js` 与 `check_decision_graph.js`，对应 `stage-roadmap.md` 的 Stage 1 acceptance。
+- acceptance 必含：`check_archetype_identity.js` 通过（若有 `identity-anchors`）、`check_game_feel.js` 与 `check_decision_graph.js`，对应 `stage-roadmap.md` 的 Stage 1 acceptance。
 - preserve 规则：从核心 entity、win/lose/settle 条件、input model、核心 UI zone 和前 3 条 scenario 生成 preserve lock。
 - 用户确认策略：必须停下让用户确认玩法方向，确认后才进入 Stage 2。
 

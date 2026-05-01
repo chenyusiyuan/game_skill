@@ -21,10 +21,14 @@ description: "Phase 2.5B: Design Strategy。在 User Clarify 完成后、Expand 
 
 产物写入 `cases/${PROJECT}/docs/design-strategy.yaml`，后续 Phase 3.0 mechanic-decomposer 必须读取。Phase 4 的 per-case runtime wrapper 只实现 mechanics.yaml 中的节点，但 wrapper 的体验重点、trace 可观察点和反馈强度应参考本文件。
 
-## archetype 种子规则
+## identity-anchors 约束（Stage 1 手感硬闸）
 
-- 若 Phase 2.5B 识别到 query 含 reference-game（如“做个俄罗斯方块”），优先用对应 archetype 的 design-strategy 字段作为种子；允许覆盖但必须写明 `archetype-ref` 字段。
-- `archetype-ref` 缺失时 codegen 走完全自由模式；存在时必须在 Stage 1 通过 `check_archetype_identity.js`。
+Phase 2.5B 展开 design-strategy.yaml 时，可选择性填入 identity-anchors 数组，用于声明本 case 的核心手感锚点：
+
+- 每个 anchor 包含 id（kebab-case）、description、mitigation，可选 grep-evidence。
+- Stage 1 check_archetype_identity.js 会按 anchor id 或 grep-evidence 在 game/src/ 中搜索证据；未命中则 Stage 1 不通过。
+- 不声明 identity-anchors 时走完全自由模式，脚本 ok-skip。
+- 声明什么锚点由模型判断——强模型看到 query "做个俄罗斯方块" 时自行列出 lock-delay / wall-kick / next-queue 等；看到 "做个跳跃平台" 时自行列出 coyote-time / jump-buffer；无 reference 类 query 可不声明。
 
 ## 触发条件
 
@@ -85,7 +89,17 @@ options:
 
 ```yaml
 version: 1
-archetype-ref: "tetris" # optional; only when seeded from a known reference-game archetype
+identity-anchors:
+  - id: lock-delay
+    description: "方块触底后 500ms 移动/旋转缓冲"
+    mitigation: "在 placement 帧后加 lockDelay 计时器，允许 5 次 reset"
+    grep-evidence: "lockDelay|lock-delay"
+  - id: wall-kick
+    description: "贴墙旋转时允许横向偏移"
+    mitigation: "旋转失败时按 SRS 表尝试 kick 偏移"
+  - id: next-queue
+    description: "至少显示下 1 个方块"
+    mitigation: "state 里维护 nextQueue: []，UI 渲染 next-preview 区"
 
 target-experience:
   fantasy: "..."

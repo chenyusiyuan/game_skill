@@ -6,26 +6,30 @@
  *   node check_archetype_identity.js <case-dir> [--log <path>]
  *
  * Exit codes:
- *   0 = OK, including ok-skip when no archetype-ref or archetype file exists
- *   1 = missing core-identity implementation evidence
+ *   0 = OK, including ok-skip when no identity-anchors are declared
+ *   1 = missing identity anchor implementation evidence
  *   3 = environment or unreadable-file failure
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "fs";
-import { dirname, join, resolve, sep } from "path";
+import { dirname, extname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 import yaml from "js-yaml";
 import { createLogger, parseLogArg } from "./_logger.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
+const ANCHOR_ID_RE = /^[a-z][a-z0-9-]*$/;
+const REGEX_HINT_RE = /[\\()[\].*+?{}|]/;
+const SOURCE_EXTENSIONS = new Set([".js", ".mjs", ".ts", ".html", ".css", ".json"]);
 
 function usage() {
   return [
     "Usage: node check_archetype_identity.js <case-dir> [--log <path>]",
     "",
-    "If docs/design-strategy.yaml has archetype-ref, checks core-identity anti-pattern mitigation evidence in game/src/.",
-    "Missing design-strategy.yaml, missing archetype-ref, or missing gameplay-archetypes/<id>.yaml returns ok-skip.",
+    "Reads cases/<slug>/docs/design-strategy.yaml identity-anchors array;",
+    "verifies each anchor has grep-able evidence in cases/<slug>/game/src/.",
+    "Missing design-strategy.yaml or empty identity-anchors returns ok-skip.",
   ].join("\n");
 }
 
@@ -48,76 +52,61 @@ if (!existsSync(caseDir) || !statSync(caseDir).isDirectory()) {
 
 const strategyPath = join(caseDir, "docs/design-strategy.yaml");
 if (!existsSync(strategyPath)) {
-  okSkip("docs/design-strategy.yaml 不存在，本 case 暂无 archetype-ref");
+  okSkip("docs/design-strategy.yaml 不存在，本 case 无 identity gate 约束");
 }
 
 const strategy = readYaml(strategyPath);
-const archetypeRef = normalizeRef(strategy?.["archetype-ref"]);
-if (!archetypeRef) {
-  okSkip("design-strategy.archetype-ref 缺失或为空，本 case 无对应 archetype");
+if (!strategy || typeof strategy !== "object" || Array.isArray(strategy)) {
+  envError("docs/design-strategy.yaml 必须是对象");
 }
 
-const archetypeDir = resolve(__dirname, "../references/gameplay-archetypes");
-if (!existsSync(archetypeDir)) {
-  okSkip(`gameplay archetype 目录不存在，未来内容批次尚未接入: ${archetypeDir}`);
+if (!Object.prototype.hasOwnProperty.call(strategy, "identity-anchors")) {
+  okSkip("design-strategy.identity-anchors 缺失或为空，本 case 无 identity gate 约束");
 }
 
-const archetypePath = resolve(archetypeDir, `${archetypeRef}.yaml`);
-if (!archetypePath.startsWith(`${archetypeDir}${sep}`)) {
-  envError(`archetype-ref 非法，不能越过 gameplay-archetypes 目录: ${archetypeRef}`);
+const anchors = strategy["identity-anchors"];
+if (!Array.isArray(anchors)) {
+  envError("design-strategy.identity-anchors 必须是数组");
 }
-if (!existsSync(archetypePath)) {
-  okSkip(`archetype 文件不存在，跳过 identity gate: ${archetypePath}`);
-}
-
-const archetypeDoc = readYaml(archetypePath);
-const antiPatterns = readAntiPatterns(archetypeDoc);
-const corePatterns = antiPatterns.filter((item) => item?.severity === "core-identity");
-const polishPatterns = antiPatterns.filter((item) => item?.severity === "polish");
-
-if (polishPatterns.length > 0) {
-  const polishIds = polishPatterns.map((item) => item.id).filter(Boolean);
-  console.log(`  info polish anti-patterns ignored for exit code: ${polishIds.join(", ") || polishPatterns.length}`);
-  info.push({ kind: "polish", ids: polishIds });
-}
-
-if (corePatterns.length === 0) {
-  console.log("  ✓ ok: no core-identity anti-patterns declared");
-  finish(0, { result: "ok", archetype: archetypeRef, missing: [] });
+if (anchors.length === 0) {
+  okSkip("design-strategy.identity-anchors 缺失或为空，本 case 无 identity gate 约束");
 }
 
 const srcDir = join(caseDir, "game/src");
 if (!existsSync(srcDir) || !statSync(srcDir).isDirectory()) {
-  envError(`game/src 不存在，无法检查 archetype identity evidence: ${srcDir}`);
+  envError(`game/src 不存在，无法检查 identity anchor evidence: ${srcDir}`);
 }
 
 const sourceFiles = listFiles(srcDir);
 const missing = [];
+let okCount = 0;
 
-for (const pattern of corePatterns) {
-  if (!pattern || typeof pattern.id !== "string" || !pattern.id.trim()) {
-    envError("core-identity anti-pattern 缺少 id");
+for (const anchor of anchors) {
+  if (!anchor || typeof anchor !== "object" || Array.isArray(anchor)) {
+    envError("identity anchor 必须是对象");
   }
-  const evidence = typeof pattern["grep-evidence"] === "string" && pattern["grep-evidence"].trim()
-    ? { mode: "regex", value: pattern["grep-evidence"].trim(), label: "grep-evidence" }
-    : { mode: "literal", value: kebabCase(pattern.id), label: "id-kebab" };
+  const id = anchor.id;
+  if (typeof id !== "string" || !ANCHOR_ID_RE.test(id)) {
+    envError(`identity anchor.id 必须匹配 ^[a-z][a-z0-9-]*$: ${String(id)}`);
+  }
+  const evidence = resolveEvidence(anchor);
   const matched = hasEvidence(sourceFiles, evidence);
   if (matched) {
-    console.log(`  ✓ ${pattern.id}: ${evidence.label} matched ${matched}`);
+    console.log(`  ✓ ${id}`);
+    okCount += 1;
   } else {
-    console.log(`  ✗ ${pattern.id}: missing ${evidence.label} evidence '${evidence.value}'`);
-    missing.push(pattern.id);
+    console.log(`  ✗ ${id}: no evidence for pattern "${evidence.value}"`);
+    missing.push(id);
   }
 }
 
+console.log(`  ${okCount}/${anchors.length} anchors found`);
+
 if (missing.length > 0) {
-  const payload = { archetype: archetypeRef, missing };
-  console.log(JSON.stringify(payload, null, 2));
-  finish(1, { result: "failed", ...payload });
+  finish(1, { result: "failed", missing, anchors_checked: anchors.length, anchors_found: okCount });
 }
 
-console.log(`  ✓ ok: all ${corePatterns.length} core-identity anti-pattern mitigations have evidence`);
-finish(0, { result: "ok", archetype: archetypeRef, missing: [] });
+finish(0, { result: "ok", missing: [], anchors_checked: anchors.length, anchors_found: okCount });
 
 function firstPositional(argv) {
   for (let i = 0; i < argv.length; i += 1) {
@@ -131,26 +120,12 @@ function firstPositional(argv) {
   return null;
 }
 
-function normalizeRef(value) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
 function readYaml(path) {
   try {
     return yaml.load(readFileSync(path, "utf-8")) ?? {};
   } catch (err) {
     envError(`读取 YAML 失败: ${path}: ${err.message}`);
   }
-}
-
-function readAntiPatterns(doc) {
-  const value = Array.isArray(doc?.["anti-patterns"])
-    ? doc["anti-patterns"]
-    : doc?.archetype?.["anti-patterns"];
-  if (!Array.isArray(value)) {
-    envError(`archetype 缺少 anti-patterns 数组: ${archetypePath}`);
-  }
-  return value;
 }
 
 function listFiles(dir) {
@@ -160,18 +135,30 @@ function listFiles(dir) {
     if (entry.isDirectory()) {
       if (["node_modules", "dist", "build", ".git"].includes(entry.name)) continue;
       files.push(...listFiles(path));
-    } else if (entry.isFile()) {
+    } else if (entry.isFile() && SOURCE_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
       files.push(path);
     }
   }
   return files;
 }
 
+function resolveEvidence(anchor) {
+  const raw = anchor["grep-evidence"];
+  if (raw !== undefined && raw !== null && typeof raw !== "string") {
+    envError(`identity anchor ${anchor.id} 的 grep-evidence 必须是字符串`);
+  }
+  const value = typeof raw === "string" && raw.trim() ? raw.trim() : anchor.id;
+  return {
+    value,
+    mode: raw && REGEX_HINT_RE.test(value) ? "regex" : "literal",
+  };
+}
+
 function hasEvidence(files, evidence) {
   let regex = null;
   if (evidence.mode === "regex") {
     try {
-      regex = new RegExp(evidence.value, "m");
+      regex = new RegExp(evidence.value, "i");
     } catch (err) {
       envError(`grep-evidence 不是合法 regex: ${evidence.value}: ${err.message}`);
     }
@@ -183,19 +170,10 @@ function hasEvidence(files, evidence) {
     } catch {
       continue;
     }
-    const matched = regex ? regex.test(text) : text.includes(evidence.value);
-    if (matched) return file;
+    const matched = regex ? regex.test(text) : text.toLowerCase().includes(evidence.value.toLowerCase());
+    if (matched) return true;
   }
-  return null;
-}
-
-function kebabCase(value) {
-  return String(value)
-    .trim()
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .replace(/[^a-zA-Z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase();
+  return false;
 }
 
 function okSkip(reason) {
