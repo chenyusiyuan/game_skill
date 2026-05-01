@@ -1019,3 +1019,18 @@ echo '{"timestamp":"'$(date -u +%FT%TZ)'","type":"fix-applied","phase":"codegen"
 - [ ] **`check_project.js` 退出 0**（含引擎专属静态检查、implementation-contract、asset-selection、asset-usage）
 - [ ] **`check_game_boots.js` 退出 0**（游戏能启动 + 能开始一局）
 - [ ] `state.json` `codegen.status = "completed"`
+- [ ] Stage 1 完成前，`grep` 命中 `main.js` / engine entry、`state.js` 和可选 manager 的必需 `@hook` 锚点后，才允许进入 Stage 2。
+
+### 4.B Stage 2+ patch-based codegen 分流
+
+Stage 1 使用本文档主流程做全量 codegen：复制 engine template、生成 `game/` 骨架、生成 per-case runtime wrapper，并复制 `_trace.mjs`。
+
+Stage 2-5 切换到 patch-based codegen 模式，codegen agent 产出 `patches.json`，由 `game_skill/skills/scripts/apply_patch.js` dry-run、apply、archive；完整协议详见 `game_skill/skills/patch-codegen.md`。
+
+Stage 1 完成前必须在下列关键位置埋 `@hook` 锚点：
+
+- `main.js` 或对应 engine entry 文件：`// @hook: game-init`、`// @hook: update-loop`、`// @hook: render-loop`
+- `state.js`：`// @hook: state-init`、`// @hook: state-reducers`
+- 若有 `level-manager` / `scene-manager`：`// @hook: level-load`、`// @hook: scene-transition`
+
+Stage 2+ codegen 禁止重新 `cp` template，禁止重新生成 `_trace.mjs`，禁止覆盖 Stage 1 的 per-case runtime wrapper。新增内容必须通过 `patches.json` 表达；详见 `game_skill/skills/patch-codegen.md`。

@@ -13,6 +13,8 @@ description: "Phase 3+ 主干 5 段 stage SOP：vertical-slice / content / varie
 
 ## 阶段定义
 
+Stage 1 走全量 codegen（见 `codegen.md` 主流程）；Stage 2-5 以及所有支路走 patch-based codegen，协议与锚点规范详见 `patch-codegen.md`。
+
 ### Stage 1 — Vertical Slice
 
 - 存在意义：先做出一条能开始、能操作、能产生胜负或结算的最小完整玩法闭环。

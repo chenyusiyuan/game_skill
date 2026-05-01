@@ -52,6 +52,8 @@ node game_skill/skills/scripts/preserve_preflight.js cases/${PROJECT} /tmp/fb.tx
 
 ## rework 反向 patch 机制
 
+本段是 `patch-codegen.md` §6 的特化；通用 patch 协议见 `patch-codegen.md`。
+
 1. 找到目标 stage 的归档：`cases/${PROJECT}/.game/stages/${TARGET_STAGE}/patches.json`。
 2. 根据归档生成 reverse patch：`add-file` 反向为 `delete-file`；`delete-file` 反向为带原内容的 `add-file`；`edit` 和 `replace-function` 必须依赖归档中的旧内容或人工生成锚点。
 3. 先 dry-run：
@@ -64,6 +66,8 @@ node game_skill/skills/scripts/apply_patch.js cases/${PROJECT} /tmp/reverse-patc
 5. 依次重放后续 stage patches。任一重放失败，停止并让用户选择升级 `pivot` 或人工介入。
 
 ## extension 追加机制
+
+本段是 `patch-codegen.md` §6 的特化；通用 patch 协议见 `patch-codegen.md`。
 
 extension 不占用主干 Stage 1-5 编号，命名为 `extension-1`、`extension-2`。
 

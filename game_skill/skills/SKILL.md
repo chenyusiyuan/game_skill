@@ -579,6 +579,7 @@ Phase 4 Codegen 与 Phase 5 Verify 不再作为一次性大段推进，而是被
 - `type` 必须来自该 node 的 `trace-events`；多条 trace event 时，每次只 push 当前触发的 event。
 - 业务代码中任何 state mutation 或 trace 产生都必须经过对应 runtime wrapper；业务代码不得 import 已删除的旧 primitive 共享目录，也不得手写 `window.__trace.push(...)`。
 - 多个 wrapper 可协作处理同一实体，但每个 wrapper 都要独立产出 trace 证据；不再要求 `predicateMatch` / `scoreAccum` 等固定 API 形态。
+- Stage >= 2 时产出必须是 `patches.json` 而非完整文件树；格式对齐 `schemas/patch.schema.json`。
 
 ### Phase 5 Verify Agent 约束
 
@@ -607,6 +608,7 @@ Phase 4 Codegen 与 Phase 5 Verify 不再作为一次性大段推进，而是被
 - check 入口：先跑 `check_preserve_regression.js`，再跑 `check_stage_contract.js --stage 2` 与 `verify_all.js --stage 2`。
 - acceptance 必含：`check_difficulty_curve.js` 单调难度与 layout hash，对应 `stage-roadmap.md` 的 Stage 2 acceptance。
 - preserve 规则：Stage 1 core-loop、input-model、render-style 不变；禁止重写主入口绕开 preserve。
+- codegen 走 patch-based 模式，详见 `patch-codegen.md`。
 - 用户确认策略：完成后建议停下确认内容规模，再进入 Stage 3。
 
 ### Stage 3 — Variety
@@ -616,6 +618,7 @@ Phase 4 Codegen 与 Phase 5 Verify 不再作为一次性大段推进，而是被
 - check 入口：`check_preserve_regression.js` + `check_stage_contract.js --stage 3` + `verify_all.js --stage 3`。
 - acceptance 必含：`check_decision_graph.js` 继续确认可决策选项数，对应 `stage-roadmap.md` 的 Stage 3 acceptance。
 - preserve 规则：Stage 1 win/lose/settle 路径不能被新 entity 绕开，核心操作仍可观察。
+- codegen 走 patch-based 模式，详见 `patch-codegen.md`。
 - 用户确认策略：默认自动推进，但用户反馈可打断并进入支路 SOP。
 
 ### Stage 4 — Progression
@@ -625,6 +628,7 @@ Phase 4 Codegen 与 Phase 5 Verify 不再作为一次性大段推进，而是被
 - check 入口：`check_preserve_regression.js` + `check_stage_contract.js --stage 4` + `verify_all.js --stage 4`。
 - acceptance 必含：`check_resource_loop.js`，对应 `stage-roadmap.md` 的 Stage 4 acceptance。
 - preserve 规则：不升级策略下仍可完成 Stage 1 核心玩法；升级系统不能吞掉原有数值敏感度。
+- codegen 走 patch-based 模式，详见 `patch-codegen.md`。
 - 用户确认策略：默认自动推进，可被用户反馈打断。
 
 ### Stage 5 — Polish
@@ -634,6 +638,7 @@ Phase 4 Codegen 与 Phase 5 Verify 不再作为一次性大段推进，而是被
 - check 入口：`check_preserve_regression.js` + `check_stage_contract.js --stage 5` + `verify_all.js --stage 5`；最终交付仍必须由真实 verify 结果生成。
 - acceptance 必含：`check_difficulty_curve.js --stage 5` 的 10 局 replay 胜率，对应 `stage-roadmap.md` 的 Stage 5 acceptance。
 - preserve 规则：Stage 4 resource loop 和 Stage 3 variety 行为不变，只改表现、节奏和反馈。
+- codegen 走 patch-based 模式，详见 `patch-codegen.md`。
 - 用户确认策略：自动完成交付；交付后反馈进入支路 SOP。
 
 ---
@@ -821,5 +826,6 @@ Agent 我：
 6. Phase 3: game-mechanic-decomposer 基于 design-strategy 动态产 mechanics.yaml，再由 expander 产 scene/rule/data/assets/event-graph 与 implementation-contract
 7. Stage 1: 按 stage-contract-1 生成 vertical slice，跑 check_stage_contract，通过后生成 preserve.lock 并等待用户确认
 8. Stage 2-5: 每段先跑 preserve 回归，再按本段 stage-contract 扩内容、变化、progression、polish
-9. task_done: "单词消消乐已生成。open cases/word-match-lite/game/index.html 可体验。"
+9. 主干 Stage 2+ codegen 产出 patches.json，并通过 node game_skill/skills/scripts/apply_patch.js apply + archive
+10. task_done: "单词消消乐已生成。open cases/word-match-lite/game/index.html 可体验。"
 ```
