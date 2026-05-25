@@ -240,11 +240,17 @@
                 "type": "object",
                 "required": ["type", "id", "timeoutMs"],
                 "additionalProperties": false,
+                "dependencies": {
+                  "maxOccurrencesInWindow": ["windowMs"]
+                },
                 "properties": {
                   "type": { "const": "milestone" },
                   "id": { "type": "string", "minLength": 1 },
                   "timeoutMs": { "type": "integer", "minimum": 1 },
-                  "minOccurrences": { "type": "integer", "minimum": 1 }
+                  "minOccurrences": { "type": "integer", "minimum": 1 },
+                  "minIntervalMs": { "type": "integer", "minimum": 1 },
+                  "maxOccurrencesInWindow": { "type": "integer", "minimum": 1 },
+                  "windowMs": { "type": "integer", "minimum": 1 }
                 }
               },
               {

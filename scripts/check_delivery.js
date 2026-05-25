@@ -14,6 +14,7 @@ import {
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { computeVisualWarn } from "./_visual_warn.js";
+import { evaluateMustNot } from "./_mustnot_evaluator.js";
 import { prepareCaseGame } from "./prepare_case_game.js";
 import { scanCaseJunk } from "./scan_case_junk.js";
 import { scanForbiddenImports } from "./scan_forbidden_imports.js";
@@ -88,13 +89,30 @@ function decisionDetail(runnerResult) {
   return detail;
 }
 
-async function decideAndWrite(caseDir, decision) {
+function compactMustNotWarnings(mustNotWarnings = []) {
+  return mustNotWarnings.map((warning) => ({
+    kind: warning.kind,
+    severity: warning.severity,
+    id: warning.id,
+    text: warning.text,
+    followUp: warning.followUp,
+    evidence: warning.evidence,
+  }));
+}
+
+async function decideAndWrite(caseDir, decision, diagnostics = {}) {
   const evalDir = join(caseDir, "eval");
   const deliveryRecord = {
     ...decision,
     qualityHints: await buildQualityHints(caseDir),
     timestamp: new Date().toISOString(),
   };
+  if (diagnostics.mustNotWarnings?.length) {
+    deliveryRecord.diagnostics = {
+      ...(deliveryRecord.diagnostics ?? {}),
+      mustNotWarnings: compactMustNotWarnings(diagnostics.mustNotWarnings),
+    };
+  }
   mkdirSync(evalDir, { recursive: true });
   writeFileSync(
     join(evalDir, "delivery.json"),
@@ -197,8 +215,26 @@ function runBuildCommand(command, args, cwd, reason) {
   };
 }
 
-export function decideStatus({ importScan = { ok: true }, planValid, build, runnerResult, junk = { ok: true } }) {
-  const warningItems = junkWarnings(junk);
+export function mustNotWarningsFromResult(mustNotResult) {
+  return (mustNotResult?.violations ?? []).map((violation) => ({
+    kind: "mustnot-warning",
+    severity: "warn",
+    id: violation.id,
+    text: `acceptance.mustNot '${violation.id}' may be violated: ${violation.text}. Treat as follow-up / Stage 2 backlog, not a Stage 1 blocker.`,
+    followUp: "follow-up / Stage 2 backlog",
+    evidence: violation.evidence ?? null,
+  }));
+}
+
+export function decideStatus({
+  importScan = { ok: true },
+  planValid,
+  build,
+  runnerResult,
+  junk = { ok: true },
+  extraWarnings = [],
+}) {
+  const warningItems = [...junkWarnings(junk), ...extraWarnings];
 
   if (importScan && !importScan.ok) return blocked("chain-blocked", importScan.reason, importScan, warningItems);
   if (!planValid.ok) return blocked("generation-blocked", "plan-invalid", planValid, warningItems);
@@ -479,6 +515,7 @@ export async function main(argv = process.argv.slice(2)) {
 
     const importScan = scanForbiddenImports(caseDir);
     const planValid = validatePlan(caseDir);
+    const plan = planValid.ok ? JSON.parse(readFileSync(join(caseDir, "specs/plan.json"), "utf8")) : null;
 
     let build = { ok: true };
     if (importScan.ok && planValid.ok) {
@@ -524,7 +561,22 @@ export async function main(argv = process.argv.slice(2)) {
       }
     }
 
-    const decision = await decideAndWrite(caseDir, decideStatus({ importScan, planValid, build, runnerResult, junk }));
+    let mustNotResult = { passed: true, violations: [], skipped: [] };
+    if (plan && runnerResult && runnerResult.reason !== "skipped-due-to-prior-failure" && !runnerResult.chainBlocked) {
+      mustNotResult = await evaluateMustNot({
+        casePath: caseDir,
+        plan,
+        runnerResult,
+        subtaskId: "stage1-delivery",
+        writeLog: false,
+      });
+    }
+    const mustNotWarnings = mustNotWarningsFromResult(mustNotResult);
+    const decision = await decideAndWrite(
+      caseDir,
+      decideStatus({ importScan, planValid, build, runnerResult, junk, extraWarnings: mustNotWarnings }),
+      { mustNotWarnings },
+    );
 
     // === N19 Phase 1 hook: append-only baseline + evolution-log ===
     if (decision.status === "delivery-pass" || decision.status === "delivery-with-warnings") {

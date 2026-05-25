@@ -54,7 +54,7 @@ coreLoop:
 
 ## A. 设计期决策
 
-### A.1 archetype 识别 — 来源: from-query
+### A.1 OpenGame 交互原型识别 — 来源: from-query
 
 **A**: 砖块破坏主循环。
 

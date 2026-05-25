@@ -49,6 +49,32 @@ export interface BossEntryOpts {
   barHeight?: number;
   depth?: number;
 }
+/** Options for trail. */
+export interface TrailOpts {
+  color?: number;
+  thickness?: number;
+  lifespan?: number;
+  frequency?: number;
+  alphaStart?: number;
+  blendMode?: 'ADD' | 'NORMAL' | 'MULTIPLY';
+  depth?: number;
+  durationMs?: number;
+}
+/** Handle returned by trail; emitter destroys itself when target or scene shuts down, or after durationMs if provided. */
+export interface TrailHandle {
+  emitter: Phaser.GameObjects.Particles.ParticleEmitter;
+  stop(): void;
+}
+/** Options for shockwave. */
+export interface ShockwaveOpts {
+  startRadius?: number;
+  endRadius?: number;
+  color?: number;
+  duration?: number;
+  thickness?: number;
+  alpha?: number;
+  depth?: number;
+}
 /** Named screen-shake presets. */
 export type ShakePreset = 'micro' | 'hit' | 'death' | 'explosion';
 /** Custom screen-shake preset shape. */
@@ -139,7 +165,7 @@ export function levelUpFlash(scene: Phaser.Scene, color: number = 0xffd166): voi
   burstParticles(scene, camera.midPoint.x, camera.midPoint.y, { color, count: 34, speed: { min: 84, max: 240 }, texture: TEXTURE_KEYS.star });
   flashRing(scene, camera.midPoint.x, camera.midPoint.y, color, { startRadius: 36, endRadius: 86, duration: 620 });
 }
-/** Applies a forced camera shake from a named preset or custom config. */
+/** Applies a forced camera shake; reserve it for high-salience events, not every frequent hit. */
 export function screenShake(scene: Phaser.Scene, preset: ShakePreset | ShakeConfig): void {
   const presets: Record<ShakePreset, ShakeConfig> = {
     micro: { duration: 60, intensity: 0.004 },
@@ -204,4 +230,52 @@ export function applyBloom(targetOrCamera: BloomTarget, color: number = 0xffffff
 }
 function rgbFromNumber(color: number): { r: number; g: number; b: number } {
   return { r: (color >> 16) & 255, g: (color >> 8) & 255, b: color & 255 };
+}
+/** Attaches a follow-target particle trail. The emitter is auto-destroyed when the target emits 'destroy', when the scene shuts down, or after durationMs when provided. */
+export function trail(scene: Phaser.Scene, target: Phaser.GameObjects.GameObject, opts: TrailOpts = {}): TrailHandle {
+  ensureProceduralTextures(scene);
+  const lifespan = opts.lifespan ?? 280;
+  const thickness = opts.thickness ?? 4;
+  const blend = opts.blendMode ?? 'ADD';
+  const emitter = scene.add.particles(0, 0, TEXTURE_KEYS.circle, {
+    follow: target as Phaser.GameObjects.GameObject & { x: number; y: number },
+    speed: 0,
+    lifespan,
+    scale: { start: thickness / 16, end: 0 },
+    alpha: { start: opts.alphaStart ?? 0.7, end: 0 },
+    quantity: 1,
+    frequency: opts.frequency ?? 16,
+    tint: opts.color ?? 0xffffff,
+    blendMode: Phaser.BlendModes[blend],
+  });
+  emitter.setDepth(opts.depth ?? 480);
+  let stopped = false;
+  const stop = (): void => {
+    if (stopped) return;
+    stopped = true;
+    if (emitter.scene) emitter.destroy();
+  };
+  target.once(Phaser.GameObjects.Events.DESTROY, stop);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, stop);
+  scene.events.once(Phaser.Scenes.Events.DESTROY, stop);
+  if (opts.durationMs !== undefined) scene.time.delayedCall(opts.durationMs, stop);
+  return { emitter, stop };
+}
+/** Plays a one-shot expanding ring used for explosions or area-effect impacts. */
+export function shockwave(scene: Phaser.Scene, x: number, y: number, opts: ShockwaveOpts = {}): Phaser.GameObjects.Graphics {
+  const startRadius = opts.startRadius ?? 6;
+  const endRadius = opts.endRadius ?? 96;
+  const thickness = opts.thickness ?? 4;
+  const color = opts.color ?? 0xffffff;
+  const ring = scene.add.graphics().setPosition(x, y).setDepth(opts.depth ?? 540);
+  ring.lineStyle(thickness, color, opts.alpha ?? 1).strokeCircle(0, 0, startRadius);
+  scene.tweens.add({
+    targets: ring,
+    scale: endRadius / Math.max(1, startRadius),
+    alpha: 0,
+    duration: opts.duration ?? 480,
+    ease: 'Quart.easeOut',
+    onComplete: () => ring.destroy(),
+  });
+  return ring;
 }

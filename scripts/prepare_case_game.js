@@ -18,6 +18,12 @@ const SCAFFOLD_FILES = [
   ["src/lib/inputController.ts", "game/src/lib/inputController.ts"],
   ["src/lib/hudBuilder.ts", "game/src/lib/hudBuilder.ts"],
   ["src/lib/progressionMath.ts", "game/src/lib/progressionMath.ts"],
+  ["src/lib/HELPERS.md", "game/src/lib/HELPERS.md"],
+  ["src/lib/arcadePhysics.ts", "game/src/lib/arcadePhysics.ts"],
+  ["src/lib/safeTimers.ts", "game/src/lib/safeTimers.ts"],
+  ["src/lib/procSprite.ts", "game/src/lib/procSprite.ts"],
+  ["src/lib/cameraRig.ts", "game/src/lib/cameraRig.ts"],
+  ["src/lib/inputExtras.ts", "game/src/lib/inputExtras.ts"],
 ];
 
 const TEMPLATE_FILES = [
@@ -26,7 +32,7 @@ const TEMPLATE_FILES = [
 ];
 
 function isKeptScaffold(source) {
-  return KEEP_SCAFFOLD.has(source) || (source.startsWith("src/lib/") && source.endsWith(".ts"));
+  return KEEP_SCAFFOLD.has(source) || (source.startsWith("src/lib/") && (source.endsWith(".ts") || source.endsWith(".md")));
 }
 
 export function prepareCaseGame(caseDir, { overwrite = "kept-only", reset = false } = {}) {

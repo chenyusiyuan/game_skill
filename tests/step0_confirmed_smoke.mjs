@@ -61,9 +61,9 @@ function makeCase(slug, options = {}) {
         "user-message-id": "test-message-id",
       },
     },
-    archetype: "vampire-survivors",
-    selectedArchetype: "shooter",
-    "selected-archetype": "breakout",
+    archetype: "top_down",
+    selectedArchetype: "platformer",
+    "selected-archetype": "grid_logic",
     visionPolicy: {
       visionMode: "disabled",
     },

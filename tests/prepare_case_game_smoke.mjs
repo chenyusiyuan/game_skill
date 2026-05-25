@@ -24,6 +24,16 @@ const files = [
   ["vite.config.js", "game/vite.config.js"],
   ["main.ts", "game/src/main.ts"],
   ["milestone.ts", "game/src/milestone.ts"],
+  ["src/lib/HELPERS.md", "game/src/lib/HELPERS.md"],
+  ["src/lib/visualTheme.ts", "game/src/lib/visualTheme.ts"],
+  ["src/lib/inputController.ts", "game/src/lib/inputController.ts"],
+  ["src/lib/hudBuilder.ts", "game/src/lib/hudBuilder.ts"],
+  ["src/lib/progressionMath.ts", "game/src/lib/progressionMath.ts"],
+  ["src/lib/arcadePhysics.ts", "game/src/lib/arcadePhysics.ts"],
+  ["src/lib/safeTimers.ts", "game/src/lib/safeTimers.ts"],
+  ["src/lib/procSprite.ts", "game/src/lib/procSprite.ts"],
+  ["src/lib/cameraRig.ts", "game/src/lib/cameraRig.ts"],
+  ["src/lib/inputExtras.ts", "game/src/lib/inputExtras.ts"],
 ];
 
 try {

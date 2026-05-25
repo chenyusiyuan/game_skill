@@ -31,13 +31,19 @@ vision policy 对图片读取的硬边界：`visionMode=disabled` 或 `allowedIm
 - `controls[]`：玩家输入到效果对照表
 - `requiredMechanics[]`：主闭环包含的机制清单，仅声明，不约束 runtime
 - `acceptance.mustHave[]`：rawQuery 的最低验收契约，不得为了易通过而缩水；每条用 `mechanicRefs[]` 覆盖 `requiredMechanics[].name`，并用 `evidence[]` 指向 smoke 证据
-- `acceptance.mustNot[]`（可选）：后续演进 / 人工复核用的反例约束，stage1 v1 不做机械执行
+- `acceptance.mustNot[]`（可选）：反例约束；Stage 1 只做只读告警并写入 handoff / Stage 2 backlog，Stage 2-5 才执行回滚语义
 - `winCondition`：胜利触发条件
 - `loseCondition`（可选）
 - `nonblockingTodos[]`（可选）：Stage 2-5 待迭代项
 - `implementationPlan[]`（可选）：worker 自查用的文件行动清单
 - `smoke.steps[]`：真实输入序列（keydown / press / wait / click）
 - `smoke.expect[]`：canvas-change / milestone / state 三类 assertion
+
+Phase A 入口可先运行自查清单 helper，帮助一次性批量修正 plan 前置问题；它只写 `.game/phase-a-checklist.md`，不参与 verdict，也不改写 plan：
+
+```bash
+node scripts/write_phase_a_checklist.js cases/<PROJECT> --query "<raw query>"
+```
 
 校验：
 
@@ -54,6 +60,8 @@ smoke 设计规则：
 3. `state` 类 expect 优先断言数值 / 计数字段（如 `score`、`lives`、`level`、`progress`），避免用 `gameState == "playing"` 这类 enum 状态作为唯一证据
 4. `top_down` / platformer / tower_defense 等实时移动 smoke 必须是确定性短路径：目标沿同一条主输入路径线性摆放，一次只证明主闭环的最小进展，不把迷宫探索、多目标收集、战斗受伤、出口通关全部塞进长导航
 5. 需求里混有导航 / 战斗 / 收集 / 伤害 / 胜利反馈时，Phase A 先选能稳定取证的最小闭环；其他体验项写入 `nonblockingTodos[]` 或拆成更短的 milestone evidence，不用长 smoke 赌路径碰巧走通
+6. 不把随机事件或整关通关当成首轮硬 smoke，除非 Phase B 明确提供稳定取证路径：例如首次击碎指定砖必掉道具、测试用短关卡、固定种子、或可由短输入稳定触发的 milestone。随机掉落、清空 40+ 砖块、等待 boss 随机出现这类长窗口目标，默认放入 nonblockingTodos / L3 手动评估 / Stage 2-5 backlog。
+7. `state` 断言必须证明变化或有效能力，不能用初始恒真值稀释验收：禁止用 `score >= 0`、`combo >= 0`、`level >= 1`、`ballCount >= 0` 这类启动后天然成立的断言来证明得分、连击、关卡推进、球反弹或道具系统。若要证明机制存在，优先用专属 milestone 或断言值相对初始状态发生变化。
 
 acceptance 反稀释规则：
 
@@ -62,6 +70,7 @@ acceptance 反稀释规则：
 3. 每条 `mustHave.evidence[]` 必须被 `smoke.expect[]` 覆盖
 4. 每条 `mustHave` 至少包含一个 milestone 或 state evidence，不能只靠 canvas-change
 5. 单一 `mechanicRef` 的 `mustHave` 必须使用该机制专属的 milestone/state evidence；不能用无关宽泛事件证明，如用 `brick-destroyed` 证明 `powerup-system`
+6. `mustHave.evidence[]` 不得使用初始恒真或弱存在断言冒充机制完成；`>= 0`、初始 `level >= 1`、初始生命大于 0 只能说明 HUD/初始状态存在，不能证明连击、关卡推进、道具、反弹、得分或胜负机制。
 
 不能稳定取证的机制应拆分 smoke 取证，或诚实放入 `nonblockingTodos[]`，不要用弱 evidence 稀释最低验收契约。
 
@@ -70,6 +79,8 @@ evidence 匹配规则：
 - `canvas-change`：`smoke.expect.minChangedPixels >= acceptance.evidence.minChangedPixels`，acceptance 缺省为 1
 - `milestone`：同 id，且 `smoke.expect.minOccurrences >= acceptance.evidence.minOccurrences`，两边缺省为 1
 - `state`：同 path、同 operator、同 value；v1 不做强弱推理
+
+高频 milestone 可显式加频率约束：`minIntervalMs` 表示相邻同 id milestone 的最小间隔；`maxOccurrencesInWindow` + `windowMs` 表示任意时间窗口内同 id milestone 的最大次数。字段缺省时保持旧行为；validator 只给 hit / damage / destroy / score / combo 等高频风险 id 提 warning，不自动注入、不改写 `plan.json`。
 
 ## Phase A v1.1 引导密度(必填,plan.json 之前先做)
 
@@ -80,7 +91,7 @@ evidence 匹配规则：
 建议 checklist：
 
 1. 读 query，保留 rawQuery 与显式需求
-2. 识别 archetype；若适用，加载 primer
+2. 识别 OpenGame 五交互原型；若适用，加载 primer
 3. 写 `docs/DESIGN.md`，填完 4 个必填 anchor
 4. 写 `docs/decisions.md` A 段，记录 5-15 条 Q&A
 5. 写 `specs/plan.json`，为 `requiredMechanics[].derivedFrom` 绑定 DESIGN anchor
@@ -91,21 +102,31 @@ evidence 匹配规则：
 10. Phase C 跑 delivery smoke，读取 `qualityHints`
 11. Phase C 可选写 retrospective，沉淀后续 Stage 2-5 backlog
 
-### A.1 archetype 识别 + on-demand primer
+### A.1 OpenGame 五交互原型识别 + on-demand primer
 
-写 `cases/<PROJECT>/docs/decisions.md` 时，A 段第一题记录 archetype 识别：
+写 `cases/<PROJECT>/docs/decisions.md` 时，A 段第一题记录 OpenGame 交互原型识别：
 
-> **Q**: 用户 query 最接近哪个已知 archetype?
+> **Q**: 用户 query 最接近哪个 OpenGame 交互原型?
 >
 > **A**: <写明判断，标 from-reasoning>
 
-若识别为 `{vampire-survivors, shooter, breakout, topdown, tower-defense}` 之一，建议运行：
+只按物理、视角、输入结构和状态推进方式判断，不按题材名或具体游戏品类枚举判断。五个可加载原型固定为：
+
+- `platformer`：side view + gravity，核心对象会下落，左右移动 / 跳跃 / 横版动作。
+- `top_down`：top-down + free movement，无重力，连续自由移动、探索、竞技场、追逐或生存。
+- `grid_logic`：grid + turn/static logic，离散格子、步进/回合/格状态推演。
+- `tower_defense`：path + waves，固定路径/车道、波次、静态防御、资源/升级。
+- `ui_heavy`：UI driven / no physics，按钮、卡片、对话、经营、问答、状态机驱动。
+
+若识别为上述之一，建议运行：
 
 ```bash
 node scripts/load_primer.js cases/<id> --archetype <X>
 ```
 
-未知、不确定或不在 5 个内，不加载 primer；自行设计，并可在 decisions.md C 段记录是否需要新增 primer。
+原型选择不是一次性锁定。如果后续在 `docs/decisions.md` A 段判断已加载 primer 不合适，先运行 `node scripts/load_primer.js cases/<id> --clear` 删除 `.game/archetype-primer.md`，再按新判断重载另一个原型或保持不加载；同时记录从原型 X 改为原型 Y / none 的理由。不要让旧 primer 留在 case context 里影响后续 Phase B/C。
+
+未知、不确定、混合型或五原型都不能解释的 case，不加载 primer；自行设计，并在 decisions.md A 段说明为什么不套原型。不要新增 `breakout`、`shooter`、`survivor` 这类按游戏品类命名的 primer；这类需求应映射到上面五个交互原型或走自行设计。
 
 ### A.2 写 docs/DESIGN.md(4 必填 anchor)
 
@@ -119,6 +140,16 @@ Phase A 先写 `cases/<PROJECT>/docs/DESIGN.md`，再写 `plan.json`。DESIGN �
 可选 anchor：`temporalShape`。
 
 不要使用已废弃的 action-bias anchor 名。意象锚点要写成可视化的真实场景，而不是只写“暗黑风格”“科技蓝”这类抽象标签。
+
+`visualIdentity.palette` 必须写清背景、玩家/主角、主交互物、目标/敌人/障碍、奖励/道具、HUD 的颜色角色，并保证移动核心对象和背景有强对比。禁止白球对白底、浅色角色对浅色地面、同色敌我不分、只靠发光边缘区分主物体；如使用白色主体，背景必须是中深色或主体必须有明显描边/阴影。
+
+当前链路默认生成桌面 Web 小游戏。Phase A 必须按桌面画布规划信息密度和布局：标准画布为 960×720；横向动作、竞速、射击或需要宽视野的游戏可用 1280×720；极简谜题、棋盘、单屏教学等紧凑玩法可用 800×600，但要在 decisions.md 说明为什么不需要更大画布。640×480、480×360 只用于 smoke viewport、旧 fixture 或 query 明确要求的复古低分辨率，不作为新 case 最终交付默认。
+
+`uiSurfaces.secondary` 默认包含暂停界面：所有游戏都应支持 `Escape` 或 `P` 暂停/继续，并在暂停时显示半透明遮罩、标题、继续提示和核心操作说明。除非 query 明确要求不可暂停，暂停不进入 delivery smoke 硬验收，但必须作为正常试玩体验落地。
+
+若 query 含关卡、波次、阶段、下一关或 boss 周期，`temporalShape` 必须写清难度递进和内容变化。只提高速度/血量不够；至少还要变化布局、敌人组合、目标位置、障碍形状、生成节奏或特殊规则之一，并在 decisions.md 记录取舍。
+
+反馈特效必须服务可读性：命中、受伤、拾取、升级、通关等事件各自使用短促、局部、语义明确的反馈。避免为了特效而全屏闪白、长时间遮挡主物体、把玩家/挡板/球改成与背景混淆的颜色；如果需要闪光，持续时间建议 <= 150ms，且不能掩盖下一次操作判断。camera shake 属于高显著度反馈，不用于普通高频命中、碰撞、击砖或接球；高频事件优先局部粒子、飘字、描边、tint、微缩放。震动只给受击/丢命、combo 阈值、奖励/道具、通关/阶段切换等低频或高价值事件，并保持短促。
 
 ### A.3 plan.json `derivedFrom` 必填
 
@@ -201,7 +232,7 @@ worker SOP：
 6. 不用 git 命令修 delivery，不 `git add -f` / `stash` / 改 ignore 来改变校验结果
 7. 不在 case 内 `npm install`
 8. 不要往 `cases/<PROJECT>/game/package.json` 加 `dependencies` / `devDependencies`；runtime（phaser / vite / typescript）由 repo root 持有
-9. `plan.smoke.viewport`（默认 480×360）仅用于 headless smoke 浏览器窗口，与游戏画布无关。Phaser canvas（config 的 `width` / `height`）按可玩性选，推荐 640×480 或 800×600；强烈建议同时设 `scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }`，让真实浏览器能撑满。canvas 超过 viewport 1.5× 会有非阻塞 warning，超过 2× 才有 GPU stall 风险
+9. `plan.smoke.viewport`（默认 480×360）仅用于 headless smoke 浏览器窗口，与游戏画布无关。当前链路默认桌面 Web 小游戏，Phaser canvas（config 的 `width` / `height`）标准为 960×720；横向动作、竞速、射击或需要宽视野的游戏可用 1280×720；极简谜题、棋盘、单屏教学等紧凑玩法可用 800×600，但要在 decisions.md 说明取舍。除非 query 明确要求复古低分辨率，不要用 640×480 或 480×360 作为最终交付画布。若使用像素风或几何图形，建议在 Phaser config 同时设 `pixelArt: true`、`roundPixels: true`、`antialias: false`，并设置 `scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }`。不要把低内部分辨率 canvas 拉伸成大画面导致模糊；新 case 优先把 `plan.smoke.viewport` 同步到 canvas 同尺寸，确有性能理由时才降到 800×600 并在 decisions.md 说明。canvas 超过 viewport 1.5× 会有非阻塞 warning，超过 2× 才有 GPU stall 风险
 10. Liveness 规则：游戏若包含时间压力 / NPC 自主行为 / 倒计时 / 持续动效（即任何"不靠玩家输入也在变化"的元素），主 scene 必须实现 `update(time, delta)` 并至少推进一个 delta-based 状态。可照抄：
 
 ```ts
@@ -214,6 +245,10 @@ update(_time: number, delta: number) {
 
 不在 `update()` 里推进任何状态，runner 会观测到 `idleNoise = 0` 双 warning。纯回合制游戏可豁免，但需在 plan 的 `nonblockingTodos[]` 里显式声明，避免 review 误判。
 11. 不发明新 milestone id
+12. 所有游戏默认实现暂停态：`Escape` 或 `P` 切换暂停/继续；暂停时主循环、物理、计时器或关键状态推进必须停止，显示遮罩和继续提示，并把 `window.__state.session.phase` 置为 `paused`。恢复后回到 `playing`，不重置分数、生命、关卡或背包。
+13. 多关卡 / 多波次游戏必须在数据或生成函数里体现递进：至少前 3 关/波在布局、敌人组合、障碍、目标位置、掉落、节奏或特殊规则上有可见差异。速度提升只能作为递进的一部分，不能是唯一变化。
+14. 视觉对比是可玩性要求：主角/挡板/球/子弹/敌人/道具/HUD 必须和背景、路径、砖块或地面有明显明度或色相差异。若对象和背景都偏浅或都偏暗，必须加描边、投影、底色面板或替换颜色。
+15. 特效要克制且语义化：玩家核心可控对象不应因为普通命中、拾取或碰撞长时间变成白色或透明；屏幕闪白只适合非常短的拾取/升级反馈，普通挡板接球、击砖、子弹命中这类高频动作优先用局部描边、微缩放、短拖尾、小粒子或飘字。不要把 camera shake 绑定到每次普通碰撞；震动只用于受击/丢命、combo 阈值、奖励/道具、通关/阶段切换等低频或高价值事件，并加冷却或条件门槛。
 
 进入 Phase C 前 worker 自己应该确保 `game/` 下能 `npx tsc --noEmit` 与 `npx vite build` 干净通过。
 
@@ -223,10 +258,16 @@ update(_time: number, delta: number) {
 
 `prepare_case_game.js` 会把 v1.1 默认 helper 复制到 `cases/<PROJECT>/game/src/lib/`：
 
+- `lib/HELPERS.md`：helper 选择索引。Phase B 先读它，再只打开匹配当前机制的 1-2 个 helper 源码；不要默认通读全部 helper。
 - `lib/visualTheme.ts`：粒子、相机、tween、伤害字、hit-stop、boss 出场；CANVAS-safe 核心 + WebGL FX optional
 - `lib/inputController.ts`：WASD、方向键、触摸虚拟摇杆
 - `lib/hudBuilder.ts`：meterBar、statusText、iconSlot
 - `lib/progressionMath.ts`：linearRamp、waveScale、thresholdCurve、clamp、lerp
+- `lib/arcadePhysics.ts`：Arcade body、静态碰撞体、速度驱动、collider / overlap；不要手动改 `body.position`
+- `lib/procSprite.ts`：缓存矩形、圆、环、三角形纹理，适合大量重复实体
+- `lib/inputExtras.ts`：暂停、重开、技能键等单键 / key bag 场景
+- `lib/cameraRig.ts`：大地图跟随、camera bounds 与 physics bounds 同步
+- `lib/safeTimers.ts`：scene shutdown / restart 时自动清理 timer 与 tween
 
 强烈建议至少调用 2 个 helper；仅 import 不算调用。低调用会进入 `delivery.json.qualityHints.warnings` 的 `low-helper-usage`，warn-only，不阻塞 delivery。
 
@@ -373,7 +414,7 @@ retrospective 可选，但有助于后续演进环少猜。
 | `handoff.ready` | 已生成玩法说明、操作说明、检查摘要和后续迭代引导 |
 | `handoff.blocked` | preview 不可用，无法正常交付试玩 |
 
-warning 使用结构化数组，`kind` 至少包括：`unexpected-milestone`、`console-warning`、`console-error`、`nonblocking-todos`、`canvas-static-after-milestone`、`static-between-inputs`、`idle-frozen`、`auto-cleaned-junk`、`canvas-exceeds-viewport`。unexpected milestone 不直接 fail，但会让结果进入 `delivery-with-warnings`。
+warning 使用结构化数组，`kind` 至少包括：`unexpected-milestone`、`console-warning`、`console-error`、`nonblocking-todos`、`canvas-static-after-milestone`、`static-between-inputs`、`idle-frozen`、`auto-cleaned-junk`、`canvas-exceeds-viewport`、`mustnot-warning`。unexpected milestone 和 mustnot-warning 不直接 fail，但会让结果进入 `delivery-with-warnings`。
 
 ## 失败时怎么读 diagnostic
 
@@ -433,7 +474,7 @@ warning 使用结构化数组，`kind` 至少包括：`unexpected-milestone`、`
 
 1. **ParticleEmitter unified API**：用 `add.particles(x, y, key, config).explode(n)`，不要用已删除的 `manager.createEmitter()`；缺粒子素材时用 `lib/visualTheme.ts` 的 `ensureProceduralTextures(scene)`。
 2. **FX WebGL-only no-op fallback**：Glow / Bloom / Pixelate 只在 WebGL 有效，CANVAS 下必须有 no-op fallback；不要把 FX 当核心画面证据。
-3. **camera force=true**：重复触发 shake / flash 时带 `force=true`，否则正在运行的 camera FX 可能忽略新调用。
+3. **camera force=true**：低频高价值事件重复触发 shake / flash 时带 `force=true`，否则正在运行的 camera FX 可能忽略新调用；普通高频碰撞仍优先用局部粒子/飘字，不要每次 shake。
 4. **timeScale reset**：`time.timeScale` 影响整个 scene；hit-stop 或慢动作后必须 reset，避免后续计时全局变慢。
 5. **Container input 不传播**：子对象 `setInteractive` 后事件不冒泡到 container；需要子对象单独监听，或把按钮元素扁平放到 scene 顶层。
 6. **scene.restart 清 tween/timer**：restart 前后在 shutdown 钩子里清理 tween / timer，避免跨 scene 残留事件和内存泄漏。

@@ -26,13 +26,13 @@ Phaser 默认 `type: Phaser.AUTO` 优先选 WebGL；headless Chromium 未启用 
 ```ts
 const config = {
   type: Phaser.CANVAS,
-  width: 480,
-  height: 360,
+  width: 960,
+  height: 720,
   scene: [PlayScene],
 };
 ```
 
-`plan.smoke.viewport` 只是 headless smoke 浏览器窗口，不要求 Phaser canvas 同尺寸。Phaser config 推荐使用 640×480 或 800×600，并设置 `scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }`；过大的 canvas 会增加 headless pixel readback 压力。
+`plan.smoke.viewport` 只是 headless smoke 浏览器窗口，不要求 Phaser canvas 同尺寸。当前链路默认桌面 Web 小游戏，Phaser config 推荐使用 960×720；横向动作、竞速、射击或宽视野游戏可用 1280×720；紧凑谜题、棋盘、单屏教学可用 800×600 并在 decisions.md 说明取舍。不要把 640×480 或 480×360 当成新 case 的最终交付画布。保持 `scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }`，像素风或几何图形同时设 `pixelArt: true`、`roundPixels: true`、`antialias: false`，避免低内部分辨率被浏览器拉伸后变模糊。新 case 优先让 smoke viewport 与 canvas 同尺寸；确有性能理由再降到 800×600。
 
 ### 备选修法
 

@@ -8,11 +8,84 @@ import addFormats from "ajv-formats";
 const REPO = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const SCHEMA_PATH = join(REPO, "schemas/plan.schema.json");
 
+const SKILL_REFS = {
+  schema: "SKILL.md#Phase A plan.json contract",
+  acceptance: "SKILL.md#acceptance anti-dilution rules",
+  designAnchor: "SKILL.md#A.3 plan.json derivedFrom required",
+  smokeSafety: "SKILL.md#smoke design rules",
+  scope: "SKILL.md#decisions source coverage",
+  frequency: "SKILL.md#milestone frequency guards",
+};
+
+function diagnostic({ code, message, severity, path = "specs/plan.json", skillRef }) {
+  return {
+    code,
+    message,
+    severity,
+    path,
+    skillRef,
+  };
+}
+
+function diagnosticMessage(item) {
+  return typeof item === "string" ? item : item?.message ?? JSON.stringify(item);
+}
+
+export function formatDiagnostics(items) {
+  return (items ?? []).map(diagnosticMessage).join("; ");
+}
+
+function schemaErrorPath(error) {
+  const base = error.instancePath || "/";
+  if (error.params?.missingProperty) {
+    return `${base === "/" ? "" : base}/${error.params.missingProperty}`;
+  }
+  if (error.params?.additionalProperty) {
+    return `${base === "/" ? "" : base}/${error.params.additionalProperty}`;
+  }
+  return base;
+}
+
 function formatAjvErrors(errors) {
   if (!Array.isArray(errors) || errors.length === 0) {
-    return ["schema validation failed without error details"];
+    return [
+      diagnostic({
+        code: "schema-validation",
+        message: "schema validation failed without error details",
+        severity: "error",
+        skillRef: SKILL_REFS.schema,
+      }),
+    ];
   }
-  return errors.map((error) => `${error.instancePath || "/"} ${error.message}`);
+  return errors.map((error) =>
+    diagnostic({
+      code: "schema-validation",
+      message: `${error.instancePath || "/"} ${error.message}`,
+      severity: "error",
+      path: `specs/plan.json${schemaErrorPath(error)}`,
+      skillRef: SKILL_REFS.schema,
+    }),
+  );
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function messagesToDiagnostics(messages, { code, severity, path, skillRef }) {
+  return (messages ?? []).map((message) =>
+    diagnostic({
+      code,
+      message,
+      severity,
+      path,
+      skillRef,
+    }),
+  );
 }
 
 function jsonEqual(a, b) {
@@ -20,6 +93,7 @@ function jsonEqual(a, b) {
 }
 
 function evidenceMatchesExpect(evidence, expect) {
+  if (!isPlainObject(evidence) || !isPlainObject(expect)) return false;
   if (evidence.type !== expect.type) return false;
 
   if (evidence.type === "canvas-change") {
@@ -120,10 +194,13 @@ function hasTokenOverlap(left, right) {
 }
 
 function validateMechanicSpecificEvidence(mustHave) {
-  const runtimeEvidence = (mustHave.evidence ?? []).filter((evidence) => evidence.type === "milestone" || evidence.type === "state");
-  if ((mustHave.mechanicRefs ?? []).length !== 1 || runtimeEvidence.length === 0) return null;
+  if (!isPlainObject(mustHave)) return null;
+  const evidenceItems = asArray(mustHave.evidence);
+  const mechanicRefs = asArray(mustHave.mechanicRefs);
+  const runtimeEvidence = evidenceItems.filter((evidence) => evidence?.type === "milestone" || evidence?.type === "state");
+  if (mechanicRefs.length !== 1 || runtimeEvidence.length === 0) return null;
 
-  const expectedTokens = identityTokens(`${mustHave.mechanicRefs[0]} ${mustHave.id}`);
+  const expectedTokens = identityTokens(`${mechanicRefs[0]} ${mustHave.id}`);
   const observedTokens = runtimeEvidence.reduce((tokens, evidence) => {
     for (const token of evidenceIdentityTokens(evidence)) tokens.add(token);
     return tokens;
@@ -133,18 +210,20 @@ function validateMechanicSpecificEvidence(mustHave) {
     return null;
   }
 
-  return `acceptance.mustHave '${mustHave.id}' for mechanic '${mustHave.mechanicRefs[0]}' needs mechanic-specific evidence; runtime evidence ids/paths [${runtimeEvidence.map(describeEvidence).join(", ")}] do not share a specific token with the mechanic or mustHave id`;
+  return `acceptance.mustHave '${mustHave.id}' for mechanic '${mechanicRefs[0]}' needs mechanic-specific evidence; runtime evidence ids/paths [${runtimeEvidence.map(describeEvidence).join(", ")}] do not share a specific token with the mechanic or mustHave id`;
 }
 
 function validateAcceptanceContract(plan) {
   const errors = [];
-  const requiredMechanics = plan.requiredMechanics ?? [];
+  const requiredMechanics = asArray(plan.requiredMechanics).filter(isPlainObject);
   const mechanicNames = new Set(requiredMechanics.map((mechanic) => mechanic.name));
   const coveredMechanics = new Set();
-  const smokeExpect = plan.smoke?.expect ?? [];
+  const smokeExpect = asArray(plan.smoke?.expect).filter(isPlainObject);
 
-  for (const mustHave of plan.acceptance?.mustHave ?? []) {
-    for (const ref of mustHave.mechanicRefs ?? []) {
+  for (const mustHave of asArray(plan.acceptance?.mustHave).filter(isPlainObject)) {
+    const mechanicRefs = asArray(mustHave.mechanicRefs);
+    const evidenceItems = asArray(mustHave.evidence);
+    for (const ref of mechanicRefs) {
       if (!mechanicNames.has(ref)) {
         errors.push(`acceptance.mustHave '${mustHave.id}' references unknown requiredMechanics '${ref}'`);
       } else {
@@ -152,12 +231,12 @@ function validateAcceptanceContract(plan) {
       }
     }
 
-    const hasRuntimeEvidence = (mustHave.evidence ?? []).some((evidence) => evidence.type === "milestone" || evidence.type === "state");
+    const hasRuntimeEvidence = evidenceItems.some((evidence) => evidence?.type === "milestone" || evidence?.type === "state");
     if (!hasRuntimeEvidence) {
       errors.push(`acceptance.mustHave '${mustHave.id}' must include at least one milestone or state evidence`);
     }
 
-    for (const evidence of mustHave.evidence ?? []) {
+    for (const evidence of evidenceItems) {
       if (!smokeExpect.some((expect) => evidenceMatchesExpect(evidence, expect))) {
         errors.push(`acceptance.mustHave '${mustHave.id}' evidence not covered by smoke.expect: ${describeEvidence(evidence)}`);
       }
@@ -180,16 +259,49 @@ function validateSmokeSafety(plan) {
   const warnings = [];
   const enumStatePath = /(^|\.)(gameState|state|status|phase|mode)$/iu;
 
-  for (const exp of plan.smoke?.expect ?? []) {
+  for (const exp of asArray(plan.smoke?.expect).filter(isPlainObject)) {
     if (exp.type !== "state") continue;
-    if (typeof exp.value !== "string") continue;
-    if (!enumStatePath.test(exp.path)) continue;
-    warnings.push(
-      `smoke.expect state '${exp.path}' uses string literal '${exp.value}'; prefer numeric/count fields such as score, lives, level, or progress over enum-state assertions`,
-    );
+    if (typeof exp.value === "string" && enumStatePath.test(exp.path)) {
+      warnings.push(
+        `smoke.expect state '${exp.path}' uses string literal '${exp.value}'; prefer numeric/count fields such as score, lives, level, or progress over enum-state assertions`,
+      );
+    }
+    if (isTautologicalStateExpect(exp)) {
+      warnings.push(
+        `smoke.expect state '${exp.path}' ${exp.operator ?? "=="} ${JSON.stringify(exp.value)} is likely initial/tautological evidence; use a changed numeric value or a mechanic-specific milestone instead`,
+      );
+    }
   }
 
   return warnings;
+}
+
+const HIGH_FREQUENCY_MILESTONE_RE = /hit|damage|destroy|score|combo|collision|collide|hurt|brick|kill|shot|bullet|fire|attack|命中|伤害|销毁|击碎|击中|得分|连击|碰撞|受击/u;
+
+function validateMilestoneFrequencyHints(plan) {
+  const warnings = [];
+  for (const exp of asArray(plan.smoke?.expect).filter(isPlainObject)) {
+    if (exp.type !== "milestone") continue;
+    if (!HIGH_FREQUENCY_MILESTONE_RE.test(String(exp.id ?? ""))) continue;
+    if (Number.isFinite(exp.minIntervalMs) || Number.isFinite(exp.maxOccurrencesInWindow)) continue;
+    warnings.push(
+      `smoke.expect milestone '${exp.id}' looks high-frequency; consider minIntervalMs or maxOccurrencesInWindow/windowMs so burst loops are observable without validator rewriting plan.json`,
+    );
+  }
+  return warnings;
+}
+
+function isTautologicalStateExpect(exp) {
+  const path = String(exp.path ?? "");
+  const operator = exp.operator ?? "==";
+  const value = exp.value;
+  if (operator === ">=" && typeof value === "number" && value <= 0) {
+    return /score|combo|count|progress|balls?|ballCount|level|lives|life|health|hp/u.test(path);
+  }
+  if (operator === ">=" && value === 1 && /(^|\.)(level|stage|wave|lives|life|health|hp)$/iu.test(path)) {
+    return true;
+  }
+  return false;
 }
 
 function schemaWithRuntimeCompatibility(schema) {
@@ -277,7 +389,7 @@ function validateDesignAnchors(caseDir, plan) {
   const bad = [];
   let hasStableAnchor = false;
 
-  for (const mechanic of plan.requiredMechanics ?? []) {
+  for (const mechanic of asArray(plan.requiredMechanics).filter(isPlainObject)) {
     const refs = derivedFromList(mechanic.derivedFrom);
     if (refs.length === 0) {
       bad.push(`${mechanic.name}: <missing>`);
@@ -379,8 +491,8 @@ function scopeLeakWarnings(caseDir, plan) {
 
   const chunks = parseDecisionAChunks(readFileSync(decisionsPath, "utf8"));
   const planText = [
-    ...(plan.requiredMechanics ?? []).map((mechanic) => mechanic.name),
-    ...(plan.acceptance?.mustHave ?? []).map((mustHave) => mustHave.text),
+    ...asArray(plan.requiredMechanics).filter(isPlainObject).map((mechanic) => mechanic.name),
+    ...asArray(plan.acceptance?.mustHave).filter(isPlainObject).map((mustHave) => mustHave.text),
   ]
     .join("\n")
     .toLowerCase();
@@ -419,7 +531,14 @@ export function validatePlan(caseDir) {
 
   try {
     if (!existsSync(planPath)) {
-      result.errors.push(`missing ${result.path}`);
+      result.errors.push(
+        diagnostic({
+          code: "plan-missing",
+          message: `missing ${result.path}`,
+          severity: "error",
+          skillRef: SKILL_REFS.schema,
+        }),
+      );
       return result;
     }
 
@@ -430,17 +549,61 @@ export function validatePlan(caseDir) {
     const validate = ajv.compile(schema);
     const schemaOk = validate(plan);
     const schemaErrors = schemaOk ? [] : formatAjvErrors(validate.errors);
-    const contractErrors = schemaOk ? validateAcceptanceContract(plan) : [];
-    const designAnchorErrors = schemaOk ? validateDesignAnchors(caseDir, plan) : [];
-    const smokeWarnings = schemaOk ? validateSmokeSafety(plan) : [];
-    const scopeWarnings = schemaOk ? scopeLeakWarnings(caseDir, plan) : [];
+    const canRunStaticChecks = isPlainObject(plan);
+    const contractErrors = canRunStaticChecks
+      ? messagesToDiagnostics(validateAcceptanceContract(plan), {
+          code: "acceptance-contract",
+          severity: "error",
+          path: "specs/plan.json/acceptance",
+          skillRef: SKILL_REFS.acceptance,
+        })
+      : [];
+    const designAnchorErrors = canRunStaticChecks
+      ? messagesToDiagnostics(validateDesignAnchors(caseDir, plan), {
+          code: "design-anchor-missing",
+          severity: "error",
+          path: "specs/plan.json/requiredMechanics",
+          skillRef: SKILL_REFS.designAnchor,
+        })
+      : [];
+    const smokeWarnings = canRunStaticChecks
+      ? messagesToDiagnostics(validateSmokeSafety(plan), {
+          code: "smoke-safety-warning",
+          severity: "warn",
+          path: "specs/plan.json/smoke/expect",
+          skillRef: SKILL_REFS.smokeSafety,
+        })
+      : [];
+    const frequencyWarnings = canRunStaticChecks
+      ? messagesToDiagnostics(validateMilestoneFrequencyHints(plan), {
+          code: "milestone-frequency-suggestion",
+          severity: "warn",
+          path: "specs/plan.json/smoke/expect",
+          skillRef: SKILL_REFS.frequency,
+        })
+      : [];
+    const scopeWarnings = canRunStaticChecks
+      ? messagesToDiagnostics(scopeLeakWarnings(caseDir, plan), {
+          code: "scope-leak",
+          severity: "warn",
+          path: "docs/decisions.md",
+          skillRef: SKILL_REFS.scope,
+        })
+      : [];
     result.ok = schemaOk && contractErrors.length === 0 && designAnchorErrors.length === 0;
     result.status = result.ok ? "pass" : "fail";
     result.errors = [...schemaErrors, ...contractErrors, ...designAnchorErrors];
-    result.warnings = [...smokeWarnings, ...scopeWarnings];
+    result.warnings = [...smokeWarnings, ...frequencyWarnings, ...scopeWarnings];
     return result;
   } catch (error) {
-    result.errors.push(error instanceof Error ? error.message : String(error));
+    result.errors.push(
+      diagnostic({
+        code: "plan-validation-exception",
+        message: error instanceof Error ? error.message : String(error),
+        severity: "error",
+        skillRef: SKILL_REFS.schema,
+      }),
+    );
     return result;
   } finally {
     writeResult(caseDir, result);
@@ -456,7 +619,9 @@ function main() {
 
   const caseDir = resolve(REPO, caseArg);
   const result = validatePlan(caseDir);
-  const summary = result.errors.join("; ") || result.path;
+  const compact = process.argv.includes("--compact");
+  const issues = [...result.errors, ...result.warnings];
+  const summary = formatDiagnostics(compact ? issues.slice(0, 3) : issues) || result.path;
   console.log(`${result.status === "pass" ? "PASS" : "FAIL"} validate_plan: ${summary}`);
   process.exit(result.status === "pass" ? 0 : 1);
 }

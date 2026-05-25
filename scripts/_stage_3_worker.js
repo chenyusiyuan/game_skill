@@ -18,7 +18,7 @@ import {
 } from "./_stage_common.js";
 import { appendPublicDecisionLog, deriveMechanicAnchor, readEvolutionContext } from "./_evolution_context.js";
 import { evaluateMustNot } from "./_mustnot_evaluator.js";
-import { validatePlan } from "./validate_plan.js";
+import { formatDiagnostics, validatePlan } from "./validate_plan.js";
 
 const PROGRESS_MECHANIC = {
   name: "destroyed-brick-progress",
@@ -94,7 +94,7 @@ export async function runStage3({ casePath, subtask, evolutionContext }) {
     });
     const planCheck = validatePlan(caseDir);
     if (!planCheck.ok) {
-      throw new Error(`plan invalid after new feature contract: ${planCheck.errors.join("; ")}`);
+      throw new Error(`plan invalid after new feature contract: ${formatDiagnostics(planCheck.errors)}`);
     }
     patchFeatureCode(scenePath, {
       destroyProgress: isDestroyProgressRequest(text),

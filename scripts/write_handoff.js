@@ -27,6 +27,12 @@ function previewHealthStatus(preview) {
   return "missing";
 }
 
+function mustNotWarnings(delivery) {
+  const diagnosticsWarnings = delivery?.diagnostics?.mustNotWarnings;
+  if (Array.isArray(diagnosticsWarnings)) return diagnosticsWarnings.slice(0, 8);
+  return (delivery?.warnings ?? []).filter((warning) => warning?.kind === "mustnot-warning").slice(0, 8);
+}
+
 export function buildHandoff({ plan, delivery, preview }) {
   const previewHealth = previewHealthStatus(preview);
   const deliveryEvidence = deliveryEvidenceStatus(delivery);
@@ -46,6 +52,7 @@ export function buildHandoff({ plan, delivery, preview }) {
       previewReason: preview?.reason ?? null,
       failedExpects: (delivery?.detail?.diagnostic?.failedExpects ?? []).slice(0, 8),
       visualWarnings: (delivery?.qualityHints?.visual?.warnings ?? []).slice(0, 8),
+      mustnotWarnings: mustNotWarnings(delivery),
     },
     launchCommand: preview?.launchCommand ?? null,
     screenshots: preview?.screenshots ?? {},

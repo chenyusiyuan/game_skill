@@ -25,6 +25,7 @@ try {
       status: "generation-blocked",
       blockReason: "expect-not-met",
       detail: { diagnostic: { failedExpects: [{ type: "milestone", id: "primary-progress", observed: 0 }] } },
+      diagnostics: { mustNotWarnings: [{ kind: "mustnot-warning", id: "no-auto-win", severity: "warn" }] },
       qualityHints: { visual: { warnings: ["hud-empty"] } },
     }),
     "utf8",
@@ -45,6 +46,7 @@ try {
   assert.equal(record.deliveryStatus, "generation-blocked");
   assert.equal(record.checks.deliveryEvidence, "blocked");
   assert.equal(record.checks.previewHealth, "ready");
+  assert.deepEqual(record.checks.mustnotWarnings, [{ kind: "mustnot-warning", id: "no-auto-win", severity: "warn" }]);
   assert.equal(record.playSummary, "玩家移动挡板反弹球，击碎砖块并累积分数。");
   assert.deepEqual(record.controls, [{ input: "ArrowLeft / ArrowRight", effect: "移动挡板" }]);
   assert.equal(record.followUpPrompt, FOLLOW_UP_PROMPT);

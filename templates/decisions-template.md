@@ -13,13 +13,13 @@
 - `from-genre-knowledge`：来自品类公约或常识。
 - `from-reasoning`：根据当前 case 的约束做出的现场判断。
 
-### A.1 archetype 识别 — 来源: <from-query | from-genre-knowledge | from-reasoning>
+### A.1 OpenGame 交互原型识别 — 来源: <from-query | from-genre-knowledge | from-reasoning>
 
-**Q**: 用户 query 最接近哪个已知 archetype？如果不属于已知 archetype，是否需要自行设计？
+**Q**: 用户 query 最接近哪个 OpenGame 五交互原型？如果不属于五原型，是否需要自行设计？
 
-**A**: <结论。例：雷霆战机接近 shooter；类幸存者生存割草接近 vampire-survivors；若未知则写“未加载 primer，自行设计”。>
+**A**: <结论。只从 platformer / top_down / grid_logic / tower_defense / ui_heavy 中选择，或写“未加载 primer，自行设计”。例：类幸存者生存割草是 top_down；推箱子是 grid_logic；卡牌/剧情/问答是 ui_heavy。>
 
-**依据**: <引用 query 中的关键词、品类公约或当前约束。>
+**依据**: <引用 query 中的物理、视角、输入结构、状态推进方式，而不是题材名。>
 
 **风险**: <误判会带来的实现偏差。>
 
@@ -43,7 +43,27 @@
 
 **风险**: <信息过多或过少的后果。>
 
-### A.4 主闭环与成功信号 — 来源: <from-query | from-genre-knowledge | from-reasoning>
+### A.4 桌面画布与布局取舍 — 来源: <from-query | from-genre-knowledge | from-reasoning>
+
+**Q**: 这个 case 使用 960×720、1280×720 还是 800×600？为什么这个尺寸适合当前玩法？
+
+**A**: <默认选 960×720；需要宽视野时选 1280×720；紧凑玩法可选 800×600 并说明信息密度足够。>
+
+**依据**: <玩家视野、HUD 密度、目标数量、操作精度、smoke viewport 的取舍。>
+
+**风险**: <画布过小会模糊或拥挤；过大会增加 headless pixel readback 压力。>
+
+### A.5 暂停与继续体验 — 来源: <from-genre-knowledge | from-reasoning>
+
+**Q**: 暂停界面如何落地，暂停时需要展示哪些核心信息？
+
+**A**: <Escape/P 切换暂停；显示遮罩、继续提示、核心操作说明；恢复后不重置进度。>
+
+**依据**: <桌面试玩默认需要可中断；暂停不应破坏主循环状态。>
+
+**风险**: <若暂停只停视觉不停止计时/物理，会造成恢复后状态跳变。>
+
+### A.6 主闭环与成功信号 — 来源: <from-query | from-genre-knowledge | from-reasoning>
 
 **Q**: `coreLoop.primaryAction` 和 `coreLoop.successSignal` 分别是什么？
 
@@ -53,7 +73,7 @@
 
 **风险**: <如果反馈太弱，delivery 过了但体验仍会怎样。>
 
-### A.5 必须避开的反例 — 来源: <from-query | from-genre-knowledge | from-reasoning>
+### A.7 必须避开的反例 — 来源: <from-query | from-genre-knowledge | from-reasoning>
 
 **Q**: `mustAvoid` 中除 `default-purple-blue-orbs` 外，还要禁止哪些具体失败形态？
 

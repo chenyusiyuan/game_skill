@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { decideStatus } from "../scripts/check_delivery.js";
+import { decideStatus, mustNotWarningsFromResult } from "../scripts/check_delivery.js";
 
 assert.equal(
   decideStatus({
@@ -123,5 +123,25 @@ const runnerWarningDecision = decideStatus({
 });
 assert.equal(runnerWarningDecision.status, "delivery-with-warnings");
 assert.equal(runnerWarningDecision.warnings[0].kind, "unexpected-milestone");
+
+const mustNotWarnings = mustNotWarningsFromResult({
+  passed: false,
+  violations: [{ id: "no-auto-win", text: "不能自动胜利", evidence: { type: "reverse-mustHave-evidence" } }],
+});
+assert.equal(mustNotWarnings[0].kind, "mustnot-warning");
+assert.equal(mustNotWarnings[0].severity, "warn");
+const mustNotDecision = decideStatus({
+  planValid: { ok: true },
+  build: { ok: true },
+  runnerResult: {
+    ok: true,
+    summary: {},
+    nonblockingTodosCount: 0,
+    warnings: [],
+  },
+  extraWarnings: mustNotWarnings,
+});
+assert.equal(mustNotDecision.status, "delivery-with-warnings", "mustNot warning does not block Stage 1");
+assert.equal(mustNotDecision.warnings[0].kind, "mustnot-warning");
 
 console.log("OK delivery_decision_smoke");

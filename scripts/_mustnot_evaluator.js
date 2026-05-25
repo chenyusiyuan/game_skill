@@ -3,7 +3,7 @@ import { appendEvolutionLog } from "./_evolution_log.js";
 const LIFE_WORDS = /命|生命|life|lives|health|hp|扣命|掉血|失去/u;
 const LIFE_NOT_DEDUCT_RE = /不扣命|不掉命|不掉血|不扣血|不失去生命|不减少生命|不减命/u;
 
-export async function evaluateMustNot({ casePath, plan, runnerResult, subtaskId = null }) {
+export async function evaluateMustNot({ casePath, plan, runnerResult, subtaskId = null, writeLog = true }) {
   const mustNot = plan?.acceptance?.mustNot ?? [];
   if (!Array.isArray(mustNot) || mustNot.length === 0) {
     return { passed: true, violations: [], skipped: [] };
@@ -35,7 +35,7 @@ export async function evaluateMustNot({ casePath, plan, runnerResult, subtaskId 
     }
   }
 
-  if (skipped.length > 0) {
+  if (writeLog && skipped.length > 0) {
     await appendEvolutionLog({
       casePath,
       entry: {
@@ -47,7 +47,7 @@ export async function evaluateMustNot({ casePath, plan, runnerResult, subtaskId 
     });
   }
 
-  if (violations.length > 0) {
+  if (writeLog && violations.length > 0) {
     await appendEvolutionLog({
       casePath,
       entry: {

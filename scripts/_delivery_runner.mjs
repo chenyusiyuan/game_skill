@@ -138,6 +138,7 @@ function summarizeFailedExpects(expectResults) {
       if (result.exp.type === "canvas-change") failed.needed = result.exp.minChangedPixels;
       if (result.exp.type === "milestone") failed.needed = result.exp.minOccurrences ?? 1;
       if (result.exp.type === "state") failed.needed = result.exp.value;
+      if (result.frequency) failed.frequency = result.frequency.checks;
       return failed;
     });
 }
@@ -305,6 +306,55 @@ async function dispatchStep(page, step) {
   throw new Error(`unsupported smoke step type: ${step.type}`);
 }
 
+function maxOccurrencesInWindow(matches, windowMs) {
+  if (!Number.isFinite(windowMs) || windowMs <= 0 || matches.length === 0) return matches.length;
+  let max = 0;
+  let end = 0;
+  const sorted = [...matches].sort((a, b) => a.at - b.at);
+  for (let start = 0; start < sorted.length; start += 1) {
+    while (end < sorted.length && sorted[end].at - sorted[start].at <= windowMs) end += 1;
+    max = Math.max(max, end - start);
+  }
+  return max;
+}
+
+export function evaluateMilestoneFrequency(exp, milestones) {
+  const matches = milestones.filter((milestone) => milestone.id === exp.id && Number.isFinite(milestone.at));
+  const checks = [];
+
+  if (Number.isFinite(exp.minIntervalMs) && matches.length >= 2) {
+    const sorted = [...matches].sort((a, b) => a.at - b.at);
+    const intervals = [];
+    for (let index = 1; index < sorted.length; index += 1) {
+      intervals.push(sorted[index].at - sorted[index - 1].at);
+    }
+    const observedMinIntervalMs = Math.min(...intervals);
+    checks.push({
+      kind: "minIntervalMs",
+      ok: observedMinIntervalMs >= exp.minIntervalMs,
+      expected: exp.minIntervalMs,
+      observed: observedMinIntervalMs,
+    });
+  }
+
+  if (Number.isFinite(exp.maxOccurrencesInWindow)) {
+    const windowMs = Number.isFinite(exp.windowMs) ? exp.windowMs : exp.timeoutMs;
+    const observedMaxOccurrences = maxOccurrencesInWindow(matches, windowMs);
+    checks.push({
+      kind: "maxOccurrencesInWindow",
+      ok: observedMaxOccurrences <= exp.maxOccurrencesInWindow,
+      expected: exp.maxOccurrencesInWindow,
+      observed: observedMaxOccurrences,
+      windowMs,
+    });
+  }
+
+  return {
+    ok: checks.every((check) => check.ok),
+    checks,
+  };
+}
+
 async function collectExpectResults({ page, plan, milestones, changedPixels }) {
   const expectResults = [];
 
@@ -321,13 +371,20 @@ async function collectExpectResults({ page, plan, milestones, changedPixels }) {
     if (exp.type === "milestone") {
       const deadline = Date.now() + exp.timeoutMs;
       const need = exp.minOccurrences ?? 1;
+      const hasFrequencyGate = Number.isFinite(exp.minIntervalMs) || Number.isFinite(exp.maxOccurrencesInWindow);
       while (Date.now() < deadline) {
         const seen = milestones.filter((milestone) => milestone.id === exp.id).length;
-        if (seen >= need) break;
+        if (seen >= need && !hasFrequencyGate) break;
         await page.waitForTimeout(100);
       }
       const seen = milestones.filter((milestone) => milestone.id === exp.id).length;
-      expectResults.push({ exp, ok: seen >= need, observed: seen });
+      const frequency = evaluateMilestoneFrequency(exp, milestones);
+      expectResults.push({
+        exp,
+        ok: seen >= need && frequency.ok,
+        observed: seen,
+        frequency: frequency.checks.length ? frequency : undefined,
+      });
       continue;
     }
 
