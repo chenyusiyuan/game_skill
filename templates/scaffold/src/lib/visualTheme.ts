@@ -7,6 +7,7 @@
  * under CANVAS or when the target has no supported FX component.
  */
 import Phaser from 'phaser';
+import { safeDelay, safeTween } from './safeTimers';
 const TEXTURE_KEYS = {
   circle: '__white_circle',
   square: '__white_square',
@@ -133,7 +134,8 @@ export function burstParticles(scene: Phaser.Scene, x: number, y: number, opts: 
   });
   emitter.setDepth(opts.depth ?? 500);
   emitter.explode(opts.count ?? 16);
-  scene.time.delayedCall(lifespan + 80, () => emitter.destroy());
+  destroyOnSceneEnd(scene, emitter);
+  safeDelay(scene, lifespan + 80, () => emitter.destroy());
   return emitter;
 }
 /** Creates a floating damage/value number that destroys itself after tweening. */
@@ -146,7 +148,8 @@ export function damageNumber(scene: Phaser.Scene, x: number, y: number, value: n
     stroke: '#000000',
     strokeThickness: 4,
   }).setOrigin(0.5).setDepth(opts.depth ?? 600);
-  scene.tweens.add({ targets: text, y: y - (opts.rise ?? 34), alpha: 0, scale: 1.25, duration: opts.duration ?? 650, ease: 'Cubic.easeOut', onComplete: () => text.destroy() });
+  destroyOnSceneEnd(scene, text);
+  safeTween(scene, { targets: text, y: y - (opts.rise ?? 34), alpha: 0, scale: 1.25, duration: opts.duration ?? 650, ease: 'Cubic.easeOut', onComplete: () => text.destroy() });
   return text;
 }
 /** Draws an expanding ring flash and destroys it when fully transparent. */
@@ -155,7 +158,8 @@ export function flashRing(scene: Phaser.Scene, x: number, y: number, color: numb
   const endRadius = opts.endRadius ?? 44;
   const ring = scene.add.graphics().setPosition(x, y).setDepth(opts.depth ?? 550);
   ring.lineStyle(opts.lineWidth ?? 3, color, opts.alpha ?? 1).strokeCircle(0, 0, startRadius);
-  scene.tweens.add({ targets: ring, scale: endRadius / Math.max(1, startRadius), alpha: 0, duration: opts.duration ?? 420, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
+  destroyOnSceneEnd(scene, ring);
+  safeTween(scene, { targets: ring, scale: endRadius / Math.max(1, startRadius), alpha: 0, duration: opts.duration ?? 420, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
   return ring;
 }
 /** Plays a generic level-up flash using camera flash, particles, and a ring. */
@@ -203,7 +207,10 @@ export function hitImpact(scene: Phaser.Scene, preset: HitImpactPreset): void {
   screenShake(scene, p.shake);
   if (p.stop > 0) {
     scene.time.timeScale = preset === 'heavy' ? 0.12 : 0.22;
-    scene.time.delayedCall(p.stop, () => { scene.time.timeScale = 1; });
+    const resetTimeScale = (): void => { scene.time.timeScale = 1; };
+    safeDelay(scene, p.stop, resetTimeScale);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, resetTimeScale);
+    scene.events.once(Phaser.Scenes.Events.DESTROY, resetTimeScale);
   }
 }
 /** Plays a boss-entry red flash, shake, and top warning bar that self-destroys. */
@@ -215,7 +222,8 @@ export function bossEntry(scene: Phaser.Scene, opts: BossEntryOpts = {}): Phaser
   screenShake(scene, 'explosion');
   const bar = scene.add.graphics().setScrollFactor(0).setDepth(opts.depth ?? 900);
   bar.fillStyle(color, 0.9).fillRect(0, 0, camera.width, opts.barHeight ?? 18);
-  scene.tweens.add({ targets: bar, alpha: 0, delay: Math.max(0, duration - 300), duration: 300, onComplete: () => bar.destroy() });
+  destroyOnSceneEnd(scene, bar);
+  safeTween(scene, { targets: bar, alpha: 0, delay: Math.max(0, duration - 300), duration: 300, onComplete: () => bar.destroy() });
   return bar;
 }
 /** Adds a WebGL glow FX when supported; returns null under CANVAS or unsupported targets. */
@@ -258,7 +266,7 @@ export function trail(scene: Phaser.Scene, target: Phaser.GameObjects.GameObject
   target.once(Phaser.GameObjects.Events.DESTROY, stop);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, stop);
   scene.events.once(Phaser.Scenes.Events.DESTROY, stop);
-  if (opts.durationMs !== undefined) scene.time.delayedCall(opts.durationMs, stop);
+  if (opts.durationMs !== undefined) safeDelay(scene, opts.durationMs, stop);
   return { emitter, stop };
 }
 /** Plays a one-shot expanding ring used for explosions or area-effect impacts. */
@@ -269,7 +277,8 @@ export function shockwave(scene: Phaser.Scene, x: number, y: number, opts: Shock
   const color = opts.color ?? 0xffffff;
   const ring = scene.add.graphics().setPosition(x, y).setDepth(opts.depth ?? 540);
   ring.lineStyle(thickness, color, opts.alpha ?? 1).strokeCircle(0, 0, startRadius);
-  scene.tweens.add({
+  destroyOnSceneEnd(scene, ring);
+  safeTween(scene, {
     targets: ring,
     scale: endRadius / Math.max(1, startRadius),
     alpha: 0,
@@ -278,4 +287,12 @@ export function shockwave(scene: Phaser.Scene, x: number, y: number, opts: Shock
     onComplete: () => ring.destroy(),
   });
   return ring;
+}
+
+function destroyOnSceneEnd(scene: Phaser.Scene, object: Phaser.GameObjects.GameObject): void {
+  const destroy = (): void => {
+    if (object.scene) object.destroy();
+  };
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, destroy);
+  scene.events.once(Phaser.Scenes.Events.DESTROY, destroy);
 }

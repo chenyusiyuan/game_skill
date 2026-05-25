@@ -12,6 +12,16 @@ import Phaser from 'phaser';
 
 type GameObjectWithBody = Phaser.GameObjects.GameObject & { x: number; y: number };
 type ArcadeTarget = Phaser.GameObjects.GameObject | Phaser.GameObjects.GameObject[] | Phaser.GameObjects.Group;
+type OverlapKey = string | number | symbol;
+type BodyLike = Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody;
+type DeactivatableGameObject = Phaser.GameObjects.GameObject & {
+  body?: BodyLike;
+  setActive?: (active: boolean) => Phaser.GameObjects.GameObject;
+  setVisible?: (visible: boolean) => Phaser.GameObjects.GameObject;
+};
+
+const overlapIds = new WeakMap<object, number>();
+let nextOverlapId = 1;
 
 /** Options for attachDynamicBody. */
 export interface DynamicBodyOpts {
@@ -37,6 +47,19 @@ export interface StaticBodyOpts {
 export interface CollisionContact {
   normalX: number;
   normalY: number;
+}
+
+/** Options for wireOverlapOnce. */
+export interface OverlapOnceOpts<A extends Phaser.GameObjects.GameObject, B extends Phaser.GameObjects.GameObject> {
+  key?: (a: A, b: B) => OverlapKey;
+  deactivateSecond?: boolean;
+  destroySecond?: boolean;
+}
+
+/** Options for wireOverlapCooldown. */
+export interface OverlapCooldownOpts<A extends Phaser.GameObjects.GameObject, B extends Phaser.GameObjects.GameObject> {
+  key?: (a: A, b: B) => OverlapKey;
+  cooldownMs?: number;
 }
 
 /** Attaches a dynamic Arcade body and applies the standard suite of options in safe order. */
@@ -148,6 +171,79 @@ export function wireOverlap<A extends Phaser.GameObjects.GameObject, B extends P
     b as ArcadeColliderType,
     (objA, objB) => onOverlap(objA as unknown as A, objB as unknown as B),
   );
+}
+
+/**
+ * Registers an overlap that fires once per object pair. Use it for pickups,
+ * one-shot triggers, or projectile hits where Arcade may report overlap for
+ * several frames before the touched object is removed.
+ */
+export function wireOverlapOnce<A extends Phaser.GameObjects.GameObject, B extends Phaser.GameObjects.GameObject>(
+  scene: Phaser.Scene,
+  a: ArcadeTarget,
+  b: ArcadeTarget,
+  onOverlap: (a: A, b: B) => void,
+  opts: OverlapOnceOpts<A, B> = {},
+): Phaser.Physics.Arcade.Collider {
+  const seen = new Set<OverlapKey>();
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => seen.clear());
+  scene.events.once(Phaser.Scenes.Events.DESTROY, () => seen.clear());
+  return wireOverlap<A, B>(scene, a, b, (objA, objB) => {
+    const key = opts.key ? opts.key(objA, objB) : defaultOverlapKey(objA, objB);
+    if (seen.has(key)) return;
+    seen.add(key);
+    onOverlap(objA, objB);
+    if (opts.destroySecond) objB.destroy();
+    else if (opts.deactivateSecond) deactivateGameObject(objB);
+  });
+}
+
+/**
+ * Registers an overlap that rate-limits callbacks per object pair. Use it for
+ * hurt iframes, contact damage, lingering hazards, or bullets that may remain
+ * active briefly after a first contact.
+ */
+export function wireOverlapCooldown<A extends Phaser.GameObjects.GameObject, B extends Phaser.GameObjects.GameObject>(
+  scene: Phaser.Scene,
+  a: ArcadeTarget,
+  b: ArcadeTarget,
+  onOverlap: (a: A, b: B) => void,
+  opts: OverlapCooldownOpts<A, B> = {},
+): Phaser.Physics.Arcade.Collider {
+  const cooldownMs = Math.max(0, opts.cooldownMs ?? 250);
+  const lastByPair = new Map<OverlapKey, number>();
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => lastByPair.clear());
+  scene.events.once(Phaser.Scenes.Events.DESTROY, () => lastByPair.clear());
+  return wireOverlap<A, B>(scene, a, b, (objA, objB) => {
+    const key = opts.key ? opts.key(objA, objB) : defaultOverlapKey(objA, objB);
+    const now = scene.time.now;
+    const last = lastByPair.get(key);
+    if (last !== undefined && now - last < cooldownMs) return;
+    lastByPair.set(key, now);
+    onOverlap(objA, objB);
+  });
+}
+
+function defaultOverlapKey(a: Phaser.GameObjects.GameObject, b: Phaser.GameObjects.GameObject): OverlapKey {
+  return `${objectId(a)}:${objectId(b)}`;
+}
+
+function objectId(value: object): number {
+  const existing = overlapIds.get(value);
+  if (existing !== undefined) return existing;
+  const id = nextOverlapId;
+  nextOverlapId += 1;
+  overlapIds.set(value, id);
+  return id;
+}
+
+function deactivateGameObject(go: Phaser.GameObjects.GameObject): void {
+  const object = go as DeactivatableGameObject;
+  object.setActive?.(false);
+  object.setVisible?.(false);
+  if (!object.body) return;
+  object.body.enable = false;
+  if (object.body instanceof Phaser.Physics.Arcade.Body) object.body.setVelocity(0, 0);
 }
 
 type ArcadePhysicsCallback = Phaser.Types.Physics.Arcade.ArcadePhysicsCallback;

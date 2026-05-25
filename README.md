@@ -52,7 +52,7 @@ node scripts/triage_router.js cases/<slug> --query "继续打磨收尾" --local
 node scripts/run_evolution.js cases/<slug> --query "修复输入响应并美化 HUD" --local
 ```
 
-`prepare_case_game.js` 会复制 `game/src/lib/HELPERS.md`。Phase B 先读这个索引，再按当前机制只打开相关 helper 源码，不需要把所有 helper 全部读进上下文。
+`prepare_case_game.js` 会复制 `game/src/lib/HELPERS.md`。Phase B 先读这个索引，再按当前机制只打开相关 helper 源码，不需要把所有 helper 全部读进上下文。常用高频 helper 包括 `arcadePhysics.ts`、`objectPool.ts`、`audioSafe.ts`、`uiButton.ts`、`visualTheme.ts`、`safeTimers.ts`，只做可用性与质量引导，不新增 Stage 1 硬门禁。
 
 Phase A 先写 `docs/DESIGN.md`、`docs/decisions.md`，再写 `specs/plan.json`。Phase C 会把视觉 warn、rubric、scope 和 LOC 分层统计合并到 `eval/delivery.json.qualityHints`，作为后续演进输入；这些 quality hints 不改变 delivery verdict。
 

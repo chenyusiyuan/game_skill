@@ -266,12 +266,15 @@ update(_time: number, delta: number) {
 - `lib/hudBuilder.ts`：meterBar、statusText、iconSlot
 - `lib/progressionMath.ts`：linearRamp、waveScale、thresholdCurve、clamp、lerp
 - `lib/arcadePhysics.ts`：Arcade body、静态碰撞体、速度驱动、collider / overlap；不要手动改 `body.position`
+- `lib/objectPool.ts`：projectile / enemy / pickup / wave spawn 的 active、visible、body enable/reset 统一对象池
+- `lib/audioSafe.ts`：可选 SFX / loop music / mute，安全处理缺音频素材、浏览器锁音频和 scene shutdown
+- `lib/uiButton.ts`：暂停、开始、重开、音量、结算按钮，封装 interactive、hover/down/disabled、stopPropagation、fixed-to-camera
 - `lib/procSprite.ts`：缓存矩形、圆、环、三角形纹理，适合大量重复实体
 - `lib/inputExtras.ts`：暂停、重开、技能键等单键 / key bag 场景
 - `lib/cameraRig.ts`：大地图跟随、camera bounds 与 physics bounds 同步
 - `lib/safeTimers.ts`：scene shutdown / restart 时自动清理 timer 与 tween
 
-强烈建议至少调用 2 个 helper；仅 import 不算调用。低调用会进入 `delivery.json.qualityHints.warnings` 的 `low-helper-usage`，warn-only，不阻塞 delivery。
+Phase B 仍先读 `lib/HELPERS.md`，再按当前机制选择 1-2 个 helper 源码：例如碰撞命中选 `arcadePhysics.ts`，弹幕/刷怪/拾取选 `objectPool.ts`，按钮界面选 `uiButton.ts`，可选音频选 `audioSafe.ts`。强烈建议至少调用 2 个 helper；仅 import 不算调用。低调用会进入 `delivery.json.qualityHints.warnings` 的 `low-helper-usage`，warn-only，不阻塞 delivery。
 
 ### B.2 decisions.md B 段(in-flight 实现期决策)
 

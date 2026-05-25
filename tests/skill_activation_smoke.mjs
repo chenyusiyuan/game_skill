@@ -102,6 +102,9 @@ for (const helperName of [
   "progressionMath.ts",
   "cameraRig.ts",
   "safeTimers.ts",
+  "objectPool.ts",
+  "audioSafe.ts",
+  "uiButton.ts",
 ]) {
   assert.match(helperIndex, new RegExp(helperName.replace(".", "\\."), "u"), `helper index must mention ${helperName}`);
 }
