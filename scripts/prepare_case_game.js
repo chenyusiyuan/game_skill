@@ -14,9 +14,22 @@ const SCAFFOLD_FILES = [
   ["vite.config.js", "game/vite.config.js"],
   ["main.ts", "game/src/main.ts"],
   ["milestone.ts", "game/src/milestone.ts"],
+  ["src/lib/visualTheme.ts", "game/src/lib/visualTheme.ts"],
+  ["src/lib/inputController.ts", "game/src/lib/inputController.ts"],
+  ["src/lib/hudBuilder.ts", "game/src/lib/hudBuilder.ts"],
+  ["src/lib/progressionMath.ts", "game/src/lib/progressionMath.ts"],
 ];
 
-export function prepareCaseGame(caseDir, { overwrite = "kept-only" } = {}) {
+const TEMPLATE_FILES = [
+  ["templates/design-template.md", "docs/DESIGN.md"],
+  ["templates/decisions-template.md", "docs/decisions.md"],
+];
+
+function isKeptScaffold(source) {
+  return KEEP_SCAFFOLD.has(source) || (source.startsWith("src/lib/") && source.endsWith(".ts"));
+}
+
+export function prepareCaseGame(caseDir, { overwrite = "kept-only", reset = false } = {}) {
   if (!existsSync(join(caseDir, "specs/plan.json"))) {
     throw new Error(`prepare_case_game requires specs/plan.json at ${caseDir}`);
   }
@@ -26,9 +39,16 @@ export function prepareCaseGame(caseDir, { overwrite = "kept-only" } = {}) {
     mkdirSync(dirname(target), { recursive: true });
     if (existsSync(target)) {
       if (overwrite === false) continue;
-      if (overwrite === "kept-only" && !KEEP_SCAFFOLD.has(source)) continue;
+      if (overwrite === "kept-only" && !isKeptScaffold(source)) continue;
     }
     copyFileSync(join(SCAFFOLD_DIR, source), target);
+  }
+
+  for (const [source, destination] of TEMPLATE_FILES) {
+    const target = join(caseDir, destination);
+    mkdirSync(dirname(target), { recursive: true });
+    if (existsSync(target) && !reset && overwrite !== true) continue;
+    copyFileSync(join(REPO, source), target);
   }
 
   return join(caseDir, "game");
@@ -42,7 +62,7 @@ function main() {
   }
 
   try {
-    const gameDir = prepareCaseGame(resolve(REPO, caseArg));
+    const gameDir = prepareCaseGame(resolve(REPO, caseArg), { reset: process.argv.includes("--reset") });
     console.log(`OK prepare_case_game: ${gameDir}`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));

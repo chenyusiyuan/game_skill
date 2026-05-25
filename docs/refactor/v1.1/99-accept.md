@@ -97,7 +97,7 @@ query 例:"生成一个打砖块小游戏,玩家用底部挡板反弹球击碎�
 | 6 | 24 决策每条能在某 phase 找到对应实施段落 | 跑 plan 文件 § "24 条锁定决策"逐条 grep |
 | 7 | 不引入新 npm 依赖 | grep package.json diff = 0 |
 | 8 | 不动锁定边界(SKILL.md Stage 1 既有判定 / cases 既有 / evolution-docs / schemas) | git diff 对应文件检查 |
-| 9 | feedbackMoments 全清(全 6 文件 grep 不到) | `grep -r feedbackMoments docs/refactor/v1.1/` 应为空 |
+| 9 | 旧 action-bias anchor 名全清(全 6 文件 grep 不到) | 对应 grep 应为空 |
 | 10 | 20-lib.md visualTheme 段标 CANVAS-safe vs WebGL-only 边界 | grep `CANVAS-safe` / `WebGL only` 在 20-lib.md |
 | 11 | 30-scripts.md check_delivery.js 改动段含 4 字段 LOC | grep `scaffoldLoc / businessLoc / helperImportCount / helperCallCount` |
 | 12 | 30-scripts.md 明确 prepare_case_game.js **不**自动复制 primer + load_primer.js 仅按显式名加载 | grep "不**含字符串 `archetype-primer`" 与 unknown-archetype 处理 |

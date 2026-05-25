@@ -8,6 +8,8 @@ const forbiddenVersionText = new RegExp(forbiddenTokens.join("|"), "u");
 const skill = fs.readFileSync("SKILL.md", "utf8");
 assert.match(skill, /^# mini-game Skill$/m, "SKILL.md must use the current unversioned title");
 assert.match(skill, /specs\/plan\.json/, "Phase A must reference plan.json");
+assert.match(skill, /docs\/DESIGN\.md[\s\S]*docs\/decisions\.md[\s\S]*specs\/plan\.json/u, "Phase A must allow DESIGN, decisions, and plan artifacts");
+assert.doesNotMatch(skill, /只产 `cases\/<PROJECT>\/specs\/plan\.json`/u, "Phase A must not claim plan.json is the only output");
 assert.match(skill, /schemas\/plan\.schema\.json/, "Phase A must reference plan.schema.json");
 assert.match(skill, /node scripts\/validate_plan\.js/, "Phase A must document validate_plan.js");
 assert.match(skill, /node scripts\/check_delivery\.js/, "Phase C must document check_delivery.js");
@@ -47,6 +49,8 @@ assert.doesNotMatch(agents, forbiddenVersionText, "AGENTS.md must not contain ve
 
 const readme = fs.readFileSync("README.md", "utf8");
 assert.match(readme, /node scripts\/check_delivery\.js/, "README.md must document current delivery");
+assert.match(readme, /templates\/design-template\.md/, "README.md must document v1.1 design template");
+assert.match(readme, /qualityHints/, "README.md must document qualityHints");
 assert.match(readme, /npm test/, "README.md must document npm test");
 assert.doesNotMatch(readme, forbiddenVersionText, "README.md must not contain version-prefix wording");
 

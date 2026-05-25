@@ -38,7 +38,7 @@
 - 不修改 `scripts/`(Phase 3 才动)
 - 不修改 `SKILL.md`(Phase 4 才动)
 - 不在任何模板里硬编码品类专属代码
-- 不写 `feedbackMoments` / `progressionFeel.powerCurve` 等 action-bias 旧词(已替换为 `coreLoop` / `temporalShape`)
+- 不写旧 action-bias anchor 名(已替换为 `coreLoop` / `temporalShape`)
 
 ## Interface contracts
 
@@ -55,7 +55,7 @@
 > 必填 anchor: `visualIdentity` / `uiSurfaces` / `coreLoop` / `mustAvoid`
 > 选填 anchor: `temporalShape`
 >
-> 不要使用 `feedbackMoments` / `progressionFeel.powerCurve` 等 action-bias 旧词
+> 不要使用旧 action-bias anchor 名
 > (已废弃,会触发 warn-only 检查)。
 
 ## visualIdentity
@@ -336,7 +336,7 @@ primer 是参考,不是法律。如果 case 的 query 明确说"我要的不是�
 跑下列断言,全部通过:
 
 1. ✅ `templates/design-template.md` 存在,grep 能找到 4 个 anchor 关键字 `visualIdentity` / `uiSurfaces` / `coreLoop` / `mustAvoid`
-2. ✅ `templates/design-template.md` 不含字符串 `feedbackMoments`(grep 应该返回空)
+2. ✅ `templates/design-template.md` 不含旧 action-bias anchor 名(对应 grep 应该返回空)
 3. ✅ `templates/design-template.md` 跨品类样例覆盖 ≥3 品类(雷霆战机 / Wordle / 城市建造 必含,其他可加)
 4. ✅ `templates/decisions-template.md` 存在,含 A / B / C 三段位 + 命名约束段(禁用"真实思考链")
 5. ✅ `templates/decisions-template.md` 第一题强制是 archetype 识别(A.1)

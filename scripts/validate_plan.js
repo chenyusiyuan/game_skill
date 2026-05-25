@@ -192,6 +192,214 @@ function validateSmokeSafety(plan) {
   return warnings;
 }
 
+function schemaWithRuntimeCompatibility(schema) {
+  const copy = JSON.parse(JSON.stringify(schema));
+  const mechanicProperties = copy?.properties?.requiredMechanics?.items?.properties;
+  if (mechanicProperties) {
+    mechanicProperties.derivedFrom = {
+      oneOf: [
+        { type: "string", minLength: 1 },
+        { type: "array", minItems: 1, items: { type: "string", minLength: 1 } },
+      ],
+    };
+  }
+  return copy;
+}
+
+function sectionText(markdown, heading) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  const match = markdown.match(new RegExp(`(?:^|\\n)##\\s+${escaped}\\b[\\s\\S]*?(?=\\n##\\s+|\\n---\\s*$|$)`, "u"));
+  return match?.[0] ?? "";
+}
+
+function designContractText(markdown) {
+  const sampleIndex = markdown.search(/\n---\s*\n\s*##\s*跨品类样例/u);
+  return sampleIndex >= 0 ? markdown.slice(0, sampleIndex) : markdown;
+}
+
+function normalizeMustAvoidItem(item) {
+  return item
+    .replace(/\s+#.*$/u, "")
+    .replace(/[`"'“”‘’]/gu, "")
+    .replace(/[。.,，;；]+$/u, "")
+    .trim();
+}
+
+function mustAvoidAnchorVariants(item) {
+  const normalized = normalizeMustAvoidItem(item);
+  if (!normalized || /^<.*>$/u.test(normalized)) return [];
+  const slug = normalized
+    .toLowerCase()
+    .replace(/\s+/gu, "-")
+    .replace(/[^\p{Letter}\p{Number}\u4e00-\u9fff-]+/gu, "-")
+    .replace(/^-+|-+$/gu, "");
+  return Array.from(new Set([normalized, slug].filter(Boolean))).map((value) => `mustAvoid.${value}`);
+}
+
+function extractDesignAnchors(markdown) {
+  const contract = designContractText(markdown);
+  const anchors = new Set();
+  const visualIdentity = sectionText(contract, "visualIdentity");
+  const uiSurfaces = sectionText(contract, "uiSurfaces");
+  const coreLoop = sectionText(contract, "coreLoop");
+  const mustAvoid = sectionText(contract, "mustAvoid");
+
+  if (/visualIdentity\s*:/u.test(visualIdentity) && /palette\s*:/u.test(visualIdentity)) {
+    anchors.add("visualIdentity.palette");
+  }
+  if (/uiSurfaces\s*:/u.test(uiSurfaces) && /primary\s*:/u.test(uiSurfaces)) {
+    anchors.add("uiSurfaces.primary");
+  }
+  if (/coreLoop\s*:/u.test(coreLoop) && /primaryAction\s*:/u.test(coreLoop)) {
+    anchors.add("coreLoop.primaryAction");
+  }
+  for (const line of mustAvoid.split(/\r?\n/u)) {
+    const match = line.match(/^\s*-\s+(.+)$/u);
+    if (!match) continue;
+    for (const anchor of mustAvoidAnchorVariants(match[1])) anchors.add(anchor);
+  }
+
+  return Array.from(anchors).sort();
+}
+
+function derivedFromList(value) {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.filter((item) => typeof item === "string");
+  return [];
+}
+
+function validateDesignAnchors(caseDir, plan) {
+  const designPath = join(caseDir, "docs/DESIGN.md");
+  if (!existsSync(designPath)) return [];
+
+  const availableAnchors = extractDesignAnchors(readFileSync(designPath, "utf8"));
+  const available = new Set(availableAnchors);
+  const bad = [];
+  let hasStableAnchor = false;
+
+  for (const mechanic of plan.requiredMechanics ?? []) {
+    const refs = derivedFromList(mechanic.derivedFrom);
+    if (refs.length === 0) {
+      bad.push(`${mechanic.name}: <missing>`);
+      continue;
+    }
+    for (const ref of refs) {
+      if (available.has(ref)) {
+        hasStableAnchor = true;
+      } else {
+        bad.push(`${mechanic.name}: ${ref}`);
+      }
+    }
+  }
+
+  if (!hasStableAnchor && bad.length === 0) {
+    bad.push("<all>: <no stable design anchor referenced>");
+  }
+
+  if (bad.length === 0) return [];
+  return [
+    `generation-blocked: design-anchor-missing; bad derivedFrom: ${bad.join(", ")}; available anchors: ${availableAnchors.join(", ") || "<none>"}`,
+  ];
+}
+
+function extractSourceTag(chunk) {
+  const sourceLine = chunk.split(/\r?\n/u).find((line) => /来源[:：]/u.test(line));
+  if (!sourceLine || sourceLine.includes("|")) return null;
+  const match = sourceLine.match(/来源[:：]\s*<?\s*(from-query|from-genre-knowledge|from-reasoning)\s*>?/u);
+  return match?.[1] ?? null;
+}
+
+function parseDecisionAChunks(markdown) {
+  const section = markdown.match(/(?:^|\n)##\s+A\.[\s\S]*?(?=\n##\s+B\.|\n##\s+C\.|$)/u)?.[0] ?? "";
+  const chunks = [];
+  for (const chunk of section.split(/(?=^###\s+A\.)/mu)) {
+    const heading = chunk.match(/^###\s+A\.[^\n]+/mu)?.[0];
+    if (!heading) continue;
+    const title = heading
+      .replace(/^###\s+A\.\S+\s*/u, "")
+      .replace(/\s*[—-]\s*来源[:：].*$/u, "")
+      .trim();
+    chunks.push({ title, source: extractSourceTag(chunk), text: chunk });
+  }
+  return chunks;
+}
+
+const SCOPE_TOKEN_STOPWORDS = new Set([
+  "archetype",
+  "case",
+  "from",
+  "query",
+  "source",
+  "risk",
+  "user",
+  "what",
+  "which",
+  "decision",
+  "primary",
+  "visual",
+  "must",
+  "avoid",
+]);
+
+const SCOPE_CJK_STOPWORDS = new Set([
+  "用户",
+  "原文",
+  "要求",
+  "是否",
+  "什么",
+  "这个",
+  "必须",
+  "进入",
+  "主计划",
+  "依据",
+  "风险",
+  "明确",
+  "写了",
+]);
+
+function scopeChunkText(chunk) {
+  const answer = chunk.text.match(/\*\*A\*\*:\s*([^\n]+)/u)?.[1] ?? "";
+  return `${chunk.title}\n${answer}`;
+}
+
+function scopeTokens(text) {
+  const value = String(text ?? "").toLowerCase();
+  const latinTokens = value
+    .split(/[^a-z0-9]+/u)
+    .filter((token) => token.length >= 3 && !/^\d+$/u.test(token) && !SCOPE_TOKEN_STOPWORDS.has(token));
+  const cjkTokens = (value.match(/[\p{Script=Han}][\p{Script=Han}a-z0-9-]{1,24}/gu) ?? []).filter(
+    (token) => !SCOPE_CJK_STOPWORDS.has(token),
+  );
+  return Array.from(new Set([...latinTokens, ...cjkTokens]));
+}
+
+function scopeLeakWarnings(caseDir, plan) {
+  const decisionsPath = join(caseDir, "docs/decisions.md");
+  if (!existsSync(decisionsPath)) return [];
+
+  const chunks = parseDecisionAChunks(readFileSync(decisionsPath, "utf8"));
+  const planText = [
+    ...(plan.requiredMechanics ?? []).map((mechanic) => mechanic.name),
+    ...(plan.acceptance?.mustHave ?? []).map((mustHave) => mustHave.text),
+  ]
+    .join("\n")
+    .toLowerCase();
+  const warnings = [];
+
+  for (const chunk of chunks) {
+    if (chunk.source !== "from-query" || chunk.text.includes("降级理由")) continue;
+    const tokens = scopeTokens(scopeChunkText(chunk));
+    if (tokens.length === 0) continue;
+    if (!tokens.some((token) => planText.includes(token))) {
+      warnings.push(
+        `scope-leak: from-query decision '${chunk.title || "<untitled>"}' not reflected in plan.requiredMechanics[].name or acceptance.mustHave[].text`,
+      );
+    }
+  }
+
+  return warnings;
+}
+
 function writeResult(caseDir, result) {
   const evalDir = join(caseDir, "eval");
   mkdirSync(evalDir, { recursive: true });
@@ -215,7 +423,7 @@ export function validatePlan(caseDir) {
       return result;
     }
 
-    const schema = JSON.parse(readFileSync(SCHEMA_PATH, "utf8"));
+    const schema = schemaWithRuntimeCompatibility(JSON.parse(readFileSync(SCHEMA_PATH, "utf8")));
     const plan = JSON.parse(readFileSync(planPath, "utf8"));
     const ajv = new Ajv({ allErrors: true, strict: false });
     addFormats(ajv);
@@ -223,11 +431,13 @@ export function validatePlan(caseDir) {
     const schemaOk = validate(plan);
     const schemaErrors = schemaOk ? [] : formatAjvErrors(validate.errors);
     const contractErrors = schemaOk ? validateAcceptanceContract(plan) : [];
+    const designAnchorErrors = schemaOk ? validateDesignAnchors(caseDir, plan) : [];
     const smokeWarnings = schemaOk ? validateSmokeSafety(plan) : [];
-    result.ok = schemaOk && contractErrors.length === 0;
+    const scopeWarnings = schemaOk ? scopeLeakWarnings(caseDir, plan) : [];
+    result.ok = schemaOk && contractErrors.length === 0 && designAnchorErrors.length === 0;
     result.status = result.ok ? "pass" : "fail";
-    result.errors = [...schemaErrors, ...contractErrors];
-    result.warnings = smokeWarnings;
+    result.errors = [...schemaErrors, ...contractErrors, ...designAnchorErrors];
+    result.warnings = [...smokeWarnings, ...scopeWarnings];
     return result;
   } catch (error) {
     result.errors.push(error instanceof Error ? error.message : String(error));

@@ -21,6 +21,10 @@
 |------|---------|
 | `SKILL.md` | **追加**段;不改既有 Step 0 / Phase A acceptance 反稀释规则 / Phase B 既有写权限白名单 / Phase C 既有判定语义 |
 
+## Files to create
+
+无。本 phase 只追加 `SKILL.md`,不创建新文件。
+
 ## Forbidden
 
 - 不改 SKILL.md 既有判定段的语义(只在每段尾追加新 SOP 步骤)
@@ -29,6 +33,10 @@
 - 不改 N19 演进环工序段
 - 不在 SKILL.md 写完整 Phaser 16 坑(完整版留 `evolution-docs/research-notes-phaser.md`,SKILL.md 只放 10-12 条高频 + 链接)
 - 不引入新 npm 依赖
+
+## Interface contracts
+
+本 phase 的接口是 `SKILL.md` 追加文本本身:Phase A/B/C 新增段、决策日志原则、Phaser 高频坑、推荐 milestone/state 词汇、视觉信号段。所有新增文字必须保持既有 Step 0、反稀释规则、case 隔离硬约束和 Phase C verdict 语义不变。
 
 ## SKILL.md 改动清单(逐段)
 
@@ -92,7 +100,7 @@ node scripts/load_primer.js cases/<id> --archetype <X>
 
 可选 anchor:`temporalShape`。
 
-> **禁用**:`feedbackMoments` / `progressionFeel.powerCurve` 等 action-bias 旧词(已废弃)。
+> **禁用**旧 action-bias anchor 名(已废弃)。
 
 意象锚点写作要求:不写"暗黑风格"或"科技蓝",写一个**非数字世界的真实场景**。参考线上 design-style-thinking 方法论:"晨光透过白色纱帘的极简客厅"、"月下荒野中的篝火孤影"、"实验室冷光下的手术台"。
 
@@ -393,7 +401,7 @@ final.png ──[_visual_warn.js 计算]──> 文本指标
 
 1. ✅ SKILL.md 含字符串 "decision log" 或 "rationale"
 2. ✅ SKILL.md **不**含字符串 "真实思考链"(此命名已废弃)
-3. ✅ SKILL.md 不含字符串 `feedbackMoments`(老 anchor)
+3. ✅ SKILL.md 不含旧 action-bias anchor 名(老 anchor)
 4. ✅ SKILL.md Phase A 段含 `derivedFrom`、`coreLoop.primaryAction`、`mustAvoid` 关键字
 5. ✅ SKILL.md Phase B 段含 `lib/visualTheme` 或 `lib/` 引用建议
 6. ✅ SKILL.md Phase C 段含 `qualityHints` 与 `vision-policy` 字段名

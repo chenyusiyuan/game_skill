@@ -5,13 +5,15 @@ import {
   existsSync,
   mkdirSync,
   openSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { computeVisualWarn } from "./_visual_warn.js";
 import { prepareCaseGame } from "./prepare_case_game.js";
 import { scanCaseJunk } from "./scan_case_junk.js";
 import { scanForbiddenImports } from "./scan_forbidden_imports.js";
@@ -86,9 +88,13 @@ function decisionDetail(runnerResult) {
   return detail;
 }
 
-function decideAndWrite(caseDir, decision) {
+async function decideAndWrite(caseDir, decision) {
   const evalDir = join(caseDir, "eval");
-  const deliveryRecord = { ...decision, timestamp: new Date().toISOString() };
+  const deliveryRecord = {
+    ...decision,
+    qualityHints: await buildQualityHints(caseDir),
+    timestamp: new Date().toISOString(),
+  };
   mkdirSync(evalDir, { recursive: true });
   writeFileSync(
     join(evalDir, "delivery.json"),
@@ -215,6 +221,223 @@ export function decideStatus({ importScan = { ok: true }, planValid, build, runn
   return pass(decisionDetail(runnerResult));
 }
 
+const RUBRIC_FIELDS = [
+  "content-density",
+  "mechanical-differentiation",
+  "visual-feedback",
+  "hud-information",
+  "feel-juice",
+  "genre-fitness",
+];
+
+function readRubric(caseDir) {
+  const rubricPath = join(caseDir, ".game/rubric.json");
+  if (!existsSync(rubricPath)) {
+    return { available: false, reason: "missing-rubric", missing: RUBRIC_FIELDS };
+  }
+  try {
+    const parsed = JSON.parse(readFileSync(rubricPath, "utf8"));
+    const missing = RUBRIC_FIELDS.filter((field) => !Object.hasOwn(parsed, field));
+    if (missing.length > 0) return { available: false, reason: "rubric-missing-fields", missing };
+    return {
+      available: true,
+      ...Object.fromEntries(RUBRIC_FIELDS.map((field) => [field, parsed[field]])),
+    };
+  } catch (error) {
+    return {
+      available: false,
+      reason: "rubric-unparseable",
+      error: error instanceof Error ? error.message : String(error),
+      missing: RUBRIC_FIELDS,
+    };
+  }
+}
+
+function extractSourceTag(chunk) {
+  const sourceLine = chunk.split(/\r?\n/u).find((line) => /来源[:：]/u.test(line));
+  if (!sourceLine || sourceLine.includes("|")) return null;
+  const match = sourceLine.match(/来源[:：]\s*<?\s*(from-query|from-genre-knowledge|from-reasoning)\s*>?/u);
+  return match?.[1] ?? null;
+}
+
+function parseDecisionAChunks(markdown) {
+  const section = markdown.match(/(?:^|\n)##\s+A\.[\s\S]*?(?=\n##\s+B\.|\n##\s+C\.|$)/u)?.[0] ?? "";
+  const chunks = [];
+  for (const chunk of section.split(/(?=^###\s+A\.)/mu)) {
+    const heading = chunk.match(/^###\s+A\.[^\n]+/mu)?.[0];
+    if (!heading) continue;
+    const title = heading
+      .replace(/^###\s+A\.\S+\s*/u, "")
+      .replace(/\s*[—-]\s*来源[:：].*$/u, "")
+      .trim();
+    chunks.push({ title, source: extractSourceTag(chunk), text: chunk });
+  }
+  return chunks;
+}
+
+function readPlanScopeLeaks(caseDir) {
+  const planCheckPath = join(caseDir, "eval/plan-check.json");
+  if (!existsSync(planCheckPath)) return [];
+  try {
+    const planCheck = JSON.parse(readFileSync(planCheckPath, "utf8"));
+    return (planCheck.warnings ?? []).filter((warning) => {
+      const text = typeof warning === "string" ? warning : JSON.stringify(warning);
+      return text.includes("scope-leak");
+    });
+  } catch {
+    return [];
+  }
+}
+
+function readScopeReport(caseDir) {
+  const decisionsPath = join(caseDir, "docs/decisions.md");
+  const counts = {
+    "from-query": 0,
+    "from-genre-knowledge": 0,
+    "from-reasoning": 0,
+  };
+  const demotedChunks = [];
+
+  if (existsSync(decisionsPath)) {
+    const chunks = parseDecisionAChunks(readFileSync(decisionsPath, "utf8"));
+    for (const chunk of chunks) {
+      if (chunk.source && Object.hasOwn(counts, chunk.source)) counts[chunk.source] += 1;
+      if (chunk.text.includes("降级理由")) {
+        demotedChunks.push({ title: chunk.title || "<untitled>", source: chunk.source ?? "unknown" });
+      }
+    }
+  }
+
+  return {
+    available: existsSync(decisionsPath),
+    fromQueryCount: counts["from-query"],
+    fromGenreKnowledgeCount: counts["from-genre-knowledge"],
+    fromReasoningCount: counts["from-reasoning"],
+    scopeLeaks: readPlanScopeLeaks(caseDir),
+    demoted: demotedChunks,
+    counts,
+    demotedCount: demotedChunks.length,
+    demotedChunks,
+  };
+}
+
+function listTsFiles(dir) {
+  if (!existsSync(dir)) return [];
+  const files = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...listTsFiles(path));
+    else if (entry.isFile() && path.endsWith(".ts")) files.push(path);
+  }
+  return files;
+}
+
+function lineCount(text) {
+  if (text.length === 0) return 0;
+  const newlineCount = text.match(/\n/gu)?.length ?? 0;
+  return text.endsWith("\n") ? newlineCount : newlineCount + 1;
+}
+
+function isScaffoldFile(srcRoot, filePath) {
+  const rel = relative(srcRoot, filePath).replaceAll("\\", "/");
+  return rel === "main.ts" || rel === "milestone.ts" || rel.startsWith("lib/");
+}
+
+function parseImportedHelperNames(source) {
+  const imports = new Map();
+  const importPattern = /^\s*import\s+([^;]*?)\s+from\s+["'](\.{1,2}\/lib(?:\/[^"']*)?)["'];?/gmu;
+  let match;
+  while ((match = importPattern.exec(source)) !== null) {
+    const clause = match[1].trim();
+    const namespace = clause.match(/\*\s+as\s+([A-Za-z_$][\w$]*)/u);
+    if (namespace) imports.set(namespace[1], "namespace");
+
+    const named = clause.match(/\{([\s\S]*?)\}/u);
+    if (named) {
+      for (const part of named[1].split(",")) {
+        const clean = part.trim();
+        if (!clean) continue;
+        const pieces = clean.split(/\s+as\s+/u).map((piece) => piece.trim());
+        imports.set(pieces.at(-1), "named");
+      }
+    }
+
+    const withoutNamed = clause.replace(/\{[\s\S]*?\}/u, "").replace(/\*\s+as\s+[A-Za-z_$][\w$]*/u, "");
+    const defaultName = withoutNamed.split(",")[0]?.trim();
+    if (defaultName && /^[A-Za-z_$][\w$]*$/u.test(defaultName)) imports.set(defaultName, "default");
+  }
+  return imports;
+}
+
+function stripImportStatements(source) {
+  return source.replace(/^\s*import\s+[^;]*?\s+from\s+["'][^"']+["'];?\s*/gmu, "");
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+function countMatches(source, pattern) {
+  return Array.from(source.matchAll(pattern)).length;
+}
+
+function computeLoc(caseDir) {
+  const srcRoot = join(caseDir, "game/src");
+  const files = listTsFiles(srcRoot);
+  let scaffoldLoc = 0;
+  let businessLoc = 0;
+  const importedHelpers = new Map();
+  const businessSources = [];
+
+  for (const file of files) {
+    const source = readFileSync(file, "utf8");
+    if (isScaffoldFile(srcRoot, file)) {
+      scaffoldLoc += lineCount(source);
+      continue;
+    }
+    businessLoc += lineCount(source);
+    businessSources.push(source);
+    for (const [name, kind] of parseImportedHelperNames(source)) {
+      importedHelpers.set(name, kind === "namespace" ? "namespace" : (importedHelpers.get(name) ?? kind));
+    }
+  }
+
+  let helperCallCount = 0;
+  for (const source of businessSources) {
+    const body = stripImportStatements(source);
+    for (const [name, kind] of importedHelpers) {
+      const escaped = escapeRegExp(name);
+      if (kind === "namespace") {
+        helperCallCount += countMatches(
+          body,
+          new RegExp(`(^|[^A-Za-z0-9_$])${escaped}\\s*\\.\\s*[A-Za-z_$][\\w$]*\\s*\\(`, "gu"),
+        );
+      } else {
+        helperCallCount += countMatches(body, new RegExp(`(^|[^A-Za-z0-9_$])${escaped}\\s*\\(`, "gu"));
+      }
+    }
+  }
+
+  return {
+    scaffoldLoc,
+    businessLoc,
+    helperImportCount: importedHelpers.size,
+    helperCallCount,
+  };
+}
+
+async function buildQualityHints(caseDir) {
+  const visual = await computeVisualWarn(caseDir);
+  const rubric = readRubric(caseDir);
+  const scopeReport = readScopeReport(caseDir);
+  const loc = computeLoc(caseDir);
+  const warnings = [];
+  if (loc.helperCallCount < 2) {
+    warnings.push({ kind: "low-helper-usage", severity: "warn", helperCallCount: loc.helperCallCount });
+  }
+  return { visual, rubric, scopeReport, loc, warnings };
+}
+
 export async function main(argv = process.argv.slice(2)) {
   const caseArg = argv.find((arg) => !arg.startsWith("--"));
   if (!caseArg || argv.includes("--help") || argv.includes("-h")) {
@@ -227,7 +450,7 @@ export async function main(argv = process.argv.slice(2)) {
 
   const runtime = runtimeInvariant();
   if (!runtime.ok) {
-    const decision = decideAndWrite(caseDir, blocked("chain-blocked", "missing-runtime", { missing: runtime.missing }));
+    const decision = await decideAndWrite(caseDir, blocked("chain-blocked", "missing-runtime", { missing: runtime.missing }));
     console.error(`[delivery] ${decision.status}: ${decision.blockReason}`);
     return 3;
   }
@@ -235,7 +458,7 @@ export async function main(argv = process.argv.slice(2)) {
   try {
     deliveryLock = acquireDeliveryLock(caseDir);
   } catch (error) {
-    const decision = decideAndWrite(
+    const decision = await decideAndWrite(
       caseDir,
       blocked("chain-blocked", "case-delivery-lock-failed", {
         error: error instanceof Error ? error.message : String(error),
@@ -246,7 +469,7 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   if (!deliveryLock.ok) {
-    const decision = decideAndWrite(caseDir, blocked("chain-blocked", "case-delivery-already-running", deliveryLock));
+    const decision = await decideAndWrite(caseDir, blocked("chain-blocked", "case-delivery-already-running", deliveryLock));
     console.error(`[delivery] ${decision.status}: ${decision.blockReason}`);
     return 3;
   }
@@ -301,7 +524,7 @@ export async function main(argv = process.argv.slice(2)) {
       }
     }
 
-    const decision = decideAndWrite(caseDir, decideStatus({ importScan, planValid, build, runnerResult, junk }));
+    const decision = await decideAndWrite(caseDir, decideStatus({ importScan, planValid, build, runnerResult, junk }));
 
     // === N19 Phase 1 hook: append-only baseline + evolution-log ===
     if (decision.status === "delivery-pass" || decision.status === "delivery-with-warnings") {

@@ -8,7 +8,6 @@ const SKILL_DIR = resolve(SCRIPT_DIR, "..");
 const CASES_ROOT = join(SKILL_DIR, "cases");
 
 const ASSET_MODES = new Set(["local-assets", "no-assets", "llm-generated-mock"]);
-const VALID_ARCHETYPES = new Set(["top_down", "platformer", "grid_logic", "ui_heavy", "tower_defense"]);
 const VALID_EVAL_PROVIDERS = new Set(["codex-cli", "claude-code-cli", "claude-code-api", "openrouter-api"]);
 const VALID_CONFIRMATION_MODES = new Set(["user-message-id", "user-message-text", "interactive", "policy-default"]);
 const SLUG_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
@@ -204,12 +203,6 @@ function validateStateChoices(state) {
   const caseName = caseDir.split("/").filter(Boolean).pop();
   if (!SLUG_RE.test(caseName)) {
     errors.push(`invalid project slug "${caseName}": must match ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`);
-  }
-  const archetype = state.archetype ?? state.selectedArchetype ?? state["selected-archetype"];
-  if (archetype === undefined || archetype === null || archetype === "") {
-    warnings.push("state archetype not set yet; Phase A must set archetype before template selection");
-  } else if (!VALID_ARCHETYPES.has(String(archetype))) {
-    errors.push(`invalid state archetype "${archetype}"; must be one of: ${[...VALID_ARCHETYPES].join(", ")}`);
   }
   const confirmedChoice = state["step-0-confirmed"]?.evaluator?.choice;
   if (confirmedChoice && !VALID_EVAL_PROVIDERS.has(confirmedChoice)) {
