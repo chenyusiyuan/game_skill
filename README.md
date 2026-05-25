@@ -23,6 +23,8 @@ tests/                 # smoke tests
 
 ## 常用 CLI
 
+新 case 的 slug 使用 `<game-name>-<model>-<number>`：游戏名精炼为 1-2 个英文小写词，模型短名只写 `glm` / `kimi` / `opus` / `gpt`，不带版本号，例如 `space-shooter-glm-1`。Step 0 会校验 slug 中的模型短名和 `--host-model` 是否匹配。
+
 ```bash
 # Step 0
 node scripts/configure_eval_provider.js cases/<slug> --provider openrouter-api --default-from-policy

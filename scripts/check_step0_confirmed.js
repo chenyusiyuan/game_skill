@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
-import { dirname, join, relative, resolve, isAbsolute } from "path";
+import { basename, dirname, join, relative, resolve, isAbsolute } from "path";
 import { fileURLToPath } from "url";
+import { validateProjectSlug } from "./_slug_policy.js";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = resolve(SCRIPT_DIR, "..");
@@ -10,13 +11,13 @@ const CASES_ROOT = join(SKILL_DIR, "cases");
 const ASSET_MODES = new Set(["local-assets", "no-assets", "llm-generated-mock"]);
 const VALID_EVAL_PROVIDERS = new Set(["codex-cli", "claude-code-cli", "claude-code-api", "openrouter-api"]);
 const VALID_CONFIRMATION_MODES = new Set(["user-message-id", "user-message-text", "interactive", "policy-default"]);
-const SLUG_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
 const usage = [
   "Usage: node check_step0_confirmed.js <case-dir> [--bypass-step0 --reason <text>] [--json]",
   "",
   "Checks <case-dir>/.game/state.json for state['step-0-confirmed'].",
   "Default evaluator policy uses openrouter-api/kimi-k2.6 via confirmationMode=policy-default.",
   "Also requires <case-dir>/.game/vision-policy.json from resolve_vision_policy.js --check.",
+  "Project slug format: <game-name>-<model>-<number>, for example space-shooter-glm-1.",
   "Use --bypass-step0 --reason <text> only for smoke-test scenarios.",
 ].join("\n");
 
@@ -60,13 +61,13 @@ if (!existsSync(statePath)) {
 const state = readJsonStrict(statePath);
 const errors = validateConfirmed(state["step-0-confirmed"]);
 const bypassed = validateExistingBypass(state["step-0-bypassed"]);
-const { warnings: stateWarnings, errors: stateErrors } = validateStateChoices(state);
 
 // C-FP09: also validate eval-provider.json confirmationMode
 const evalProviderPath = join(gameDir, "eval-provider.json");
 const { warnings: evalWarnings, errors: evalErrors } = validateEvalProviderConfirmation(evalProviderPath);
 const visionPolicyPath = join(gameDir, "vision-policy.json");
-const { warnings: visionWarnings, errors: visionErrors } = validateVisionPolicy(visionPolicyPath, state);
+const { warnings: visionWarnings, errors: visionErrors, hostModel } = validateVisionPolicy(visionPolicyPath, state);
+const { warnings: stateWarnings, errors: stateErrors } = validateStateChoices(state, { hostModel });
 
 const allErrors = [...errors, ...stateErrors, ...evalErrors, ...visionErrors];
 if (allErrors.length && !bypassed.ok) {
@@ -162,18 +163,18 @@ function validateVisionPolicy(policyPath, state) {
   const errors = [];
   if (!existsSync(policyPath)) {
     errors.push(`missing ${policyPath}; run resolve_vision_policy.js before Phase A`);
-    return { warnings, errors };
+    return { warnings, errors, hostModel: null };
   }
   let policy;
   try {
     policy = JSON.parse(readFileSync(policyPath, "utf-8"));
   } catch (err) {
     errors.push(`failed to parse ${policyPath}: ${err.message}`);
-    return { warnings, errors };
+    return { warnings, errors, hostModel: null };
   }
   if (!isObject(policy)) {
     errors.push(`${policyPath} is not a valid JSON object`);
-    return { warnings, errors };
+    return { warnings, errors, hostModel: null };
   }
   const mode = String(policy.visionMode ?? policy["vision-mode"] ?? "").trim();
   if (!["enabled", "disabled"].includes(mode)) errors.push(`${policyPath} visionMode must be enabled or disabled`);
@@ -194,16 +195,14 @@ function validateVisionPolicy(policyPath, state) {
   const stateMode = String(state?.visionPolicy?.visionMode ?? state?.visionPolicy?.["vision-mode"] ?? "").trim();
   if (!stateMode) errors.push("state.visionPolicy missing; run resolve_vision_policy.js so Step 0 records the minimal host image-read policy");
   else if (mode && stateMode !== mode) errors.push(`state.visionPolicy ${stateMode} does not match vision-policy.json ${mode}`);
-  return { warnings, errors };
+  return { warnings, errors, hostModel };
 }
 
-function validateStateChoices(state) {
+function validateStateChoices(state, { hostModel = null } = {}) {
   const warnings = [];
   const errors = [];
-  const caseName = caseDir.split("/").filter(Boolean).pop();
-  if (!SLUG_RE.test(caseName)) {
-    errors.push(`invalid project slug "${caseName}": must match ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`);
-  }
+  const caseName = basename(caseDir);
+  errors.push(...validateProjectSlug(caseName, { hostModel }).errors);
   const confirmedChoice = state["step-0-confirmed"]?.evaluator?.choice;
   if (confirmedChoice && !VALID_EVAL_PROVIDERS.has(confirmedChoice)) {
     errors.push(`state['step-0-confirmed'].evaluator.choice invalid: ${confirmedChoice}`);

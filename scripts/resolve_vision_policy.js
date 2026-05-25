@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve, isAbsolute } from "node:path";
+import { basename, dirname, join, relative, resolve, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
+import { validateProjectSlug } from "./_slug_policy.js";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, "..");
@@ -13,6 +14,7 @@ const usage = [
   "",
   "Writes <case-dir>/.game/vision-policy.json and records a minimal state.visionPolicy summary.",
   "The host model must be an actual model id. If --host-model is omitted, MINI_GAME_HOST_MODEL, ANTHROPIC_MODEL, CLAUDE_CODE_MODEL, then CODEX_MODEL are tried.",
+  "Project slug model alias must match the host model: glm, kimi, opus, or gpt, without version numbers.",
   "Use --check to validate an existing policy without rewriting it.",
   "This is a static capability resolver; it never probes by reading or sending an image.",
 ].join("\n");
@@ -43,6 +45,7 @@ export function writeVisionPolicy(caseDir, options = {}) {
     process.env.CODEX_MODEL,
   );
   assertActualHostModel(hostModel);
+  assertProjectSlug(root, hostModel);
   const policy = resolveVisionPolicy({
     requested: options.requested ?? "unknown",
     hostModel,
@@ -87,6 +90,7 @@ export function checkVisionPolicy(caseDir) {
   if (!["enabled", "disabled"].includes(mode)) errors.push(".game/vision-policy.json visionMode must be enabled or disabled");
   const hostModel = String(policy?.hostModel ?? policy?.model ?? "").trim();
   if (isUnknownHostModel(hostModel)) errors.push(".game/vision-policy.json hostModel must be an actual model id, not empty or unknown");
+  errors.push(...validateProjectSlug(basename(root), { hostModel }).errors);
   if (/glm/i.test(hostModel) && mode !== "disabled") errors.push("GLM host models must use visionMode disabled");
   if (mode === "disabled") {
     if (policy?.mainAgentMayReadImages !== false) errors.push("disabled vision policy must set mainAgentMayReadImages=false");
@@ -172,6 +176,11 @@ function assertMiniGameCaseDir(dir) {
   if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) {
     throw new Error(`mini-game cases must live under ${casesRoot}/<slug>; got ${dir}`);
   }
+}
+
+function assertProjectSlug(dir, hostModel) {
+  const { errors } = validateProjectSlug(basename(dir), { hostModel });
+  if (errors.length) throw new Error(errors.join("; "));
 }
 
 function firstNonEmpty(...values) {

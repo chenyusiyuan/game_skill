@@ -5,6 +5,7 @@ import path from "node:path";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { fileURLToPath } from "node:url";
+import { validateProjectSlug } from "./_slug_policy.js";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(SCRIPT_DIR, "..");
@@ -22,6 +23,7 @@ const usage = [
   "                                                [--default-from-policy|--confirmed-by-user --user-message-id <hash>|--user-message-text <text>] [--json]",
   "",
   "Default evaluator policy: openrouter-api / kimi-k2.6.",
+  "Project slug format: <game-name>-<model>-<number>, for example space-shooter-glm-1.",
   "Non-interactive calls with a non-default provider must pass --confirmed-by-user and user-message evidence.",
   "This writes <case-dir>/.game/eval-provider.json and mirrors Step 0 confirmation into <case-dir>/.game/state.json.",
 ].join("\n");
@@ -36,6 +38,7 @@ if (!args.caseDir) fail(usage, 2);
 
 const caseDir = path.resolve(REPO, args.caseDir);
 assertMiniGameCaseDir(caseDir);
+assertProjectSlug(caseDir);
 fs.mkdirSync(path.join(caseDir, ".game"), { recursive: true });
 
 let provider = args.provider;
@@ -209,6 +212,12 @@ function assertMiniGameCaseDir(dir) {
   if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) {
     fail(`FAIL configure_eval_provider: cases must live under ${CASES_ROOT}/<slug>; got ${dir}`, 2);
   }
+}
+
+function assertProjectSlug(dir) {
+  const slug = path.basename(dir);
+  const { errors } = validateProjectSlug(slug);
+  if (errors.length) fail(`FAIL configure_eval_provider: ${errors.join("; ")}`, 2);
 }
 
 function writeJsonAtomic(filePath, data) {

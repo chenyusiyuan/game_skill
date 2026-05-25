@@ -7,6 +7,8 @@ const forbiddenVersionText = new RegExp(forbiddenTokens.join("|"), "u");
 
 const skill = fs.readFileSync("SKILL.md", "utf8");
 assert.match(skill, /^# mini-game Skill$/m, "SKILL.md must use the current unversioned title");
+assert.match(skill, /space-shooter-glm-1/u, "SKILL.md must document the current slug naming policy");
+assert.match(skill, /glm.*kimi.*opus.*gpt/u, "SKILL.md must list the slug model aliases");
 assert.match(skill, /specs\/plan\.json/, "Phase A must reference plan.json");
 assert.match(skill, /docs\/DESIGN\.md[\s\S]*docs\/decisions\.md[\s\S]*specs\/plan\.json/u, "Phase A must allow DESIGN, decisions, and plan artifacts");
 assert.doesNotMatch(skill, /只产 `cases\/<PROJECT>\/specs\/plan\.json`/u, "Phase A must not claim plan.json is the only output");
@@ -75,6 +77,7 @@ assert.match(agents, /known-issues\.md/, "AGENTS.md must mention known issues");
 assert.doesNotMatch(agents, forbiddenVersionText, "AGENTS.md must not contain version-prefix wording");
 
 const readme = fs.readFileSync("README.md", "utf8");
+assert.match(readme, /space-shooter-glm-1/u, "README.md must document the current slug naming policy");
 assert.match(readme, /node scripts\/check_delivery\.js/, "README.md must document current delivery");
 assert.match(readme, /node scripts\/check_preview\.js/, "README.md must document preview health");
 assert.match(readme, /node scripts\/write_handoff\.js/, "README.md must document handoff");

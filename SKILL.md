@@ -10,6 +10,8 @@ stage1 用最朴素事实判定一次首轮生成是否成功：真实输入驱�
 
 所有 case 放在 `cases/<PROJECT>/`。进入 Phase A 前运行：
 
+`<PROJECT>` 必须按当前生成/宿主模型命名：先把游戏名精炼成 1-2 个英文小写词，再接模型短名，再接递增编号，格式为 `<game-name>-<model>-<number>`，例如 `space-shooter-glm-1`、`2048-gpt-2`。模型短名只允许 `glm` / `kimi` / `opus` / `gpt`，不带版本号；`check_step0_confirmed.js` 会用 `.game/vision-policy.json` 的 `hostModel` 校验短名是否匹配当前模型。
+
 ```bash
 node scripts/configure_eval_provider.js cases/<PROJECT> --provider openrouter-api --default-from-policy
 node scripts/resolve_vision_policy.js cases/<PROJECT> --host-model <actual-host-model> --requested unknown

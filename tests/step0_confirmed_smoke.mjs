@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
@@ -9,29 +8,35 @@ const repoRoot = resolve(new URL("..", import.meta.url).pathname);
 const casesRoot = join(repoRoot, "cases");
 const scriptPath = join(repoRoot, "scripts/check_step0_confirmed.js");
 const created = [];
+let unique = Date.now();
 
 try {
-  const validCase = makeCase(`step0-smoke-${randomUUID()}`);
+  const validCase = makeCase(nextSlug("step0-smoke"));
   const pass = runCheck(validCase);
   assert.equal(pass.status, 0, `${pass.stdout}\n${pass.stderr}`);
   const passResult = JSON.parse(pass.stdout);
   assert.equal(passResult.status, "pass");
   assert.equal(passResult.warnings.some((warning) => /template selection|archetype/u.test(warning)), false);
 
-  const invalidSlugCase = makeCase(`BadSlug-${randomUUID()}`);
+  const invalidSlugCase = makeCase(`BadSlug-glm-${unique++}`);
   const invalidSlug = runCheck(invalidSlugCase);
   assert.equal(invalidSlug.status, 1, `${invalidSlug.stdout}\n${invalidSlug.stderr}`);
   assert(JSON.parse(invalidSlug.stdout).errors.some((error) => /invalid project slug/u.test(error)));
 
-  const missingEvalCase = makeCase(`step0-missing-eval-${randomUUID()}`, { skipEvalProvider: true });
+  const modelMismatchCase = makeCase(nextSlug("model-mismatch", "kimi"));
+  const modelMismatch = runCheck(modelMismatchCase);
+  assert.equal(modelMismatch.status, 1, `${modelMismatch.stdout}\n${modelMismatch.stderr}`);
+  assert(JSON.parse(modelMismatch.stdout).errors.some((error) => /does not match host model/u.test(error)));
+
+  const missingEvalCase = makeCase(nextSlug("missing-eval"), { skipEvalProvider: true });
   const missingEval = runCheck(missingEvalCase);
   assert.equal(missingEval.status, 1, `${missingEval.stdout}\n${missingEval.stderr}`);
   assert(JSON.parse(missingEval.stdout).errors.some((error) => /missing .*eval-provider\.json/u.test(error)));
 
-  const mismatchCase = makeCase(`step0-vision-mismatch-${randomUUID()}`, {
+  const mismatchCase = makeCase(nextSlug("vision-mismatch", "opus"), {
     visionPolicy: {
       visionMode: "enabled",
-      hostModel: "claude-sonnet-4",
+      hostModel: "claude-opus-4-7",
       mainAgentMayReadImages: true,
       compilerImagePolicy: "disabled",
       imageReadPolicy: "image reads allowed for this fixture",
@@ -87,6 +92,10 @@ function makeCase(slug, options = {}) {
   });
 
   return caseDir;
+}
+
+function nextSlug(gameName, model = "glm") {
+  return `${gameName}-${model}-${unique++}`;
 }
 
 function runCheck(caseDir) {
