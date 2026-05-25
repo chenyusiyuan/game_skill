@@ -1,8 +1,9 @@
 node_modules/
 .DS_Store
-.omc/
-.cache/vlm/
-.cache/template-deps/
+**/.DS_Store
+**/.omc/
+**/.cache/
+**/.gstack/
 .env
 .env.local
 .env.*.local
@@ -16,10 +17,6 @@ cases/*/
 !cases/.gitkeep
 debug-skill/output/
 specs/*.yaml
-cases/*/game/dist/
-cases/*/game/node_modules/
-cases/*/.game/check-cache.json
-cases/*/.game/pw-session.json
 debug-skill/protocol.json
 template-skill/library.json.bak
 !assets/
@@ -28,4 +25,7 @@ template-skill/library.json.bak
 !assets/preset/.gitkeep
 assets/generated/
 assets-external/
-.gstack/
+
+# Iteration-specific artifacts (kept local only, not in repo)
+docs/refactor/
+evolution-docs/v1.1-validation-report.md

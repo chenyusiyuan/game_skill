@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"echo \\\"=== writeset-violations.json files on disk ===\\\"\\nfind /Users/bytedance/Project/mini-game/cases -name \\\"writeset-violations.json\\\" 2>/dev/null\\necho \\\"\\\"\\necho \\\"=== references to w...",
-  "error": "Exit code 1\n=== writeset-violations.json files on disk ===\n/Users/bytedance/Project/mini-game/cases/platformer-firstcut/eval/writeset-violations.json\n\n=== references to writeset-violations.json in code ===\n/Users/bytedance/Project/mini-game/scripts/check_writeset.js:218:  const reportPath = join(repoRoot, allowRoot, \"eval/writeset-violations.json\");\n\n=== git status for these stale files ===\n(eval):8: no matches found: cases/*/eval/writeset-violations.json",
-  "timestamp": "2026-05-23T12:39:40.554Z",
-  "retry_count": 1
-}
