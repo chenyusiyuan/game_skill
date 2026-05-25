@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "vision-mode": "enabled",
+  "visionMode": "enabled",
+  "requested": "unknown",
+  "hostModel": "gpt-5.5",
+  "provider": null,
+  "decisionSource": "static-capability-table",
+  "reason": "default-enabled",
+  "mainAgentMayReadImages": true,
+  "subagentImagePolicy": "enabled-for-codegen-repairer-l3-only",
+  "compilerImagePolicy": "disabled",
+  "allowed-image-inputs": "explicit-main-agent-paths-only",
+  "allowedImageInputs": "explicit-main-agent-paths-only",
+  "image-read-policy": "Main agent, codegen, repairer, and L3 may read only explicit image paths; compiler subagents remain text-only and visual observations are auxiliary.",
+  "imageReadPolicy": "Main agent, codegen, repairer, and L3 may read only explicit image paths; compiler subagents remain text-only and visual observations are auxiliary.",
+  "forbiddenImageReadGlobs": [],
+  "visualFallbackEvidence": [
+    "screenshot path existence",
+    "image dimensions",
+    "non-empty pixel/basic contrast metrics",
+    "DOM/HUD text",
+    "state snapshot",
+    "console/pageerror"
+  ],
+  "updatedAt": "2026-05-23T03:41:55.832Z"
+}

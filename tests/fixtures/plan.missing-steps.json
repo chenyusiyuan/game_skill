@@ -1,0 +1,63 @@
+{
+  "meta": { "caseId": "fixture-platformer-keyed-exit", "createdAt": "2026-05-23T00:00:00.000Z" },
+  "rawQuery": "横版闯关，跳跃 + 收 2 把钥匙 + 开门到出口",
+  "primaryLoop": "玩家用左右键移动 + 空格跳跃，地图中间有 2 把钥匙需要触碰收集，全部收集后右侧出口门解锁，到达出口即胜利。",
+  "controls": [
+    { "input": "ArrowLeft / ArrowRight", "effect": "玩家水平移动" },
+    { "input": "Space", "effect": "玩家跳跃，受重力下落" }
+  ],
+  "requiredMechanics": [
+    { "name": "horizontal-movement", "summary": "玩家受输入水平移动" },
+    { "name": "gravity-jump", "summary": "玩家按 Space 起跳，松开后 / 落地后受重力下落" },
+    { "name": "key-pickup", "summary": "玩家碰触 key 实体后 keys 计数 +1" },
+    { "name": "exit-unlock", "summary": "keys === 2 时出口门改为可通过状态" },
+    { "name": "reach-exit", "summary": "玩家进入出口区域后胜利" }
+  ],
+  "acceptance": {
+    "mustHave": [
+      {
+        "id": "navigate-level",
+        "text": "玩家可以水平移动并用跳跃推进关卡",
+        "mechanicRefs": ["horizontal-movement", "gravity-jump"],
+        "evidence": [
+          { "type": "canvas-change", "minChangedPixels": 2000 },
+          { "type": "state", "path": "playerX", "operator": ">=", "value": 100 }
+        ]
+      },
+      {
+        "id": "collect-key",
+        "text": "玩家触碰钥匙后产生收集进度",
+        "mechanicRefs": ["key-pickup"],
+        "evidence": [
+          { "type": "milestone", "id": "key-collected", "minOccurrences": 1 }
+        ]
+      },
+      {
+        "id": "unlock-and-win",
+        "text": "收集钥匙后进入出口并胜利",
+        "mechanicRefs": ["exit-unlock", "reach-exit"],
+        "evidence": [
+          { "type": "milestone", "id": "primary-win", "minOccurrences": 1 },
+          { "type": "state", "path": "won", "operator": "==", "value": true }
+        ]
+      }
+    ],
+    "mustNot": [
+      { "id": "no-instant-win", "text": "不能开局或按一次键直接胜利" }
+    ]
+  },
+  "winCondition": "玩家在 keys === 2 状态下接触出口区域，触发 win milestone",
+  "loseCondition": "无（不设失败）",
+  "nonblockingTodos": [
+    { "id": "secondary-bgm", "type": "asset", "summary": "背景音乐" }
+  ],
+  "smoke": {
+    "expect": [
+      { "type": "canvas-change", "minChangedPixels": 2000 },
+      { "type": "milestone", "id": "key-collected", "timeoutMs": 8000, "minOccurrences": 1 },
+      { "type": "milestone", "id": "primary-win", "timeoutMs": 12000 },
+      { "type": "state", "path": "playerX", "operator": ">=", "value": 100 },
+      { "type": "state", "path": "won", "operator": "==", "value": true }
+    ]
+  }
+}

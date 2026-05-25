@@ -1,0 +1,24 @@
+{
+  "baselineId": "2026-05-24T07:47:14.842Z-79975e",
+  "createdAt": "2026-05-24T07:47:14.842Z",
+  "planHash": "6f2dcd3d877f08d1409a6a285b9555046bcfd44cc2adcf570004fc7fa4ee3a23",
+  "deliverySummary": {
+    "status": "delivery-with-warnings",
+    "warningKinds": [
+      "auto-cleaned-junk",
+      "idle-frozen"
+    ],
+    "milestoneCount": 4,
+    "changedPixels": 18879
+  },
+  "artifactPointers": {
+    "plan": "specs/plan.json",
+    "delivery": "eval/delivery.json",
+    "runnerResult": "eval/runner-result.json",
+    "screenshots": {
+      "mount": "eval/screenshots/mount.png",
+      "afterSteps": "eval/screenshots/after-steps.png",
+      "final": "eval/screenshots/final.png"
+    }
+  }
+}

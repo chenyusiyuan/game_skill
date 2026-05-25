@@ -1,0 +1,17 @@
+{
+  "step-0-confirmed": {
+    "at": "2026-05-23T03:41:55.750Z",
+    "evaluator": {
+      "choice": "openrouter-api",
+      "model": "kimi-k2.6",
+      "reasoning": null,
+      "confirmationMode": "policy-default",
+      "confirmed-by": "user-message",
+      "user-message-id": "policy:default-openrouter-kimi-k2.6"
+    }
+  },
+  "visionPolicy": {
+    "visionMode": "enabled",
+    "reason": "default-enabled"
+  }
+}

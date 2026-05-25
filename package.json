@@ -1,0 +1,25 @@
+{
+  "name": "mini-game",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Natural-language web mini-game generation skill for Phaser3, TypeScript, and Vite.",
+  "scripts": {
+    "test": "node tests/plan_schema_smoke.mjs && node tests/prepare_case_game_smoke.mjs && node tests/forbidden_import_smoke.mjs && node tests/delivery_decision_smoke.mjs && node tests/skill_activation_smoke.mjs && node tests/scan_case_junk_smoke.mjs && node tests/check_delivery_lock_smoke.mjs",
+    "test:browser": "node tests/delivery_runner_smoke.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.95.0",
+    "phaser": "^3.80.0"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.0",
+    "ajv-formats": "^3.0.1",
+    "playwright": "^1.48.0",
+    "typescript": "^5.8.0",
+    "vite": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

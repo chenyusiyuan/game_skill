@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "caseId": "platformer-firstcut",
+    "createdAt": "2026-05-23T00:00:00.000Z"
+  },
+  "rawQuery": "横版闯关：玩家用 ArrowLeft / ArrowRight 左右移动 + Space 跳跃；地图中段散落 2 把钥匙，玩家碰到钥匙收集；集齐 2 把钥匙后右侧出口门解锁；到达出口胜利。",
+  "primaryLoop": "玩家从左侧出发，用方向键横向移动并可按 Space 跳跃。沿路触碰 2 把钥匙后右侧出口门解锁，继续前进进入出口触发胜利。",
+  "controls": [
+    { "input": "ArrowLeft", "effect": "玩家向左移动" },
+    { "input": "ArrowRight", "effect": "玩家向右移动并推动关卡进度" },
+    { "input": "Space", "effect": "玩家跳跃，产生可见纵向位移" }
+  ],
+  "requiredMechanics": [
+    { "name": "horizontal-movement", "summary": "左右方向键驱动玩家在平台上移动" },
+    { "name": "jump", "summary": "Space 让玩家短暂离地并受重力回落" },
+    { "name": "key-pickup", "summary": "玩家接触钥匙后收集计数增加并隐藏钥匙" },
+    { "name": "door-unlock", "summary": "收集 2 把钥匙后出口门变为可通过状态" },
+    { "name": "reach-exit", "summary": "玩家抵达已解锁出口后触发胜利" }
+  ],
+  "acceptance": {
+    "mustHave": [
+      {
+        "id": "move-and-jump-through-level",
+        "text": "玩家可以用方向键移动并用 Space 跳跃推进到关卡右侧",
+        "mechanicRefs": ["horizontal-movement", "jump"],
+        "evidence": [
+          { "type": "canvas-change", "minChangedPixels": 1000 },
+          { "type": "state", "path": "playerX", "operator": ">=", "value": 520 }
+        ]
+      },
+      {
+        "id": "collect-two-keys",
+        "text": "玩家需要触碰并收集 2 把钥匙",
+        "mechanicRefs": ["key-pickup"],
+        "evidence": [
+          { "type": "milestone", "id": "key-collected", "minOccurrences": 2 },
+          { "type": "state", "path": "keys", "operator": ">=", "value": 2 }
+        ]
+      },
+      {
+        "id": "unlock-door-and-win",
+        "text": "收集钥匙后门解锁，玩家到达出口才胜利",
+        "mechanicRefs": ["door-unlock", "reach-exit"],
+        "evidence": [
+          { "type": "milestone", "id": "door-unlocked", "minOccurrences": 1 },
+          { "type": "milestone", "id": "primary-win", "minOccurrences": 1 },
+          { "type": "state", "path": "won", "operator": "==", "value": true }
+        ]
+      }
+    ],
+    "mustNot": [
+      { "id": "no-instant-win", "text": "不能开局或按一次键直接胜利" },
+      { "id": "no-exit-before-keys", "text": "不能不收集 2 把钥匙就进入出口胜利" }
+    ]
+  },
+  "winCondition": "玩家收集两把钥匙后进入右侧出口区域，触发 primary-win milestone。",
+  "loseCondition": "无失败条件，首验只验证主闭环。",
+  "nonblockingTodos": [],
+  "implementationPlan": [
+    {
+      "file": "game/src/main.ts",
+      "action": "modify",
+      "purpose": "覆盖占位入口，使用 Phaser.CANVAS 并注册 PlayScene"
+    },
+    {
+      "file": "game/src/scenes/PlayScene.ts",
+      "action": "create",
+      "purpose": "实现玩家移动、跳跃、钥匙拾取、开门和胜利 milestone"
+    }
+  ],
+  "smoke": {
+    "steps": [
+      { "type": "wait", "durationMs": 300 },
+      { "type": "keydown", "key": "ArrowRight", "durationMs": 900 },
+      { "type": "press", "key": "Space", "holdMs": 120 },
+      { "type": "wait", "durationMs": 200 },
+      { "type": "keydown", "key": "ArrowRight", "durationMs": 900 },
+      { "type": "press", "key": "Space", "holdMs": 120 },
+      { "type": "keydown", "key": "ArrowRight", "durationMs": 1300 },
+      { "type": "wait", "durationMs": 400 }
+    ],
+    "expect": [
+      { "type": "canvas-change", "minChangedPixels": 1000 },
+      { "type": "milestone", "id": "key-collected", "timeoutMs": 8000, "minOccurrences": 2 },
+      { "type": "milestone", "id": "door-unlocked", "timeoutMs": 9000, "minOccurrences": 1 },
+      { "type": "milestone", "id": "primary-win", "timeoutMs": 12000, "minOccurrences": 1 },
+      { "type": "state", "path": "keys", "operator": ">=", "value": 2 },
+      { "type": "state", "path": "won", "operator": "==", "value": true },
+      { "type": "state", "path": "playerX", "operator": ">=", "value": 520 }
+    ]
+  }
+}

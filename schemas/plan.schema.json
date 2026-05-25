@@ -1,0 +1,267 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "plan.schema.json",
+  "type": "object",
+  "required": ["meta", "rawQuery", "primaryLoop", "controls", "requiredMechanics", "acceptance", "winCondition", "smoke"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["caseId", "createdAt"],
+      "additionalProperties": false,
+      "properties": {
+        "caseId": { "type": "string", "minLength": 1 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "rawQueryRef": { "type": "string" }
+      }
+    },
+    "rawQuery": { "type": "string", "minLength": 8 },
+    "primaryLoop": {
+      "type": "string",
+      "minLength": 16,
+      "description": "1-3 句人话描述主闭环：玩家做什么、世界如何反应、怎样达成胜利"
+    },
+    "controls": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["input", "effect"],
+        "additionalProperties": false,
+        "properties": {
+          "input": { "type": "string", "minLength": 1 },
+          "effect": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "requiredMechanics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "summary"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "summary": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "required": ["mustHave"],
+      "additionalProperties": false,
+      "properties": {
+        "mustHave": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "text", "mechanicRefs", "evidence"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "text": { "type": "string", "minLength": 1 },
+              "mechanicRefs": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "evidence": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "required": ["type"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": { "const": "canvas-change" },
+                        "minChangedPixels": { "type": "integer", "minimum": 1 }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "required": ["type", "id"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": { "const": "milestone" },
+                        "id": { "type": "string", "minLength": 1 },
+                        "minOccurrences": { "type": "integer", "minimum": 1 }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "required": ["type", "path", "operator", "value"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": { "const": "state" },
+                        "path": { "type": "string", "minLength": 1 },
+                        "operator": { "enum": ["==", ">=", "<=", ">", "<"] },
+                        "value": {}
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "mustNot": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "text"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "text": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "winCondition": { "type": "string", "minLength": 8 },
+    "loseCondition": { "type": "string" },
+    "nonblockingTodos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "summary"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "summary": { "type": "string", "minLength": 1 },
+          "type": { "enum": ["secondary-system", "feel", "asset", "ui-issue", "stage2-feature"] }
+        }
+      }
+    },
+    "implementationPlan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "action", "purpose"],
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string",
+            "minLength": 1,
+            "description": "case-local relative path, such as game/src/scenes/PlayScene.ts"
+          },
+          "action": {
+            "enum": ["create", "modify", "delete"]
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 4,
+            "description": "Short human-readable reason for this file change"
+          }
+        }
+      }
+    },
+    "smoke": {
+      "type": "object",
+      "required": ["steps", "expect"],
+      "additionalProperties": false,
+      "properties": {
+        "viewport": {
+          "type": "object",
+          "required": ["width", "height"],
+          "additionalProperties": false,
+          "properties": {
+            "width": { "type": "integer", "minimum": 240, "maximum": 1280 },
+            "height": { "type": "integer", "minimum": 180, "maximum": 800 }
+          }
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["type", "key", "durationMs"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "const": "keydown" },
+                  "key": { "type": "string", "minLength": 1 },
+                  "durationMs": { "type": "integer", "minimum": 1 }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["type", "key"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "const": "press" },
+                  "key": { "type": "string", "minLength": 1 },
+                  "holdMs": { "type": "integer", "minimum": 1 }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["type", "durationMs"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "const": "wait" },
+                  "durationMs": { "type": "integer", "minimum": 1 }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["type", "x", "y"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "const": "click" },
+                  "x": { "type": "integer" },
+                  "y": { "type": "integer" },
+                  "button": { "enum": ["left", "right", "middle"] }
+                }
+              }
+            ]
+          }
+        },
+        "expect": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["type", "minChangedPixels"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "const": "canvas-change" },
+                  "minChangedPixels": { "type": "integer", "minimum": 1 }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["type", "id", "timeoutMs"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "const": "milestone" },
+                  "id": { "type": "string", "minLength": 1 },
+                  "timeoutMs": { "type": "integer", "minimum": 1 },
+                  "minOccurrences": { "type": "integer", "minimum": 1 }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["type", "path"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "const": "state" },
+                  "path": { "type": "string", "minLength": 1 },
+                  "operator": { "enum": ["==", ">=", "<=", ">", "<"] },
+                  "value": {}
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

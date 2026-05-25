@@ -1,0 +1,86 @@
+{
+  "meta": {
+    "caseId": "delivery-runner-smoke",
+    "createdAt": "2026-05-23T00:00:00.000Z"
+  },
+  "rawQuery": "一个最小 canvas 互动烟测，按右键后方块移动并记录进度。",
+  "primaryLoop": "玩家按 ArrowRight 后，画布里的方块向右移动，分数更新，并发出 primary-progress milestone。",
+  "controls": [
+    {
+      "input": "ArrowRight",
+      "effect": "方块向右移动并增加 score"
+    }
+  ],
+  "requiredMechanics": [
+    {
+      "name": "move-right",
+      "summary": "ArrowRight 触发方块移动"
+    },
+    {
+      "name": "progress-beacon",
+      "summary": "移动后发出 primary-progress milestone"
+    }
+  ],
+  "acceptance": {
+    "mustHave": [
+      {
+        "id": "move-and-progress",
+        "text": "按 ArrowRight 后方块移动、score 增加并发出进度 milestone",
+        "mechanicRefs": ["move-right", "progress-beacon"],
+        "evidence": [
+          {
+            "type": "canvas-change",
+            "minChangedPixels": 200
+          },
+          {
+            "type": "milestone",
+            "id": "primary-progress",
+            "minOccurrences": 1
+          },
+          {
+            "type": "state",
+            "path": "score",
+            "operator": ">=",
+            "value": 1
+          }
+        ]
+      }
+    ],
+    "mustNot": [
+      {
+        "id": "no-progress-without-input",
+        "text": "未按 ArrowRight 时不应自动完成主进度"
+      }
+    ]
+  },
+  "winCondition": "按下 ArrowRight 后 score >= 1 即视为完成主闭环",
+  "loseCondition": "无",
+  "nonblockingTodos": [],
+  "smoke": {
+    "steps": [
+      {
+        "type": "keydown",
+        "key": "ArrowRight",
+        "durationMs": 100
+      }
+    ],
+    "expect": [
+      {
+        "type": "canvas-change",
+        "minChangedPixels": 200
+      },
+      {
+        "type": "milestone",
+        "id": "primary-progress",
+        "timeoutMs": 1000,
+        "minOccurrences": 1
+      },
+      {
+        "type": "state",
+        "path": "score",
+        "operator": ">=",
+        "value": 1
+      }
+    ]
+  }
+}

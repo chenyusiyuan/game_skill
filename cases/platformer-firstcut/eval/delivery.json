@@ -1,0 +1,41 @@
+{
+  "status": "delivery-with-warnings",
+  "warnings": [
+    {
+      "kind": "idle-frozen",
+      "text": "canvas changed very little during the idle sample; games with time pressure, NPCs, countdowns, or continuous effects should advance at least one delta-based state while idle",
+      "idleNoise": 0,
+      "threshold": 100,
+      "severity": "warn"
+    }
+  ],
+  "detail": {
+    "runner": {
+      "changedPixels": 18896,
+      "idleNoise": 0,
+      "noiseRatio": 0,
+      "postMilestoneChangedPixels": 784,
+      "milestoneCount": 4,
+      "stepsCount": 8
+    },
+    "diagnostic": {
+      "canvasMounted": true,
+      "canvasSize": {
+        "width": 640,
+        "height": 360
+      },
+      "canvasContext": "2d",
+      "viewport": {
+        "width": 480,
+        "height": 360
+      },
+      "pixelsAvailable": true,
+      "inputDispatched": true,
+      "stepsExecuted": 8,
+      "stepsTotal": 8,
+      "milestonesAny": 4,
+      "failedExpects": []
+    }
+  },
+  "timestamp": "2026-05-24T08:26:05.712Z"
+}
