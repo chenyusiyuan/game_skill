@@ -13,11 +13,19 @@ assert.doesNotMatch(skill, /只产 `cases\/<PROJECT>\/specs\/plan\.json`/u, "Pha
 assert.match(skill, /schemas\/plan\.schema\.json/, "Phase A must reference plan.schema.json");
 assert.match(skill, /node scripts\/validate_plan\.js/, "Phase A must document validate_plan.js");
 assert.match(skill, /node scripts\/check_delivery\.js/, "Phase C must document check_delivery.js");
+assert.match(skill, /node scripts\/check_preview\.js/, "Phase C must document check_preview.js");
+assert.match(skill, /node scripts\/write_handoff\.js/, "Phase C must document write_handoff.js");
+assert.match(skill, /node scripts\/start_preview\.js/, "Phase C must document start_preview.js");
 assert.match(skill, /eval\/delivery\.json/, "Phase C must document delivery.json");
+assert.match(skill, /eval\/preview\.json/, "Phase C must document preview.json");
+assert.match(skill, /eval\/handoff\.json/, "Phase C must document handoff.json");
 assert.match(skill, /implementationPlan\[\]/, "Phase A must document implementationPlan");
 assert.match(skill, /acceptance\.mustHave\[\]/, "Phase A must document acceptance.mustHave");
 assert.match(skill, /requiredMechanics\[\]\.name/, "acceptance rules must bind back to requiredMechanics");
 assert.match(skill, /first-cut evidence pass/, "delivery-pass must be scoped to first-cut evidence");
+assert.match(skill, /preview health/u, "Stage 1 must separate preview health from delivery evidence");
+assert.match(skill, /可试玩/u, "Stage 1 must allow playable preview handoff");
+assert.match(skill, /如果遇到 bug、想增加需求、修改现有机制、调整手感\/数值、素材\/颜色\/布局\/UI，都可以继续说/u, "handoff prompt must invite follow-up iteration");
 assert.match(skill, /eval\/screenshots\/final\.png/, "Phase C must document screenshot evidence");
 assert.match(skill, /unexpected-milestone/, "structured warning kinds must be documented");
 assert.match(skill, /top_down.*确定性短路径/u, "Phase A must keep realtime/top_down smoke deterministic");
@@ -49,6 +57,9 @@ assert.doesNotMatch(agents, forbiddenVersionText, "AGENTS.md must not contain ve
 
 const readme = fs.readFileSync("README.md", "utf8");
 assert.match(readme, /node scripts\/check_delivery\.js/, "README.md must document current delivery");
+assert.match(readme, /node scripts\/check_preview\.js/, "README.md must document preview health");
+assert.match(readme, /node scripts\/write_handoff\.js/, "README.md must document handoff");
+assert.match(readme, /node scripts\/start_preview\.js/, "README.md must document preview startup");
 assert.match(readme, /templates\/design-template\.md/, "README.md must document v1.1 design template");
 assert.match(readme, /qualityHints/, "README.md must document qualityHints");
 assert.match(readme, /npm test/, "README.md must document npm test");

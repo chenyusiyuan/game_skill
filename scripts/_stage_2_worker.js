@@ -3,6 +3,7 @@ import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   FileSnapshot,
+  buildCheckpoint,
   findTunableNumberConstant,
   isPassingDelivery,
   logCheckpoint,
@@ -12,6 +13,7 @@ import {
   runDeliveryCheck,
   summarizeFailure,
 } from "./_stage_common.js";
+import { mustAvoidBlocksPaddleSpeed, readEvolutionContext } from "./_evolution_context.js";
 import { evaluateMustNot } from "./_mustnot_evaluator.js";
 
 const REPO = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -25,6 +27,7 @@ export async function runStage2({ casePath, subtask, evolutionContext }) {
   if (!subtask || subtask.stage !== 2) {
     return failResult(caseDir, subtaskId, ["worker received mismatched subtask stage"]);
   }
+  const context = readEvolutionContext(caseDir);
 
   if (requiresNewContract(subtask.subIntent ?? "")) {
     await logRollback({ caseDir, subtaskId, stage: 2, reason: "wrong-worker" });
@@ -37,6 +40,9 @@ export async function runStage2({ casePath, subtask, evolutionContext }) {
   const planPath = join(caseDir, "specs/plan.json");
   const plan = readJson(planPath);
   if (isPaddleLagRepair(text)) {
+    if (mustAvoidBlocksPaddleSpeed(context.designSummary.mustAvoid)) {
+      return failResult(caseDir, subtaskId, ["DESIGN.md mustAvoid blocks paddle speed/input responsiveness repair"]);
+    }
     return runPaddleLagRepair({ caseDir, subtaskId, planPath });
   }
 
@@ -98,15 +104,16 @@ export async function runStage2({ casePath, subtask, evolutionContext }) {
         );
       }
 
-      const baseline = readJsonOptional(join(caseDir, "eval/baseline.json"));
-      const checkpoint = {
-        baselineId: baseline?.baselineId ?? null,
-        deliveryStatus: delivery?.status ?? null,
-        fixed: {
-          file: relativeCaseFile(caseDir, replacement.filePath),
-          from: replacement.from,
-          to: replacement.to,
-        },
+      const checkpoint = buildCheckpoint({
+        casePath: caseDir,
+        deliveryResult: after,
+        changedFiles: [relativeCaseFile(caseDir, replacement.filePath)],
+        note: "fixed milestone typo",
+      });
+      checkpoint.fixed = {
+        file: relativeCaseFile(caseDir, replacement.filePath),
+        from: replacement.from,
+        to: replacement.to,
       };
       await logCheckpoint({ caseDir, subtaskId, stage: 2, checkpoint });
       const result = { verdict: "pass", checkpoint };
@@ -162,14 +169,15 @@ async function runPaddleLagRepair({ caseDir, subtaskId, planPath }) {
       );
     }
 
-    const baseline = readJsonOptional(join(caseDir, "eval/baseline.json"));
-    const checkpoint = {
-      baselineId: baseline?.baselineId ?? null,
-      deliveryStatus: after.delivery?.status ?? null,
-      fixed: {
-        file: relativeCaseFile(caseDir, scenePath),
-        reason: "paddle input responsiveness",
-      },
+    const checkpoint = buildCheckpoint({
+      casePath: caseDir,
+      deliveryResult: after,
+      changedFiles: [relativeCaseFile(caseDir, scenePath)],
+      note: "fixed paddle input responsiveness",
+    });
+    checkpoint.fixed = {
+      file: relativeCaseFile(caseDir, scenePath),
+      reason: "paddle input responsiveness",
     };
     await logCheckpoint({ caseDir, subtaskId, stage: 2, checkpoint });
     const result = { verdict: "pass", checkpoint };

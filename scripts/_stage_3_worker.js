@@ -16,7 +16,9 @@ import {
   summarizeFailure,
   writeJson,
 } from "./_stage_common.js";
+import { appendPublicDecisionLog, deriveMechanicAnchor, readEvolutionContext } from "./_evolution_context.js";
 import { evaluateMustNot } from "./_mustnot_evaluator.js";
+import { validatePlan } from "./validate_plan.js";
 
 const PROGRESS_MECHANIC = {
   name: "destroyed-brick-progress",
@@ -63,19 +65,37 @@ export async function runStage3({ casePath, subtask, evolutionContext }) {
   }
 
   const planPath = join(caseDir, "specs/plan.json");
+  const decisionsPath = join(caseDir, "docs/decisions.md");
+  const context = readEvolutionContext(caseDir);
+  const derivedFrom = deriveMechanicAnchor(context.designSummary, "mechanic");
+  if (!derivedFrom) {
+    return failResult(caseDir, subtaskId, ["DESIGN.md missing usable anchor for new requiredMechanics.derivedFrom"]);
+  }
   const scenePath = resolveMainScenePath(caseDir);
   if (!scenePath) {
     return failResult(caseDir, subtaskId, ["main scene file not found under game/src/scenes/"]);
   }
-  const snapshot = new FileSnapshot().capture([planPath, scenePath]);
+  const snapshot = new FileSnapshot().capture([planPath, scenePath, decisionsPath]);
   const beforePlan = readJson(planPath);
 
   try {
     const plan = addFeaturePlanContracts(beforePlan, {
       destroyProgress: isDestroyProgressRequest(text),
       comboAchievement: isComboAchievementRequest(text),
+      derivedFrom,
     });
     writeJson(planPath, plan);
+    appendFeatureDecisionLog({
+      decisionsPath,
+      subtaskId,
+      destroyProgress: isDestroyProgressRequest(text),
+      comboAchievement: isComboAchievementRequest(text),
+      derivedFrom,
+    });
+    const planCheck = validatePlan(caseDir);
+    if (!planCheck.ok) {
+      throw new Error(`plan invalid after new feature contract: ${planCheck.errors.join("; ")}`);
+    }
     patchFeatureCode(scenePath, {
       destroyProgress: isDestroyProgressRequest(text),
       comboAchievement: isComboAchievementRequest(text),
@@ -135,7 +155,7 @@ export async function runStage3({ casePath, subtask, evolutionContext }) {
   }
 }
 
-function addFeaturePlanContracts(beforePlan, { destroyProgress, comboAchievement }) {
+export function addFeaturePlanContracts(beforePlan, { destroyProgress, comboAchievement, derivedFrom }) {
   const plan = JSON.parse(JSON.stringify(beforePlan));
   plan.requiredMechanics ??= [];
   plan.acceptance ??= {};
@@ -144,7 +164,7 @@ function addFeaturePlanContracts(beforePlan, { destroyProgress, comboAchievement
   plan.smoke.expect ??= [];
 
   if (destroyProgress && !plan.requiredMechanics.some((item) => item?.name === PROGRESS_MECHANIC.name)) {
-    plan.requiredMechanics.push(PROGRESS_MECHANIC);
+    plan.requiredMechanics.push({ ...PROGRESS_MECHANIC, derivedFrom });
   }
   if (destroyProgress && !plan.acceptance.mustHave.some((item) => item?.id === PROGRESS_MUST_HAVE.id)) {
     plan.acceptance.mustHave.push(PROGRESS_MUST_HAVE);
@@ -153,7 +173,7 @@ function addFeaturePlanContracts(beforePlan, { destroyProgress, comboAchievement
     plan.smoke.expect.push(PROGRESS_EXPECT);
   }
   if (comboAchievement && !plan.requiredMechanics.some((item) => item?.name === COMBO_MECHANIC.name)) {
-    plan.requiredMechanics.push(COMBO_MECHANIC);
+    plan.requiredMechanics.push({ ...COMBO_MECHANIC, derivedFrom });
   }
   if (comboAchievement && !plan.acceptance.mustHave.some((item) => item?.id === COMBO_MUST_HAVE.id)) {
     plan.acceptance.mustHave.push(COMBO_MUST_HAVE);
@@ -162,6 +182,21 @@ function addFeaturePlanContracts(beforePlan, { destroyProgress, comboAchievement
     plan.smoke.expect.push(COMBO_EXPECT);
   }
   return plan;
+}
+
+function appendFeatureDecisionLog({ decisionsPath, subtaskId, destroyProgress, comboAchievement, derivedFrom }) {
+  const featureNames = [
+    destroyProgress ? "破坏进度 milestone" : null,
+    comboAchievement ? "连击成就进度 milestone" : null,
+  ].filter(Boolean);
+  appendPublicDecisionLog({
+    decisionsPath,
+    subtaskId,
+    title: "演进新增机制契约",
+    decision: `新增 ${featureNames.join("、")}，并把 requiredMechanics.derivedFrom 绑定到 ${derivedFrom}。`,
+    basis: "该机制是用户演进 query 要求的新体验，属于唯一允许扩展 plan shape 的新增机制路径。",
+    risk: "新增证据必须和旧 smoke 一起回归；若后续 delivery 退化，本 subtask 回滚。",
+  });
 }
 
 function patchFeatureCode(scenePath, { destroyProgress, comboAchievement }) {

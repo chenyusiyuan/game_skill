@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { readEvolutionContext, summarizeDelivery } from "./_evolution_context.js";
 import { appendEvolutionLog } from "./_evolution_log.js";
 
 export const REPO = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -133,16 +134,21 @@ export async function runDeliveryCheck(casePath) {
   };
 }
 
-export function buildCheckpoint({ casePath, deliveryResult, changedFiles = [], note = null }) {
+export function buildCheckpoint({ casePath, deliveryResult, beforeDeliveryResult = null, changedFiles = [], note = null }) {
   const caseDir = resolve(REPO, casePath);
   const baseline = readJsonOptional(join(caseDir, "eval/baseline.json"));
   const delivery = deliveryResult?.delivery ?? readJsonOptional(join(caseDir, "eval/delivery.json"));
   const runnerResult = deliveryResult?.runnerResult ?? readJsonOptional(join(caseDir, "eval/runner-result.json"));
+  const context = readEvolutionContext(caseDir, { delivery, runnerResult, baseline });
   return {
     baselineId: baseline?.baselineId ?? null,
     deliveryStatus: delivery?.status ?? null,
     runnerSummary: runnerResult?.summary ?? delivery?.detail?.runner ?? null,
     warningKinds: (delivery?.warnings ?? []).map((warning) => warning?.kind).filter(Boolean),
+    qualityHintsSummary: context.qualityHintsSummary,
+    designSummary: context.designSummary,
+    beforeDeliverySummary: beforeDeliveryResult ? summarizeDelivery(beforeDeliveryResult.delivery) : undefined,
+    afterDeliverySummary: summarizeDelivery(delivery),
     changedFiles,
     ...(note ? { note } : {}),
   };

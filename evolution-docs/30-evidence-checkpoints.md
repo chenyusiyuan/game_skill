@@ -1,10 +1,10 @@
 # Evolution Docs · Evidence And Checkpoints
 
-本文说明演进层如何理解证据、checkpoint、baseline pointer、evolution log 和 `acceptance.mustNot`。这些都是设计说明，不代表当前仓库已经实现。
+本文说明演进层如何理解证据、checkpoint、baseline pointer、evolution log 和 `acceptance.mustNot`。当前仓库已有最小 runtime 实现；本文仍记录边界与证据语义，不替代 Stage 1 SOP。
 
 ## Baseline Pointer
 
-baseline pointer 指向“最近一次可接受交付”的证据集合。它不是 Stage 1 的输入，也不是重新生成的依据，而是演进前后的对照锚点。
+baseline pointer 指向“最近一次可接受交付或可试玩版本”的证据集合。它不是 Stage 1 的输入，也不是重新生成的依据，而是演进前后的对照锚点。
 
 N19 建议未来最小记录：
 
@@ -15,7 +15,12 @@ N19 建议未来最小记录：
 
 完整归档 `game/` 可以作为后续实现候选，但 N19 不锁死该存储方案。原因是完整归档可能在资源增加后成本变高，应该由实现阶段根据实际文件体量决定。
 
-建议生命周期：每次演进 subtask 通过回归门后写入新的 baseline pointer，保留最近 3 份。具体落点可考虑 `cases/<id>/eval/baseline.json`，但 N19 不创建该文件。
+当前生命周期：每次 passing delivery 会写入 `cases/<id>/eval/baseline.json`，并轮转 `baseline-prev1.json` / `baseline-prev2.json`。如果 delivery evidence 未通过但 `check_preview.js` 判定 `preview-ready`，且当前没有 delivery baseline，则写入 `baselineKind=preview` 的 preview baseline。baseline 保留旧字段，同时可选保存 `previewSummary`、`qualityHintsSummary`、`designSummary`、`decisionSummary`，让后续演进能对照 v1.1 backlog 与 design guard。
+
+`baselineKind` 语义：
+
+- `delivery`：自动 delivery evidence 已通过或带 warnings 通过；旧 baseline 缺字段时按 delivery 兼容。
+- `preview`：游戏可启动试玩，但 delivery evidence 可能是 `generation-blocked`；Stage 2-5 可以把 failed expects 当作修复/验收错位证据。
 
 ## Checkpoint
 
@@ -28,11 +33,11 @@ checkpoint 是 subtask 后的可回滚交付点。它不等于 git commit，也�
 - 它跑过哪些验证。
 - 如果后续失败，如何回到这个点。
 
-checkpoint 的实现可以由文件快照、artifact pointer、delivery 结果和 evolution log 共同组成。具体格式留给后续。
+当前 checkpoint 由 worker 运行时写入 `eval/evolution-log.jsonl`，至少包含 baselineId、deliveryStatus、runnerSummary、warningKinds、changedFiles；v1.1 收尾后还会附带 `qualityHintsSummary`、`designSummary`、`beforeDeliverySummary`、`afterDeliverySummary` 等可选摘要。
 
 ## Evolution Log
 
-未来的 `eval/evolution-log.jsonl` 应作为 append-only 历史记录。它让 triage router 能知道：
+`eval/evolution-log.jsonl` 是 append-only 历史记录。它让 triage router 能知道：
 
 - 用户本轮 query 是什么。
 - 被拆成了哪些 subtask。
@@ -40,7 +45,7 @@ checkpoint 的实现可以由文件快照、artifact pointer、delivery 结果�
 - 每个 subtask 的 verdict、checkpoint 指针和失败原因。
 - 是否发生 kick-back。
 
-N19 不定义 JSONL schema，只规定它是历史感知的来源之一。
+当前实现不把 JSONL schema 固化进 `schemas/`，只规定它是历史感知的来源之一。
 
 ## `acceptance.mustNot`
 
@@ -53,7 +58,7 @@ Stage 1 当前只把 `acceptance.mustNot` 当作后续人工复核或演进参�
 - `mustNot` 失败时，演进 subtask 应回滚并报告。
 - Stage 1 行为不变；不要为了 mustNot 修改 Stage 1 delivery 语义。
 
-N19 只说明未来 hook 点。当前 runner 已有 `canvas-change`、`milestone`、`state` 三类正向 expect 语义，但这不等于它已经支持 mustNot 执行。
+当前 Stage 2-5 worker 会在回归后执行 `acceptance.mustNot` 检查；失败时回滚该 subtask 并报告。`check_delivery.js` 仍不执行 mustNot，保持 Stage 1 语义不变。
 
 ## 证据类型复用
 

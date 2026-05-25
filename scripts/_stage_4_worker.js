@@ -16,6 +16,7 @@ import {
   runDeliveryCheck,
   summarizeFailure,
 } from "./_stage_common.js";
+import { qualityBacklog, readEvolutionContext } from "./_evolution_context.js";
 import { evaluateMustNot } from "./_mustnot_evaluator.js";
 
 export async function runStage4({ casePath, subtask, evolutionContext }) {
@@ -34,9 +35,14 @@ export async function runStage4({ casePath, subtask, evolutionContext }) {
     await logRollback({ caseDir, subtaskId, stage: 4, reason: "wrong-worker" });
     return kickBackResult(caseDir, subtaskId, 3, "请求需要改变 controls[].input");
   }
-  if (!wantsBallSpeedTune(text)) {
+  const context = readEvolutionContext(caseDir);
+  const backlog = qualityBacklog(context.qualityHintsSummary);
+  const qualityDrivenTune = isBacklogTuningRequest(text) && backlog.hasStage4Signal;
+  if (!wantsBallSpeedTune(text) && !qualityDrivenTune) {
     await logRollback({ caseDir, subtaskId, stage: 4, reason: "unsupported-deterministic-tuning" });
-    return failResult(caseDir, subtaskId, ["unsupported deterministic tuning POC"]);
+    return failResult(caseDir, subtaskId, [
+      `unsupported deterministic tuning POC; lowRubric=${backlog.lowRubric.join(",") || "<none>"}`,
+    ]);
   }
 
   const planPath = join(caseDir, "specs/plan.json");
@@ -49,7 +55,7 @@ export async function runStage4({ casePath, subtask, evolutionContext }) {
 
   try {
     const beforeDelivery = await runDeliveryCheck(caseDir);
-    patchBallSpeed(scenePath, speedDirection(text));
+    patchBallSpeed(scenePath, qualityDrivenTune && !wantsBallSpeedTune(text) ? "up" : speedDirection(text));
 
     const afterPlan = readJson(planPath);
     const changedFiles = changedFilesFromSnapshot(caseDir, snapshot);
@@ -90,10 +96,12 @@ export async function runStage4({ casePath, subtask, evolutionContext }) {
     const checkpoint = buildCheckpoint({
       casePath: caseDir,
       deliveryResult: afterDelivery,
+      beforeDeliveryResult: beforeDelivery,
       changedFiles,
       note: "tuned ball speed constant",
     });
     checkpoint.beforeRunnerSummary = beforeDelivery.runnerResult?.summary ?? beforeDelivery.delivery?.detail?.runner ?? null;
+    checkpoint.qualityBacklog = backlog;
     await logCheckpoint({ caseDir, subtaskId, stage: 4, checkpoint });
     const result = { verdict: "pass", checkpoint };
     await logSubtaskResult({ caseDir, subtaskId, stage: 4, result });
@@ -145,6 +153,10 @@ async function kickBackResult(caseDir, subtaskId, suggestedStage, reason) {
 
 function wantsBallSpeedTune(text) {
   return /球速|速度|太快|太慢|慢点|快点|调慢|调快|提一点|降低|提高/u.test(text);
+}
+
+function isBacklogTuningRequest(text) {
+  return /玩法体验打磨|体验调整|继续优化|继续打磨|收尾|手感|节奏|打击感|更舒服/u.test(text);
 }
 
 function speedDirection(text) {

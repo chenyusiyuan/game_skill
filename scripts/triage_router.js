@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { qualityBacklog, readEvolutionContext } from "./_evolution_context.js";
 import { appendEvolutionLog, readEvolutionLog } from "./_evolution_log.js";
 import { buildTriagePrompt } from "./_triage_prompt.js";
 
@@ -30,7 +31,12 @@ export async function routeQuery({ casePath, rawQuery, logDecision = true, force
     caseId,
     plan: context.plan,
     deliverySummary: context.deliverySummary,
+    previewSummary: context.previewSummary,
     runnerSummary: context.runnerSummary,
+    qualityHintsSummary: context.qualityHintsSummary,
+    designSummary: context.designSummary,
+    decisionSummary: context.decisionSummary,
+    baselineSummary: context.baselineSummary,
     recentEvolutionLog: rekickFrom ? withRekickContext(context.recentEvolutionLog, rekickFrom) : context.recentEvolutionLog,
     screenshotArtifacts: context.screenshotArtifacts,
     providerConfig: context.providerConfig,
@@ -41,7 +47,7 @@ export async function routeQuery({ casePath, rawQuery, logDecision = true, force
   if (useLlm) {
     decision = await routeWithLlm({ prompt, context, rawQuery, caseId });
   } else {
-    decision = localRoute({ rawQuery, caseId, baselineRef: context.baseline.baselineId, rekickFrom });
+    decision = localRoute({ rawQuery, caseId, baselineRef: context.baseline.baselineId, rekickFrom, context });
   }
 
   const checked = validateDecision(decision);
@@ -145,7 +151,6 @@ async function readRouterContext(caseDir, caseId, rawQuery) {
   const required = {
     plan: join(caseDir, "specs/plan.json"),
     delivery: join(caseDir, "eval/delivery.json"),
-    runner: join(caseDir, "eval/runner-result.json"),
     baseline: join(caseDir, "eval/baseline.json"),
     provider: join(caseDir, ".game/eval-provider.json"),
   };
@@ -154,37 +159,37 @@ async function readRouterContext(caseDir, caseId, rawQuery) {
     if (!existsSync(filePath)) {
       const reason =
         name === "baseline"
-          ? "baseline 缺失; no passing baseline; run delivery first"
+          ? "baseline 缺失; run delivery or preview first"
           : `required context missing: ${relativeCasePath(caseDir, filePath)}`;
-      return { reject: rejectDecision({ rawQuery, caseId, reason, guidance: "请先跑一次 Stage 1 delivery 并确认 eval 工件齐全。" }) };
+      return { reject: rejectDecision({ rawQuery, caseId, reason, guidance: "请先跑 Stage 1 delivery / preview 并确认 eval 工件齐全。" }) };
     }
   }
 
-  const plan = await readJson(required.plan);
-  const delivery = await readJson(required.delivery);
-  const runner = await readJson(required.runner);
-  const baseline = await readJson(required.baseline);
-  const providerConfig = await readJson(required.provider);
+  const context = readEvolutionContext(caseDir);
+  const { plan, delivery, preview, runner, baseline, providerConfig } = context;
 
   if (!baseline?.baselineId) {
     return {
       reject: rejectDecision({
         rawQuery,
         caseId,
-        reason: "baseline 缺少 baselineId; no passing baseline; run delivery first",
-        guidance: "请先跑一次 Stage 1 delivery 生成有效 baseline。",
+        reason: "baseline 缺少 baselineId; run delivery or preview first",
+        guidance: "请先跑一次 Stage 1 delivery 或 check_preview 生成有效 baseline。",
       }),
     };
   }
 
-  if (!["delivery-pass", "delivery-with-warnings"].includes(delivery?.status)) {
+  const deliveryReady = ["delivery-pass", "delivery-with-warnings"].includes(delivery?.status);
+  const baselineKind = baseline.baselineKind ?? "delivery";
+  const previewReady = preview?.status === "preview-ready";
+  if (!deliveryReady && !(baselineKind === "preview" && previewReady)) {
     return {
       reject: rejectDecision({
         rawQuery,
         caseId,
         baselineRef: baseline.baselineId,
         reason: `当前 delivery 状态为 ${delivery?.status ?? "unknown"}，不适合进入演进环。`,
-        guidance: "请先修复 Stage 1 delivery。",
+        guidance: "请先跑 check_preview 生成可试玩 preview baseline，或修复到 delivery evidence 通过。",
       }),
     };
   }
@@ -195,14 +200,19 @@ async function readRouterContext(caseDir, caseId, rawQuery) {
     runner,
     baseline,
     providerConfig,
-    deliverySummary: summarizeDelivery(delivery),
-    runnerSummary: summarizeRunner(runner),
-    screenshotArtifacts: await summarizeScreenshots(caseDir, runner),
+    deliverySummary: context.deliverySummary,
+    previewSummary: context.previewSummary,
+    runnerSummary: context.runnerSummary,
+    qualityHintsSummary: context.qualityHintsSummary,
+    designSummary: context.designSummary,
+    decisionSummary: context.decisionSummary,
+    baselineSummary: context.baselineSummary,
+    screenshotArtifacts: context.screenshotArtifacts,
     recentEvolutionLog: (await readEvolutionLog(caseDir)).slice(-5),
   };
 }
 
-function localRoute({ rawQuery, caseId, baselineRef, rekickFrom = null }) {
+function localRoute({ rawQuery, caseId, baselineRef, rekickFrom = null, context = null }) {
   const query = rawQuery.trim();
   if (rekickFrom) {
     return localRekickRoute({ rawQuery: query, caseId, baselineRef, rekickFrom });
@@ -216,6 +226,11 @@ function localRoute({ rawQuery, caseId, baselineRef, rekickFrom = null }) {
       reason: "query 要求推倒重做整份 plan;这属于非演进范畴。",
       guidance: "请走首轮生成 SOP 重新生成。",
     });
+  }
+
+  if (isBacklogPolish(query)) {
+    const backlogDecision = localQualityBacklogRoute({ rawQuery, query, caseId, baselineRef, context });
+    if (backlogDecision) return backlogDecision;
   }
 
   if (isVague(query)) {
@@ -286,6 +301,39 @@ function localRoute({ rawQuery, caseId, baselineRef, rekickFrom = null }) {
     subtasks: intents,
     conflicts: [],
   };
+}
+
+function localQualityBacklogRoute({ rawQuery, query, caseId, baselineRef, context }) {
+  const backlog = qualityBacklog(context?.qualityHintsSummary);
+  const subtasks = [];
+  if (backlog.hasStage4Signal && !/美化|视觉|画面|颜色|UI|ui|布局/u.test(query)) {
+    subtasks.push(makeSubtask({ stage: 4, index: subtasks.length + 1, rawQuery: query }));
+    subtasks.at(-1).subIntent = "玩法体验打磨";
+  }
+  if (backlog.hasStage5Signal || /美化|视觉|画面|颜色|UI|ui|布局/u.test(query)) {
+    subtasks.push(makeSubtask({ stage: 5, index: subtasks.length + 1, rawQuery: query }));
+    subtasks.at(-1).subIntent = inferVisualBacklogIntent(backlog.visualWarnings);
+  }
+  if (subtasks.length === 0) return null;
+  subtasks.forEach((subtask, offset) => {
+    subtask.id = `s${subtask.stage}-${String(offset + 1).padStart(3, "0")}`;
+  });
+  return {
+    decision: "execute",
+    rawQuery,
+    caseId,
+    baselineRef,
+    subtasks,
+    conflicts: [],
+  };
+}
+
+function inferVisualBacklogIntent(warnings) {
+  if (warnings.includes("hud-empty")) return "HUD 信息强化";
+  if (warnings.includes("center-static")) return "中心动态反馈强化";
+  if (warnings.includes("colorCount-low")) return "色彩层次强化";
+  if (warnings.includes("shapeRegions-low")) return "画面区域层次强化";
+  return "表现层优化";
 }
 
 function makeSubtask({ stage, index, rawQuery }) {
@@ -469,6 +517,10 @@ function isPolish(query) {
   return /UI|ui|颜色|音效|视觉|画面|布局|排布|太挤|不醒目|字体|特效|更清楚/u.test(query);
 }
 
+function isBacklogPolish(query) {
+  return /继续优化|继续打磨|收尾|打磨一下|整体打磨|优化一下|再润色|美化一下/u.test(query);
+}
+
 function isVague(query) {
   return /^(游戏)?感觉不对[。！!,.，\s]*$/u.test(query) || /^(不好玩|有问题|怪怪的)[。！!,.，\s]*$/u.test(query);
 }
@@ -636,10 +688,6 @@ async function safeLogDecision(caseDir, decision, context = {}, extra = {}) {
   } catch {
     // The CLI output remains the source of truth if logging is unavailable.
   }
-}
-
-async function readJson(filePath) {
-  return JSON.parse(await readFile(filePath, "utf8"));
 }
 
 function relativeCasePath(caseDir, filePath) {

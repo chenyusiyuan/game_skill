@@ -1,6 +1,6 @@
 # Evolution Docs · Stage Boundaries
 
-本文说明 Stage 2-5 的边界。它不是执行 SOP，而是给后续 worker、reviewer 和实现者看的边界说明。
+本文说明 Stage 2-5 的边界。它不是 Stage 1 执行 SOP，而是给 post-delivery worker、reviewer 和实现者看的边界说明。当前仓库已有 `scripts/_stage_2_worker.js` 到 `scripts/_stage_5_worker.js` 的 deterministic runtime；未覆盖的请求必须失败诚实停或 kick-back。
 
 ## 总览
 
@@ -16,6 +16,8 @@
 触发意图：用户指出已有行为和预期不一致。典型例子是输入失效、碰撞错误、卡死、掉帧、结算不触发、某个 acceptance 对应行为没有发生。
 
 Stage 2 的核心是复现优先。没有可复现问题，就无法判断修复是否成功。复现可以来自用户步骤、runner diagnostic、delivery warning、mustNot 反例，或未来的 issue 文件。
+
+当前实现还读取 `DESIGN.md.mustAvoid` 和 `decisions.md` 摘要作为 design guard；任何修复不得把 mustAvoid 禁忌当作优化方向。
 
 允许变更：
 
@@ -49,6 +51,8 @@ Kick-back 信号：
 
 Stage 3 是唯一允许 `spec-shape-change` 的 stage。它使用当前 `plan.json` 做增量，不引入 GDD 子链路，不从头生成一份新设计。
 
+当前实现要求所有新增 `requiredMechanics[]` 都写入 v1.1 `derivedFrom`，并能通过 `scripts/validate_plan.js` 的 design-anchor 校验。新增机制还会在 `docs/decisions.md` B 段追加公开 decision log。
+
 允许变更：
 
 - 新增 `requiredMechanics`、`acceptance.mustHave`、control、rule、entity、win/lose 条件。
@@ -80,6 +84,8 @@ Kick-back 信号：
 触发意图：用户觉得现有玩法“不够好”，但不是要求加入新机制。典型例子是手感不舒服、节奏拖、打击反馈弱、难度曲线不顺、敌人生成太密。
 
 Stage 4 的边界以契约形状为准，不以文件名或“逻辑代码”硬切。Phaser 项目里输入窗、碰撞反馈、命中停顿和速度曲线经常写在同一 scene 中；关键不是碰了哪个文件，而是有没有改变玩家承诺的机制形状。
+
+当前实现会把 `qualityHints.rubric`、`qualityHints.visual.warnings` 和 LOC 摘要作为 backlog 优先级线索，但仍只执行可验证的局部调参；没有明确可执行目标时失败诚实停。
 
 允许变更：
 
@@ -114,6 +120,8 @@ Stage 4 kick-back 前必须回滚该 subtask 已写改动，不留下半调参�
 触发意图：用户不满意样子、听感或排布。典型例子是 UI 太挤、颜色不清楚、角色不醒目、音效弱、特效不好看。
 
 Stage 5 关注感官表达，不改变 gameplay 契约。N19 v1 按逻辑串行理解；物理异步美化只作为未来议题，合并前仍必须通过逻辑回归门。
+
+当前实现直接消费 `qualityHints.visual.warnings`，并用 `colorCount`、`shapeRegions`、`hudOccupancy`、`centerActivity` 做文本化 before/after no-regression gate。它不读取截图二进制，也不做多模态视觉裁判。
 
 允许变更：
 

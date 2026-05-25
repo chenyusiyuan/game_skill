@@ -5,8 +5,9 @@ canvas.width = 160;
 canvas.height = 90;
 document.body.append(canvas);
 
-const context = canvas.getContext("2d");
-if (!context) throw new Error("2d canvas unavailable");
+const maybeContext = canvas.getContext("2d");
+if (!maybeContext) throw new Error("2d canvas unavailable");
+const context = maybeContext;
 
 let playerX = 20;
 let score = 0;

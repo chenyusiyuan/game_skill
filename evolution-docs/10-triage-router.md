@@ -1,6 +1,6 @@
 # Evolution Docs · Triage Router
 
-本文说明首交付后的自然语言修改需求如何被拆成有序 subtask。它是设计接口说明，不是 JSON schema，也不承诺当前仓库已有对应实现。
+本文说明首交付后的自然语言修改需求如何被拆成有序 subtask。它是设计接口说明，不是 JSON schema；当前仓库的实现入口是 `scripts/triage_router.js`。
 
 ## 为什么先有路由器
 
@@ -14,12 +14,20 @@
 
 - 用户自然语言 query。
 - 当前 `cases/<id>/specs/plan.json`。
+- 当前 `docs/DESIGN.md` 的 anchors / mustAvoid，以及 `docs/decisions.md` 的来源标签摘要。
 - 最近一次 `eval/delivery.json` 和 `eval/runner-result.json` 的摘要、diagnostic、warning。
+- `eval/preview.json` 的试玩健康状态、启动命令和 preview screenshot 元数据。
+- `eval/delivery.json.qualityHints` 中的 visual warnings、rubric、scopeReport 和 LOC 摘要。
+- `eval/baseline.json` 的 baseline summary 与 v1.1 摘要快照；`baselineKind=preview` 表示游戏可试玩但 delivery evidence 可能未通过。
 - 可用 screenshot 路径和元信息；若 vision policy 禁止读图，则只使用文件路径、尺寸、大小、像素统计等文本证据。
 - 未来的 `eval/evolution-log.jsonl`，用于避免重复修同一类问题。
 - 可选 issue 文本，如用户明确给出复现步骤、期望和实际结果。
 
 v1 只接受自然语言 query。结构化用户输入留作后续设计。
+
+当前实现的共享读取层是 `scripts/_evolution_context.js`。它只读取 case-local 文本/JSON 和截图路径/大小元数据，不读取截图二进制，也不把图片 base64 放进 prompt。
+
+如果 `delivery.status` 不是 `delivery-pass` / `delivery-with-warnings`，但 `preview.status=preview-ready` 且 baseline 是 `baselineKind=preview`，router 仍可启动 Stage 2-5。此时 failed expects 和 previewSummary 是 Stage 2 修复、验收错位排查和后续迭代的重要证据。
 
 ## 输出形状
 

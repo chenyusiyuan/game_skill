@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { readEvolutionContext } from "./_evolution_context.js";
 
 const SCREENSHOT_POINTERS = {
   mount: "eval/screenshots/mount.png",
@@ -50,29 +51,37 @@ function deliverySummary(deliveryRecord, runnerResult) {
   };
 }
 
-function artifactPointers(runnerResult) {
+function artifactPointers(runnerResult, previewRecord) {
   return {
     plan: "specs/plan.json",
     delivery: "eval/delivery.json",
+    preview: "eval/preview.json",
     runnerResult: "eval/runner-result.json",
     screenshots: {
       ...SCREENSHOT_POINTERS,
       ...(runnerResult?.screenshots ?? {}),
     },
+    previewScreenshots: previewRecord?.screenshots ?? {},
   };
 }
 
-export async function writeBaseline({ casePath, deliveryRecord, runnerResult, planPath }) {
+export async function writeBaseline({ casePath, deliveryRecord, runnerResult, planPath, baselineKind = "delivery", previewRecord = null }) {
   const evalDir = assertEvalDir(casePath);
   const createdAt = new Date().toISOString();
   const baselineId = `${createdAt}-${caseHash(casePath)}`;
   const baselinePath = join(evalDir, "baseline.json");
+  const context = readEvolutionContext(casePath, { delivery: deliveryRecord, preview: previewRecord, runnerResult, baseline: null });
   const baselineRecord = {
+    baselineKind,
     baselineId,
     createdAt,
     planHash: planHash(planPath),
     deliverySummary: deliverySummary(deliveryRecord, runnerResult),
-    artifactPointers: artifactPointers(runnerResult),
+    previewSummary: context.previewSummary,
+    qualityHintsSummary: context.qualityHintsSummary,
+    designSummary: context.designSummary,
+    decisionSummary: context.decisionSummary,
+    artifactPointers: artifactPointers(runnerResult, previewRecord),
   };
 
   rotateBaselines(evalDir);

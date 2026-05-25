@@ -4,7 +4,7 @@
 
 stage1 用最朴素事实判定一次首轮生成是否成功：真实输入驱动、真实画面变化、真实 milestone、失败诚实停。worker 直接写 case-local Phaser/TypeScript 游戏；用一页 `plan.json` 表达主闭环和最低 acceptance 契约；用一个真实输入派发的 delivery smoke 验证主闭环。
 
-`delivery-pass` 只表示 first-cut evidence pass：首轮产物能启动、接收真实输入，并产出主闭环机械证据。它不表示用户需求已最终完整验收；后续体验问题和局部 bugfix 进入首交付后的演进说明。stage1 不做局部修复、不触发 repair loop；失败只诚实停，或由后续流程整份重生。
+`delivery-pass` 只表示 first-cut evidence pass：首轮产物能启动、接收真实输入，并产出主闭环机械证据。它不表示用户需求已最终完整验收；后续体验问题和局部 bugfix 进入首交付后的演进说明。Stage 1 不做局部 repair loop；delivery evidence 失败要诚实说明，但只要 preview health 可启动，就应交付试玩并引导用户继续提出 bug、需求新增、机制修改、手感/数值或素材/布局调整。
 
 ## Step 0
 
@@ -89,7 +89,7 @@ evidence 匹配规则：
 8. Phase B 写核心循环、milestone emit、state 暴露与可见反馈
 9. Phase B 更新 decisions.md B 段，覆盖实现差异与风险
 10. Phase C 跑 delivery smoke，读取 `qualityHints`
-11. Phase C 可选写 retrospective，沉淀后续 Stage 2 backlog
+11. Phase C 可选写 retrospective，沉淀后续 Stage 2-5 backlog
 
 ### A.1 archetype 识别 + on-demand primer
 
@@ -274,13 +274,16 @@ update(_time: number, delta: number) {
 
 ## Phase C
 
-只跑：
+固定顺序：
 
 ```bash
 node scripts/check_delivery.js cases/<PROJECT>
+node scripts/check_preview.js cases/<PROJECT>
+node scripts/write_handoff.js cases/<PROJECT>
+node scripts/start_preview.js cases/<PROJECT>
 ```
 
-它内部按顺序执行：
+`check_delivery.js` 内部按顺序执行：
 
 1. import guard：禁止业务代码 import templates / scripts / schemas / archive / legacy / sibling case
 2. plan validate：AJV 校验 `specs/plan.json`
@@ -289,10 +292,14 @@ node scripts/check_delivery.js cases/<PROJECT>
 5. delivery runner：Playwright 启动 vite dev、派发 `smoke.steps`、观测 `smoke.expect`，并落地截图 / summary / warnings 作为后续演进输入证据
 6. 写 `eval/delivery.json` 四态 verdict
 
-Phase C 不跑 mechanism smoke、不跑 playable-demo、不跑 receipt vocab 校验、不触发自动修复。
+`check_preview.js` 是试玩健康检查，不派发 `smoke.steps`，不判定 milestone/state/canvas expect；它只检查 runtime、import guard、prepare、typecheck、vite build、dev server mount、pageerror、canvas mounted / pixels available，并写 `eval/preview.json`。
+
+`write_handoff.js` 读取 `plan.json`、`delivery.json`、`preview.json`、`qualityHints`，写 `eval/handoff.json`。preview-ready 时，主 agent 必须启动游戏，说明玩法和操作，并明确告诉用户：如果遇到 bug、想增加需求、修改现有机制、调整手感/数值、素材/颜色/布局/UI，都可以继续说。
+
+Phase C 不跑 mechanism smoke、不跑 playable-demo、不跑 receipt vocab 校验、不触发自动修复，不自动进入 Stage 2-5。
 Phase C 不再读取 git diff / git status，不要求 `--baseline`，也不会因工作树里其他 case 或 repo-level 改动而阻塞。
 同一仓库同一 case 不要并行跑 `check_delivery`；如需多 agent 并行，优先用不同 case 或 git worktree 物理隔离。
-`check_delivery` 不是 repair loop。首轮 Stage1 同一 case 最多运行 3 次 `check_delivery`（首次 + 最多 2 次小修复复测）；若仍是 `generation-blocked`，或修法需要重设地图、路径、机制、plan 主结构，立刻按失败汇报停，不继续局部修到 pass。
+`check_delivery` 不是 repair loop。首轮 Stage1 同一 case 最多运行 3 次 `check_delivery`（首次 + 最多 2 次小修复复测）；若仍是 `generation-blocked`，或修法需要重设地图、路径、机制、plan 主结构，先跑 `check_preview`。preview-ready 则可试玩交付并把 evidence 失败写进 handoff；preview-blocked 才按阻塞汇报停。
 
 Phase C 物证：
 
@@ -300,6 +307,8 @@ Phase C 物证：
 - `eval/screenshots/after-steps.png`
 - `eval/screenshots/final.png`
 - `eval/runner-result.json` 中的 `summary`、`warnings`、`screenshots`
+- `eval/preview.json` 中的 preview health、试玩截图和 launch command
+- `eval/handoff.json` 中的玩法说明、操作说明、检查摘要和后续迭代引导
 
 截图仅作物证，不是视觉裁判。若 vision policy 禁止读图，agent 只能使用截图路径、文件大小、尺寸、像素统计等文本证据，不得肉眼解读图片内容。
 
@@ -307,7 +316,7 @@ Phase C 物证：
 
 ### C.1 delivery.json.qualityHints 解读
 
-`delivery.json.qualityHints` 是 Stage 2 backlog 输入，包含 4 个子项：
+`delivery.json.qualityHints` 是 Stage 2-5 backlog 输入，包含 4 个子项：
 
 | 子项 | 含义 |
 |---|---|
@@ -327,7 +336,7 @@ Phase C 物证：
 delivery 后建议读取 `delivery.json.qualityHints`，在 decisions.md C 段写 retrospective：
 
 - 视觉指标读后感，例如 colorCount / hudOccupancy 极端值的可能原因
-- 如果重来会改什么，作为 Stage 2 backlog 种子
+- 如果重来会改什么，作为 Stage 2-5 backlog 种子
 - scope 自评：from-query 是否都落地，from-genre-knowledge 推迟了哪些
 
 retrospective 可选，但有助于后续演进环少猜。
@@ -335,6 +344,14 @@ retrospective 可选，但有助于后续演进环少猜。
 ### C.4 delivery-pass 不等于完整完成
 
 `delivery-pass` 只表示首交付证据通过：主闭环可启动、接收输入、产生 milestone / canvas / state 证据。它不等于需求完整验收、视觉达标或体验打磨完成；这些看 qualityHints、rubric、retrospective，并留给 Stage 2-5 演进处理。
+
+### C.5 preview-ready 是试玩交付 gate
+
+`preview-ready` 只表示游戏可启动试玩：build、页面 mount、canvas 和像素读取健康。它不表示 delivery evidence 通过，也不表示需求完整完成。
+
+若 `delivery.status` 是 `generation-blocked`，但 `preview.status` 是 `preview-ready`，最终对用户的状态应是“可试玩，但自动检查未完全通过”。主 agent 仍要启动游戏、说明玩法/操作，并把失败的 expect 或 diagnostic 作为后续 Stage 2-5 backlog，而不是把游戏藏起来。
+
+`preview-blocked` 才表示无法展示给用户；此时优先在 Stage 1 小修复预算内修到可启动，修不动再按阻塞汇报。
 
 ## 4 态出口
 
@@ -346,6 +363,15 @@ retrospective 可选，但有助于后续演进环少猜。
 | `chain-blocked` | 链路承诺过但没提供：import 不存在的 helper / 越界依赖、prepare 自身失败、runner 自身异常 |
 
 `chain-blocked` 只能由 runner / guard 自动判定，worker 不能自报。
+
+## Preview / Handoff 出口
+
+| status | 含义 |
+|---|---|
+| `preview-ready` | 游戏能启动、页面能 mount、canvas 可读，可给用户试玩 |
+| `preview-blocked` | 缺 runtime、越界 import、prepare/typecheck/vite/page mount/pageerror/canvas 不可用，不能给用户试玩 |
+| `handoff.ready` | 已生成玩法说明、操作说明、检查摘要和后续迭代引导 |
+| `handoff.blocked` | preview 不可用，无法正常交付试玩 |
 
 warning 使用结构化数组，`kind` 至少包括：`unexpected-milestone`、`console-warning`、`console-error`、`nonblocking-todos`、`canvas-static-after-milestone`、`static-between-inputs`、`idle-frozen`、`auto-cleaned-junk`、`canvas-exceeds-viewport`。unexpected milestone 不直接 fail，但会让结果进入 `delivery-with-warnings`。
 
@@ -457,7 +483,7 @@ window.__state = {
 final.png -> _visual_warn.js -> qualityHints.visual
 ```
 
-`_visual_warn.js` 输出 `colorCount`、`shapeRegions`、`hudOccupancy`、`centerActivity` 等文本指标，供 retrospective 与 Stage 2 backlog 使用。
+`_visual_warn.js` 输出 `colorCount`、`shapeRegions`、`hudOccupancy`、`centerActivity` 等文本指标，供 retrospective 与 Stage 2-5 backlog 使用。
 
 多模态只通过 `vision-policy` opt-in：支持读图的模型也必须先满足 `.game/vision-policy.json` 与 Step 0 的边界，不能绕过 policy 直接肉眼读图。
 
@@ -475,6 +501,8 @@ blockReason: <脚本输出的 reason>
 判断: <generation-blocked = case 自身错；chain-blocked = 链路能力不够>
 下一步: <用户决策点>
 ```
+
+如果 `eval/preview.json` 是 `preview-ready`，不要使用上面的阻塞模板作为最终交付话术；改用 `eval/handoff.json` 的玩法/操作/检查摘要，说明自动证据未完全通过但游戏可试玩，并邀请用户继续迭代。
 
 ## 视觉表现建议（非门禁，参考用）
 
@@ -499,4 +527,6 @@ blockReason: <脚本输出的 reason>
 
 Stage 2-5 的演进设计见 [evolution-docs/README.md](./evolution-docs/README.md)。
 
-Stage 1 行为不变：不会自动进入演进环，不把演进 query 回流到首轮生成链路，也不在本 SOP 中实现 Stage 2-5 worker。
+Stage 1 行为不变：不会自动进入演进环，也不把演进 query 回流到首轮生成链路。
+
+当前仓库已提供首交付后的显式 evolution CLI：`scripts/triage_router.js` 与 `scripts/run_evolution.js`。它们从最近 passing baseline、delivery / runner 证据、`docs/DESIGN.md`、`docs/decisions.md` 和 `eval/delivery.json.qualityHints` 出发，按 Stage 2-5 边界做局部修复、新增、深化和美化；具体实现状态与边界以 `evolution-docs/README.md` 为准。

@@ -15,6 +15,7 @@ import {
   runDeliveryCheck,
   summarizeFailure,
 } from "./_stage_common.js";
+import { qualityBacklog, readEvolutionContext } from "./_evolution_context.js";
 import { evaluateMustNot } from "./_mustnot_evaluator.js";
 
 export async function runStage5({ casePath, subtask, evolutionContext }) {
@@ -36,9 +37,14 @@ export async function runStage5({ casePath, subtask, evolutionContext }) {
       followUp: "需要更强的视觉遮挡检测后再允许此类布局修改",
     });
   }
-  if (!wantsHudPolish(text)) {
+  const context = readEvolutionContext(caseDir);
+  const backlog = qualityBacklog(context.qualityHintsSummary);
+  const qualityDrivenPolish = isVisualBacklogRequest(text) && backlog.hasStage5Signal;
+  if (!wantsHudPolish(text) && !qualityDrivenPolish) {
     await logRollback({ caseDir, subtaskId, stage: 5, reason: "unsupported-deterministic-polish" });
-    return failResult(caseDir, subtaskId, ["unsupported deterministic polish POC"]);
+    return failResult(caseDir, subtaskId, [
+      `unsupported deterministic polish POC; visualWarnings=${backlog.visualWarnings.join(",") || "<none>"}`,
+    ]);
   }
 
   const planPath = join(caseDir, "specs/plan.json");
@@ -50,8 +56,10 @@ export async function runStage5({ casePath, subtask, evolutionContext }) {
   const snapshot = new FileSnapshot().capture([planPath, scenePath]);
   const beforePlan = readJson(planPath);
   const beforeFiles = { [sceneRel]: readTextOptional(scenePath) ?? "" };
+  const targetedWarnings = inferTargetedVisualWarnings(text, backlog.visualWarnings);
 
   try {
+    const beforeDelivery = await runDeliveryCheck(caseDir);
     patchHudStyle(scenePath);
     const afterPlan = readJson(planPath);
     const afterFiles = { [sceneRel]: readTextOptional(scenePath) ?? "" };
@@ -98,21 +106,35 @@ export async function runStage5({ casePath, subtask, evolutionContext }) {
       await logRollback({ caseDir, subtaskId, stage: 5, reason: screenshotCheck.reason });
       return failResult(caseDir, subtaskId, [screenshotCheck.reason]);
     }
+    const visualGate = evaluateStage5VisualGate({
+      text,
+      targetedWarnings,
+      beforeDelivery: beforeDelivery.delivery,
+      afterDelivery: deliveryResult.delivery,
+    });
+    if (!visualGate.ok) {
+      snapshot.restore();
+      await logRollback({ caseDir, subtaskId, stage: 5, reason: visualGate.reason });
+      return failResult(caseDir, subtaskId, [visualGate.reason]);
+    }
 
     const checkpoint = buildCheckpoint({
       casePath: caseDir,
       deliveryResult,
+      beforeDeliveryResult: beforeDelivery,
       changedFiles,
       note: "polished HUD font metadata",
     });
     checkpoint.screenshotMetadata = screenshotCheck.files;
+    checkpoint.visualGate = visualGate;
+    checkpoint.qualityBacklog = backlog;
     await logCheckpoint({ caseDir, subtaskId, stage: 5, checkpoint });
     const result = {
       verdict: "pass",
       checkpoint,
       advisory: {
-        kind: "visual-gate-weak",
-        followUp: "当前只校验截图文件元数据，严格视觉门留后续演进",
+        kind: "visual-gate-text-metrics",
+        followUp: "当前使用截图元数据和 qualityHints.visual 指标做 no-regression gate，不引入多模态评审",
       },
     };
     await logSubtaskResult({ caseDir, subtaskId, stage: 5, result });
@@ -155,6 +177,32 @@ function checkScreenshots(caseDir, runnerResult) {
   return { ok: true, files };
 }
 
+export function evaluateStage5VisualGate({ text = "", targetedWarnings = [], beforeDelivery, afterDelivery }) {
+  const metrics = targetMetricsForStage5(text, targetedWarnings);
+  if (metrics.length === 0) return { ok: true, checked: [], reason: null };
+
+  const before = beforeDelivery?.qualityHints?.visual;
+  const after = afterDelivery?.qualityHints?.visual;
+  if (!before?.available || !after?.available) {
+    return { ok: false, checked: metrics, reason: "visual metrics unavailable for before/after no-regression gate" };
+  }
+
+  const checked = [];
+  for (const metric of metrics) {
+    const beforeValue = Number(before[metric]);
+    const afterValue = Number(after[metric]);
+    if (!Number.isFinite(beforeValue) || !Number.isFinite(afterValue)) {
+      return { ok: false, checked, reason: `visual metric missing: ${metric}` };
+    }
+    checked.push({ metric, before: beforeValue, after: afterValue });
+    if (afterValue + 1e-9 < beforeValue) {
+      return { ok: false, checked, reason: `visual metric regressed: ${metric} ${beforeValue} -> ${afterValue}` };
+    }
+  }
+
+  return { ok: true, checked, reason: null };
+}
+
 async function failResult(caseDir, subtaskId, errors, advisory = undefined) {
   const result = { verdict: "fail", errors, advisory };
   await logSubtaskResult({ caseDir, subtaskId, stage: 5, result });
@@ -176,6 +224,28 @@ async function kickBackResult(caseDir, subtaskId, suggestedStage, reason) {
 
 function wantsHudPolish(text) {
   return /HUD|hud|字体|颜色|布局|排布|UI|ui|画面|视觉|更清楚|太小/u.test(text);
+}
+
+function isVisualBacklogRequest(text) {
+  return /表现层优化|HUD 信息强化|中心动态反馈强化|色彩层次强化|画面区域层次强化|继续优化|继续打磨|收尾|美化/u.test(text);
+}
+
+function inferTargetedVisualWarnings(text, visualWarnings) {
+  const out = new Set(visualWarnings ?? []);
+  if (/HUD|hud|字体|UI|ui|信息/u.test(text)) out.add("hud-empty");
+  if (/颜色|色彩|对比/u.test(text)) out.add("colorCount-low");
+  if (/中心|动态|反馈/u.test(text)) out.add("center-static");
+  if (/区域|层次|形状/u.test(text)) out.add("shapeRegions-low");
+  return Array.from(out);
+}
+
+function targetMetricsForStage5(text, targetedWarnings) {
+  const metrics = new Set();
+  if (targetedWarnings.includes("hud-empty") || /HUD|hud|字体|UI|ui|信息/u.test(text)) metrics.add("hudOccupancy");
+  if (targetedWarnings.includes("colorCount-low") || /颜色|色彩|对比/u.test(text)) metrics.add("colorCount");
+  if (targetedWarnings.includes("shapeRegions-low") || /区域|层次|形状/u.test(text)) metrics.add("shapeRegions");
+  if (targetedWarnings.includes("center-static") || /中心|动态/u.test(text)) metrics.add("centerActivity");
+  return Array.from(metrics);
 }
 
 function wantsGameplayChange(text) {

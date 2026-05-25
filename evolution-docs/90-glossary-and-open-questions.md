@@ -19,6 +19,8 @@
 | `expectedArtifacts` | 执行前 blast radius 声明，不是执行后 diff |
 | checkpoint | subtask 后的可回滚交付点，不等于 git commit |
 | baseline pointer | 指向最近可接受交付证据集合的轻量记录 |
+| preview baseline | 指向最近可试玩版本的轻量记录；游戏能启动，但 delivery evidence 可能未通过 |
+| preview handoff | Stage 1 结束后给用户的玩法、操作、检查摘要和继续迭代引导 |
 | kick-back | worker 发现 stage 不匹配后，回滚该 subtask 并交回 triage 的信号 |
 | evolution iteration | 用户一次演进 query 及其所有 subtask 的完整处理过程 |
 | conflict | 两个 subtask 预期影响重叠且语义方向相反 |
@@ -30,11 +32,12 @@
 
 | ID | 问题 | N19 落点 | 状态 |
 |---|---|---|---|
-| A | baseline pointer | `30-evidence-checkpoints.md` | design only |
-| B | `mustNot` 执行 | `30-evidence-checkpoints.md` | design only |
+| A | baseline pointer | `30-evidence-checkpoints.md` | implemented minimal |
+| B | `mustNot` 执行 | `30-evidence-checkpoints.md` | implemented in Stage 2-5 workers |
 | C | 冲突检测 | `10-triage-router.md` | design only |
-| D | kick-back 协议 | `20-stage-boundaries.md` | design only |
-| E | 演进迭代追踪 | `30-evidence-checkpoints.md` | design only |
+| D | kick-back 协议 | `20-stage-boundaries.md` | implemented minimal |
+| E | 演进迭代追踪 | `30-evidence-checkpoints.md` | implemented minimal |
+| H | preview handoff | `30-evidence-checkpoints.md` | implemented minimal |
 | F | subtask 并发 | deferred | v2 topic |
 | G | 用户结构化输入 | `10-triage-router.md` | deferred |
 
